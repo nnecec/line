@@ -1,0 +1,48 @@
+# Loop Build
+Line.app
+
+# Mac OS X
+*.DS_Store
+
+# Backup files
+*.bak
+
+# Local scratch files
+*.tmp
+*.swp
+.env
+.env.*
+!.env.example
+
+# Signing and release credentials
+*.cer
+*.crt
+*.der
+*.key
+*.pem
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.keychain
+*.keychain-db
+
+# Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+xcuserdata
+Line.zip
+*.dmg
+*.xcarchive
+Build/
+DerivedData
+build/
+dist/
+.build/
+
+.agents/
+.claude/
+skills-lock.json
+docs/plans/

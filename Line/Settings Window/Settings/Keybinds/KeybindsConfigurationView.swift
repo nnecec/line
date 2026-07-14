@@ -1,0 +1,343 @@
+//
+//  KeybindsConfigurationView.swift
+//  Line
+//
+//  Created by nnecec on 2024-04-20.
+//
+
+import Defaults
+import SwiftUI
+
+final class KeybindsConfigurationModel: ObservableObject {
+    @Published var currentEventMonitor: LocalEventMonitor?
+    @Published var selectedKeybinds = Set<BoundWindowAction>()
+    @Published var selectedKeybindIDs = Set<UUID>()
+}
+
+private enum KeybindConflictPolicy {
+    static func effectiveKeybind(for action: BoundWindowAction, triggerKey: Set<CGKeyCode>) -> Set<CGKeyCode> {
+        action.bypassTriggerKey ? action.keybind : triggerKey.union(action.keybind)
+    }
+
+    static func conflictingIDs(in actions: [BoundWindowAction], triggerKey: Set<CGKeyCode>) -> Set<BoundWindowAction.ID> {
+        var idsByKeybind = [Set<CGKeyCode>: [BoundWindowAction.ID]]()
+
+        for action in actions {
+            guard !action.keybind.isEmpty else { continue }
+            let effectiveKeybind = effectiveKeybind(for: action, triggerKey: triggerKey)
+            idsByKeybind[effectiveKeybind, default: []].append(action.id)
+        }
+
+        return idsByKeybind.values.reduce(into: Set<BoundWindowAction.ID>()) { conflicts, ids in
+            guard ids.count > 1 else { return }
+            conflicts.formUnion(ids)
+        }
+    }
+}
+
+struct KeybindsConfigurationView: View {
+    @EnvironmentObject private var settingsState: SettingsState
+    @StateObject private var model = KeybindsConfigurationModel()
+
+    @Default(.triggerKey) private var triggerKey
+    @Default(.sideDependentTriggerKey) private var sideDependentTriggerKey
+    @Default(.triggerDelay) private var triggerDelay
+    @Default(.cycleModeRestartEnabled) private var cycleModeRestartEnabled
+    @Default(.cycleBackwardsOnShiftPressed) private var cycleBackwardsOnShiftPressed
+    @Default(.doubleClickToTrigger) private var doubleClickToTrigger
+    @Default(.middleClickTriggersLine) private var middleClickTriggersLine
+    @Default(.enableTriggerDelayOnMiddleClick) private var enableTriggerDelayOnMiddleClick
+    @Default(.keybinds) private var keybinds
+
+    /// If the user has "enabled" the trigger delay.
+    private var useTriggerDelay: Bool {
+        Defaults[.triggerDelay] != 0
+    }
+
+    /// Is there at least one keybind action that is a cycle?
+    private var isCycleActionPresentInKeybinds: Bool {
+        keybinds.contains(where: { $0.cycle != nil })
+    }
+
+    /// Is Shift used in the trigger key?
+    private var isShiftUsedByTriggerKey: Bool {
+        triggerKey.map(\.baseModifier).contains(.kVK_Shift)
+    }
+
+    private var showMiddleClickTriggerDelayOption: Bool {
+        middleClickTriggersLine && useTriggerDelay
+    }
+
+    private var showCycleRestartOption: Bool {
+        isCycleActionPresentInKeybinds
+    }
+
+    private var showCycleBackwardsOption: Bool {
+        isCycleActionPresentInKeybinds && !isShiftUsedByTriggerKey
+    }
+
+    private var conflictingKeybindIDs: Set<BoundWindowAction.ID> {
+        KeybindConflictPolicy.conflictingIDs(in: keybinds, triggerKey: triggerKey)
+    }
+
+    var body: some View {
+        Form {
+            // Show a diagnostic recovery prompt when stored keybinds are missing.
+            if keybinds.isEmpty {
+                Section {
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.red)
+
+                        Text("Keybind list is empty", comment: "Warning title shown when settings have no keybinds")
+                            .font(.headline)
+
+                        Text("This can make every keybind show a red warning icon. Restore the default configuration below.", comment: "Warning detail shown when settings have no keybinds")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button {
+                            keybinds = BoundWindowAction.defaultKeybinds
+                        } label: {
+                            Label("Restore Default Keybinds", systemImage: "arrow.counterclockwise")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                }
+            }
+
+            triggerKeySection
+            settingsSection
+            keybindsSection
+        }
+        .settingsFormPanel(maxWidth: 560)
+        .animation(
+            .default,
+            value: [
+                showMiddleClickTriggerDelayOption,
+                cycleModeRestartEnabled,
+                showCycleBackwardsOption
+            ]
+        )
+    }
+
+    private var triggerKeySection: some View {
+        Section {
+            Text("Hold this modifier to reveal Line’s window actions. The same key also opens the grid thumbnail when a grid action is selected.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            TriggerKeycorder($triggerKey)
+                .environmentObject(model)
+        } header: {
+            Text("Trigger Key", comment: "Section header shown in settings")
+        }
+    }
+
+    @ViewBuilder
+    private var settingsSection: some View {
+        Section {
+            Toggle(isOn: $sideDependentTriggerKey) {
+                SettingsRowLabel(
+                    "Treat left and right keys differently",
+                    detail: "Let left Command and right Command behave as separate trigger keys.",
+                    systemImage: "keyboard"
+                )
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Trigger delay")
+                    Spacer()
+                    HStack(spacing: 0) {
+                        Text(triggerDelay, format: .number.precision(.fractionLength(1...1)))
+                        Text("s", comment: "Unit symbol: seconds")
+                    }
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, alignment: .trailing)
+                }
+
+                Slider(value: $triggerDelay, in: 0...1, step: 0.1)
+            }
+
+            Toggle(isOn: $doubleClickToTrigger) {
+                SettingsRowLabel(
+                    "Double-click to trigger",
+                    detail: "Open Line only after the trigger key is pressed twice.",
+                    systemImage: "rectangle.stack.badge.play"
+                )
+            }
+
+            Toggle(isOn: $middleClickTriggersLine) {
+                SettingsRowLabel(
+                    "Middle-click to trigger",
+                    detail: "Use the mouse wheel button as an additional trigger.",
+                    systemImage: "computermouse"
+                )
+            }
+
+            if showMiddleClickTriggerDelayOption {
+                Toggle(isOn: $enableTriggerDelayOnMiddleClick) {
+                    SettingsRowLabel(
+                        "Apply trigger delay on middle-click",
+                        detail: "Use the same delay before a middle-click opens Line.",
+                        systemImage: "timer"
+                    )
+                }
+            }
+        } header: {
+            Text("Settings", comment: "Section header shown in settings")
+        }
+
+        if showCycleRestartOption || showCycleBackwardsOption {
+            Section {
+                if showCycleRestartOption {
+                    Toggle(isOn: $cycleModeRestartEnabled) {
+                        SettingsRowLabel(
+                            "Always start cycles from first item",
+                            detail: "Each cycle action begins from its first item instead of resuming.",
+                            systemImage: "arrow.counterclockwise"
+                        )
+                    }
+                    .help("By default, Line resumes cycles from where you last left off in each window.")
+                }
+
+                if showCycleBackwardsOption {
+                    Toggle(isOn: $cycleBackwardsOnShiftPressed) {
+                        SettingsRowLabel(
+                            "Cycle backward with Shift",
+                            detail: "Hold Shift while triggering a cycle to move in reverse.",
+                            systemImage: "shift"
+                        )
+                    }
+                }
+            } header: {
+                Text("Cycles", comment: "Section header shown in settings")
+            }
+        }
+    }
+
+    private var keybindsSection: some View {
+        let duplicateKeybindIDs = conflictingKeybindIDs
+
+        return Section {
+            HStack {
+                Button {
+                    keybinds.insert(BoundWindowAction(action: .special(.noAction), keybind: []), at: 0)
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .help("Add a new keybind (⌘N)")
+
+                Button(role: .destructive) {
+                    removeSelectedKeybinds()
+                } label: {
+                    Label("Remove", systemImage: "minus")
+                }
+                .disabled(model.selectedKeybindIDs.isEmpty)
+                .keyboardShortcut(.delete)
+                .help("Remove selected keybinds (⌫)")
+
+                Spacer()
+            }
+
+            List(selection: $model.selectedKeybindIDs) {
+                if keybinds.isEmpty {
+                    emptyKeybindsView
+                } else {
+                    ForEach($keybinds) { keybind in
+                        KeybindItemView(
+                            keybind,
+                            triggerKey: triggerKey,
+                            hasDuplicateKeybinds: duplicateKeybindIDs.contains(keybind.wrappedValue.id)
+                        )
+                        .environmentObject(model)
+                        .tag(keybind.wrappedValue.id)
+                    }
+                }
+            }
+            .frame(minHeight: 180)
+            .onAppear(perform: updatePreviewForSelection)
+            .onReceive(model.$selectedKeybindIDs) { _ in
+                updatePreviewForSelection()
+            }
+            .onDisappear {
+                settingsState.isPreviewingUserSelection = false
+            }
+        } header: {
+            Text("Keybinds", comment: "Section header shown in settings")
+        } footer: {
+            Text("Select one shortcut to preview its action in the settings window.")
+        }
+    }
+
+    private var emptyKeybindsView: some View {
+        HStack {
+            Spacer()
+            VStack {
+                Text("No keybinds")
+                    .font(.title3)
+                Text("Press \"Add\" to add a keybind")
+                    .font(.caption)
+            }
+            Spacer()
+        }
+        .foregroundStyle(.secondary)
+        .padding()
+    }
+
+    private func removeSelectedKeybinds() {
+        keybinds.removeAll { model.selectedKeybindIDs.contains($0.id) }
+        model.selectedKeybindIDs.removeAll()
+        updatePreviewForSelection()
+    }
+
+    private func updatePreviewForSelection() {
+        let selectedKeybinds = keybinds.filter { model.selectedKeybindIDs.contains($0.id) }
+        model.selectedKeybinds = Set(selectedKeybinds)
+
+        if selectedKeybinds.count == 1, let action = selectedKeybinds.first {
+            settingsState.isPreviewingUserSelection = true
+            settingsState.setPreviewedAction(to: action)
+        } else {
+            settingsState.isPreviewingUserSelection = false
+        }
+    }
+}
+
+// MARK: - macOS 26 Availability Helper
+
+private extension View {
+    @ViewBuilder
+    func scrollEdgeEffectStyleSoftIfAvailable() -> some View {
+        if #available(macOS 26.0, *) {
+            scrollEdgeEffectStyle(.soft, for: .all)
+        } else {
+            self
+        }
+    }
+
+    @ViewBuilder
+    func contentMarginsIfAvailable(_ edges: Edge.Set, _ length: CGFloat) -> some View {
+        if #available(macOS 14.0, *) {
+            contentMargins(edges, length, for: .scrollContent)
+        } else {
+            self
+        }
+    }
+}
+
+#Preview {
+    KeybindsConfigurationView()
+        .environmentObject(SettingsState())
+        .frame(width: 300)
+}

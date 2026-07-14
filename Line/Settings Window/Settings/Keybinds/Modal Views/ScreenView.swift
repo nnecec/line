@@ -1,0 +1,88 @@
+//
+//  ScreenView.swift
+//  Line
+//
+//  Created by nnecec on 2024-04-14.
+//
+
+import SwiftUI
+
+struct ScreenView<Content>: View where Content: View {
+    @Environment(\.isEnabled) private var isEnabled
+    @ObservedObject private var accentColorController: AccentColorController = .shared
+
+    let isBlurred: Bool
+    let content: () -> Content
+
+    @State private var image: NSImage?
+
+    private let screenShape = RoundedRectangle(cornerRadius: 8)
+
+    init(
+        isBlurred: Bool = false,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.isBlurred = isBlurred
+        self.content = content
+    }
+
+    var body: some View {
+        ZStack {
+            GeometryReader { proxy in
+                if let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .blur(radius: isBlurred ? 10 : 0)
+                        .opacity(isBlurred ? 0.5 : 1)
+                } else {
+                    accentColorController.color1
+                        .opacity(0.1)
+                }
+            }
+            .allowsHitTesting(false)
+            .opacity(isEnabled ? 1.0 : 0.5)
+            .overlay {
+                content()
+                    .padding(5)
+            }
+            .clipShape(screenShape)
+
+            screenShape
+                .stroke(.gray, lineWidth: 2)
+
+            screenShape
+                .inset(by: 2.5)
+                .stroke(.black, lineWidth: 5)
+
+            screenShape
+                .inset(by: 3)
+                .stroke(.gray.opacity(0.2), lineWidth: 1)
+        }
+        .aspectRatio(16 / 10, contentMode: .fill)
+        .task {
+            guard let fetchedImage = await fetchImage() else {
+                return
+            }
+
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    image = fetchedImage
+                }
+            }
+        }
+    }
+
+    func fetchImage() async -> NSImage? {
+        let wallpaperImageFetcher = WallpaperImageFetcher()
+        guard let image = try? await wallpaperImageFetcher.takeScreenshot() else {
+            return nil
+        }
+
+        let aspectRatio = image.size.width / image.size.height
+        let resizedImage = image.resized(to: .init(width: 300 * aspectRatio, height: 300))
+
+        return resizedImage
+    }
+}

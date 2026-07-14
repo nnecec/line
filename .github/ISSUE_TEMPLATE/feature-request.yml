@@ -1,0 +1,107 @@
+name: Feature Request
+description: Suggest a focused improvement to Line.
+title: "[Feature]: "
+labels: ["Feature"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Request Summary
+      description: Provide a concise description of the feature.
+      placeholder: Briefly describe what you want to achieve.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Opportunity & Desired Solution
+      description: Describe the pain point, why it matters now, and how the feature should work from the user's perspective.
+      placeholder: |
+        Problem or Opportunity:
+        - Current behavior
+        - Why it matters now
+        Desired Solution / Implementation:
+        - How it should work
+        - What should happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: List any alternatives you considered.
+      placeholder: |
+        1. Alternative A and why it falls short
+        2. Alternative B and why it falls short
+    validations:
+      required: false
+
+  - type: textarea
+    id: visuals
+    attributes:
+      label: Visuals or References
+      description: Add mockups, screenshots, or links to inspiration.
+      placeholder: Drag and drop files or paste URLs.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Share any other relevant notes (logs, related issues, documentation).
+      placeholder: |
+        - Related issues: #123, #456
+        - Other relevant information
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      options:
+        - Window actions
+        - Grid layout
+        - Stashing
+        - Keyboard or mouse triggers
+        - Settings
+        - Updates and distribution
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How urgent or valuable is this request?
+      options:
+        - High (mission critical)
+        - Medium (important but not blocking)
+        - Low (nice to have)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Final Checks
+      options:
+        - label: My issue title is descriptive.
+          required: true
+        - label: This is a single feature request (multiple feature requests should be reported individually).
+          required: true
+        - label: I have looked to see if this is a duplicate of another feature request.
+          required: true
+        - label: I can help with research or testing.
+          required: false
+        - label: I can help code this feature.
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to propose this feature.

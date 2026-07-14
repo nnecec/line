@@ -1,0 +1,64 @@
+name: Suggest New Icon
+description: Add your icon to Line.
+title: "[Icon]: Add [icon name]"
+labels: ["Feature"]
+body:
+  - type: textarea
+    id: files
+    attributes:
+      label: Icon Files
+      description: Drag and drop `.icon`/`.svg`/`.png` assets directly into this field, or paste the URL of the icon. Also, attach the link or file used to create the icon (Figma, Sketch, etc.).
+      placeholder: Attach one file per row or bundle them in a ZIP. Include the editable source or a link to it.
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Icon Name
+      description: Provide the exact name of the icon that should appear in Line.
+      placeholder: Black Hole
+    validations:
+      required: true
+
+  - type: textarea
+    id: concept
+    attributes:
+      label: Concept & Meaning
+      description: Explain what this icon represents and why it is valuable.
+    validations:
+      required: false
+
+  - type: input
+    id: credit
+    attributes:
+      label: Preferred Social Media Handle
+      description: Provide a social media link to be credited in the contribution list. If left blank, your GitHub account associated with this issue will be used instead.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add references, mockups in situ, or related discussions.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Final Checks
+      options:
+        - label: I am submitting an icon (this is not for icon requests).
+          required: true
+        - label: I own the rights to these assets or have permission to share them.
+          required: true
+        - label: I can iterate on the design if feedback is provided.
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        Please keep in mind that not all icons may be approved, as they do take up quite a bit of space in the app itself.
+        Thank you for taking the time to make icons for Line.

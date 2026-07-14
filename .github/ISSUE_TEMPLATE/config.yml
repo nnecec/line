@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/nnecec/Line/security/advisories/new
+    about: Report vulnerabilities privately. Do not open a public issue.
+  - name: Upstream Loop project
+    url: https://github.com/MrKai77/Loop
+    about: Check whether the issue belongs to the original Loop project.

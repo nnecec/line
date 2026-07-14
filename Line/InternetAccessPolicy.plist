@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>DeveloperName</key>
+	<string>Line contributors</string>
+	<key>ApplicationDescription</key>
+	<string>Line is a macOS window manager with configurable keyboard, mouse, and grid controls for moving, resizing, and arranging windows.</string>
+	<key>Website</key>
+	<string>https://github.com/nnecec/Line</string>
+	<key>Connections</key>
+	<array>
+		<dict>
+			<key>IsIncoming</key>
+			<false/>
+			<key>Host</key>
+			<string>github.com</string>
+			<key>NetworkProtocol</key>
+			<string>TCP</string>
+			<key>Port</key>
+			<string>443</string>
+			<key>Relevance</key>
+			<string>Default</string>
+			<key>Purpose</key>
+			<string>Line uses Sparkle to check its GitHub-hosted update feed and download a release after you approve the update. Automatic checks can be disabled in Line&apos;s About settings.</string>
+			<key>DenyConsequences</key>
+			<string>If you deny these connections, Line cannot check for or download updates.</string>
+		</dict>
+		<dict>
+			<key>IsIncoming</key>
+			<false/>
+			<key>Host</key>
+			<string>*.githubusercontent.com</string>
+			<key>NetworkProtocol</key>
+			<string>TCP</string>
+			<key>Port</key>
+			<string>443</string>
+			<key>Relevance</key>
+			<string>Default</string>
+			<key>Purpose</key>
+			<string>Line reads its Sparkle update feed and downloads signed update archives hosted by GitHub.</string>
+			<key>DenyConsequences</key>
+			<string>If you deny these connections, Line cannot check for or install updates.</string>
+		</dict>
+	</array>
+</dict>
+</plist>
