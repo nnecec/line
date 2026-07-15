@@ -1,6 +1,8 @@
 # 007: CustomWindowActionCalculator 几何边缘情况测试
 
-**状态**: DONE  
+**状态**: DONE (已验证完成)
+**完成时间**: 2026-07-15
+**commit**: c9e75d1  
 **优先级**: P2（快速胜利）  
 **发现**: COV-06  
 **基准 commit**: 79ff450  
