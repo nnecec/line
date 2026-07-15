@@ -22,6 +22,16 @@ xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line
 
 Run the core local checks below. CI also performs an unsigned archive smoke test for the Release scheme.
 
+在提交 PR 前运行完整验证：
+
+```bash
+make test           # 所有测试
+make lint           # SwiftFormat 检查
+make build-release  # Release 构建验证
+```
+
+或使用详细命令：
+
 ```bash
 xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build
 xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS'

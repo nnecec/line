@@ -34,6 +34,24 @@ Do not install binaries shared through issues, pull requests, or unrelated downl
 
 Use Xcode 26.4 or a compatible Xcode 26 release. The `Line` scheme is used for local development and tests. `Line (GH ACTIONS)` exercises the release configuration used by CI.
 
+**快速开始**:
+
+```bash
+# 运行所有测试
+make test
+
+# 运行测试并查看覆盖率
+make test-coverage
+
+# Debug 构建
+make build
+
+# 查看所有命令
+make help
+```
+
+**详细命令** (如果不使用 Makefile):
+
 ```bash
 xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line
 xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build
