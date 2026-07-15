@@ -17,10 +17,10 @@
 | 005 | 私有 API 符号加载无验证覆盖 | 测试 | LOW | M | LOW | TODO |
 | 006 | WindowActionEngine apply() 执行流缺少集成测试 | 测试 | MED | M | MED | TODO |
 | 007 | CustomWindowActionCalculator 几何边缘情况测试 | 测试 | LOW | S | LOW | DONE |
+| 008 | ResizeContext 状态包装缺少特性测试 | 测试 | LOW | S | LOW | DONE |
 | 009 | Grid Layout 几何计算未测试 | 测试 | MED | M | MED | TODO |
 | 010 | SystemWindowManager macOS 15 集成零覆盖 | 测试 | MED | M | MED | TODO |
-| 011 | ResizeContext 状态包装缺少特性测试 | 测试 | LOW | S | LOW | TODO |
-| 012 | WindowAction 帧计算边缘情况测试不足 | 测试 | MED | M | MED | DONE |
+| 012 | WindowAction 帧计算边缘情况测试不足 | 测试 | MED | M | MED | TODO |
 | 013 | 并发 action 处理和取消未测试 | 测试 | MED | S | MED | TODO |
 | 014 | RectangleTranslationLayer 导入逻辑未测试 | 测试 | LOW | S | LOW | TODO |
 | 015 | Window 和 WindowUtility 核心操作缺少单元测试 | 测试 | MED | L | MED | TODO |
