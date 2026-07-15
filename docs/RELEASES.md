@@ -2,6 +2,27 @@
 
 Official binaries come from GitHub Actions. Local Xcode archives are development artifacts unless the same signing, notarization, Sparkle, and verification steps are completed.
 
+## Unsigned release without an Apple Developer membership
+
+The `Unsigned Release` workflow builds installable DMG and ZIP packages without Apple signing credentials. Push a three-component version tag for a commit on `main` to publish automatically:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow can also be dispatched manually from `main` with a version input. It creates `Line-unsigned.dmg`, `Line-unsigned.zip`, and `SHA256SUMS.txt`, verifies the uploaded assets, records GitHub build provenance, and then publishes a GitHub prerelease. The build number is the commit count on `main`, and one semantic version tag is allowed per release commit.
+
+These packages are not signed with a Developer ID and are not notarized. macOS may require the user to approve the app manually in Privacy & Security. The unsigned workflow does not update `appcast.xml`; Sparkle updates still require an archive signed with the private key matching `SPARKLE_PUBLIC_ED_KEY`.
+
+Use the same packaging flow locally:
+
+```bash
+VERSION=1.2.3 scripts/release/build_unsigned_package.sh
+```
+
+Set `BUILD_NUMBER` to override the default Git commit count or `OUTPUT_DIR` to choose another destination. By default, packages are written to `dist/`.
+
 ## Repository setup
 
 Before the first release:

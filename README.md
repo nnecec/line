@@ -18,6 +18,8 @@ Line targets macOS 26 and requires Accessibility permission to move and resize w
 
 Official binaries are published on the repository's [GitHub Releases](https://github.com/nnecec/Line/releases) page. Release artifacts built by the protected workflow are Developer ID signed, Apple-notarized, accompanied by SHA-256 checksums, and covered by GitHub artifact attestations.
 
+The repository also supports unsigned releases for maintainers without an Apple Developer membership. These assets are named `Line-unsigned.dmg` and `Line-unsigned.zip`, include SHA-256 checksums and GitHub build provenance, but are not Apple-notarized. macOS may require manual approval in Privacy & Security before opening them.
+
 Until an official release is available, build Line from source:
 
 ```bash
@@ -39,6 +41,14 @@ xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macO
 xcodebuild -project Line.xcodeproj -scheme "Line (GH ACTIONS)" -configuration Release -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
 ruby scripts/release/update_appcast_test.rb
 ```
+
+Build unsigned DMG and ZIP packages locally:
+
+```bash
+VERSION=1.2.3 scripts/release/build_unsigned_package.sh
+```
+
+The packages are written to `dist/`. Pushing a `vX.Y.Z` tag for a commit on `main` runs the `Unsigned Release` workflow and publishes the same packages as a GitHub prerelease.
 
 SwiftFormat is pinned through Mint:
 

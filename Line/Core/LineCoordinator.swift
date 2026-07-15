@@ -225,16 +225,26 @@ extension LineCoordinator {
             return
         }
 
-        guard !isLineActive else {
-            // If using Karabiner-Elements, TriggerKeybindObserver may call openLine twice, as key events arrive in quick succession.
-            // This happens because Karabiner-Elements sends modifier keys and other keys as separate, rapid events.
-            // As a result, Line might be opened before the full keybind is pressed.
-            // In these cases, we can simply update the action instead of reopening the Line.
-            if startingAction.direction != .noSelection { // Can switch to .noAction still!
-                await changeAction(startingAction, disableHapticFeedback: true)
-            }
+        if isLineActive {
+            // If grid mode is active and user presses a directional keybind,
+            // close grid mode and open session mode with the new action.
+            if gridModeCoordinator.isActive, startingAction.direction != .noSelection {
+                log.info("Switching from grid mode to session mode with action: \(startingAction.direction)")
+                gridModeCoordinator.close(reason: .cancelled)
+                triggerKeyTimeoutTimer.cancel()
+                isLineActive = false
+                // Fall through to open session mode below
+            } else {
+                // If using Karabiner-Elements, TriggerKeybindObserver may call openLine twice, as key events arrive in quick succession.
+                // This happens because Karabiner-Elements sends modifier keys and other keys as separate, rapid events.
+                // As a result, Line might be opened before the full keybind is pressed.
+                // In these cases, we can simply update the action instead of reopening the Line.
+                if startingAction.direction != .noSelection { // Can switch to .noAction still!
+                    await changeAction(startingAction, disableHapticFeedback: true)
+                }
 
-            return
+                return
+            }
         }
 
         let window = WindowUtility.userDefinedTargetWindow()
