@@ -51,6 +51,12 @@
     - keybinds   (List all custom keybinds)
     - all        (List everything)
 
+ Security Limits:
+ ---------------
+ - Maximum URL length: 1024 characters
+ - Maximum individual parameter length: 256 characters
+ - URLs exceeding these limits are silently rejected
+
  Usage Tips:
  ----------
  1. All commands are case-insensitive
@@ -300,6 +306,12 @@ final class URLCommandHandler {
             return
         }
 
+        // Validate URL length to prevent DoS
+        guard url.absoluteString.count < 1024 else {
+            log.error("URL command rejected: exceeds maximum length of 1024 characters")
+            return
+        }
+
         let components = (url.host.map { [$0] } ?? []) + url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
 
         guard let commandString = components.first,
@@ -310,6 +322,15 @@ final class URLCommandHandler {
         }
 
         let parameters = Array(components.dropFirst())
+
+        // Validate individual parameter lengths
+        for parameter in parameters {
+            guard parameter.count <= 256 else {
+                log.error("URL command rejected: parameter exceeds maximum length of 256 characters")
+                return
+            }
+        }
+
         processCommand(command, parameters)
     }
 
