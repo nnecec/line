@@ -1,6 +1,6 @@
 # 001: AccessibilityManager 权限状态机测试
 
-**状态**: TODO  
+**状态**: DONE  
 **优先级**: P0（阻塞其他需要权限的测试）  
 **发现**: COV-01  
 **基准 commit**: 79ff450  
