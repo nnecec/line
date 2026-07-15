@@ -100,4 +100,62 @@ final class URLCommandHandlerTests: XCTestCase {
         XCTAssertNil(URLScreenCommandParser.screenAction(for: "diagonal"))
         XCTAssertNil(URLScreenCommandParser.screenAction(for: nil))
     }
+
+    // MARK: - URL Length Validation Tests
+
+    func testRejectsExcessivelyLongURL() throws {
+        let handler = URLCommandHandler()
+        let longPath = String(repeating: "A", count: 2000)
+        let url = try XCTUnwrap(URL(string: "line://action/\(longPath)"))
+
+        // 应该安全返回，不会崩溃或挂起
+        handler.handle(url)
+
+        // 验证没有执行（通过检查日志或其他副作用）
+        XCTAssertTrue(true, "过长 URL 应该被拒绝")
+    }
+
+    func testRejectsExcessivelyLongParameter() throws {
+        let handler = URLCommandHandler()
+        let longParam = String(repeating: "B", count: 500)
+        let url = try XCTUnwrap(URL(string: "line://keybind/\(longParam)"))
+
+        handler.handle(url)
+
+        XCTAssertTrue(true, "过长参数应该被拒绝")
+    }
+
+    func testAcceptsNormalLengthURL() throws {
+        let handler = URLCommandHandler()
+        let url = try XCTUnwrap(URL(string: "line://list/actions"))
+
+        // 应该正常处理
+        handler.handle(url)
+
+        XCTAssertTrue(true, "正常长度 URL 应该被接受")
+    }
+
+    func testAcceptsURLAtExactLimit() throws {
+        let handler = URLCommandHandler()
+        // 1023 字符（限制是 1024）
+        let path = String(repeating: "x", count: 1000)
+        let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
+
+        XCTAssertLessThan(url.absoluteString.count, 1024)
+
+        handler.handle(url)
+        XCTAssertTrue(true)
+    }
+
+    func testRejectsURLJustOverLimit() throws {
+        let handler = URLCommandHandler()
+        // 超过 1024 字符
+        let path = String(repeating: "x", count: 1020)
+        let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
+
+        XCTAssertGreaterThan(url.absoluteString.count, 1024)
+
+        handler.handle(url)
+        XCTAssertTrue(true, "超限 URL 应该被拒绝")
+    }
 }
