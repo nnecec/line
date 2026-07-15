@@ -1,9 +1,10 @@
 # 002: WindowDragManager 拖拽捕捉逻辑测试
 
-**状态**: TODO  
+**状态**: DONE  
 **优先级**: P1  
 **发现**: COV-02  
 **基准 commit**: 79ff450  
+**实际工作量**: S（< 1小时）
 **工作量估算**: L（多天）  
 **风险**: MED  
 **依赖**: 001-accessibility-manager-tests.md
