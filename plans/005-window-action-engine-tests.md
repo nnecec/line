@@ -1,6 +1,6 @@
 # 005: WindowActionEngine 集成测试
 
-**状态**: TODO  
+**状态**: DONE  
 **优先级**: P1  
 **发现**: COV-04  
 **基准 commit**: 79ff450  
