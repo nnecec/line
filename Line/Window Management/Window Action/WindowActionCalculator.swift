@@ -142,7 +142,7 @@ extension WindowAction.StandardWindowAction: WindowActionCalculator {
 
     /// Calculates the Y offset for macOS-style centering.
     private func getMacOSCenterYOffset(screenHeight: CGFloat) -> CGFloat {
-        screenHeight / 10
+        WindowFrameUtility.macOSCenterYOffset(for: screenHeight)
     }
 
     private func calculateFillAvailableSpace(for request: WindowResizeRequest) -> CGRect {
@@ -381,7 +381,7 @@ extension WindowAction.IncrementalAction {
         }
 
         // Clamp to bounds
-        newFrame = newFrame.clamped(to: bounds)
+        newFrame = WindowFrameUtility.clamp(newFrame, to: bounds)
 
         return newFrame
     }
@@ -396,33 +396,4 @@ extension WindowAction.CustomWindowAction: WindowActionCalculator {
 
 // MARK: - Helper Extensions
 
-extension CGRect {
-    /// Clamps this rect to fit within the given bounds.
-    func clamped(to bounds: CGRect) -> CGRect {
-        var clamped = self
-
-        // Clamp size
-        if clamped.width > bounds.width {
-            clamped.size.width = bounds.width
-        }
-        if clamped.height > bounds.height {
-            clamped.size.height = bounds.height
-        }
-
-        // Clamp position
-        if clamped.minX < bounds.minX {
-            clamped.origin.x = bounds.minX
-        }
-        if clamped.maxX > bounds.maxX {
-            clamped.origin.x = bounds.maxX - clamped.width
-        }
-        if clamped.minY < bounds.minY {
-            clamped.origin.y = bounds.minY
-        }
-        if clamped.maxY > bounds.maxY {
-            clamped.origin.y = bounds.maxY - clamped.height
-        }
-
-        return clamped
-    }
-}
+// Note: clamped(to:) removed - use WindowFrameUtility.clamp(_:to:) instead

@@ -146,7 +146,7 @@ extension WindowAction.CustomWindowAction {
         case .macOSCenter:
             // macOS 风格的居中 (有 Y 偏移)
             x = bounds.midX - windowSize.width / 2
-            let yOffset = bounds.height / 10
+            let yOffset = WindowFrameUtility.macOSCenterYOffset(for: bounds.height)
             y = bounds.midY - windowSize.height / 2 - yOffset
 
         case .right:

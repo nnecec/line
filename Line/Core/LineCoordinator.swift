@@ -249,9 +249,8 @@ extension LineCoordinator {
 
         let window = WindowUtility.userDefinedTargetWindow()
 
-        guard
-            window?.isAppExcluded != true,
-            (window?.fullscreen ?? false && Defaults[.ignoreFullscreen]) == false
+        guard let window,
+              WindowStateValidator.canManipulate(window)
         else {
             return
         }
@@ -267,7 +266,7 @@ extension LineCoordinator {
             shouldCancelOpening = false
         }
 
-        log.info("Opening Line with starting action and target window: \(window?.description ?? "(none)")")
+        log.info("Opening Line with starting action and target window: \(window.description)")
 
         // Refresh accent colors in case user has enabled the wallpaper processor
         Task {
@@ -303,14 +302,12 @@ extension LineCoordinator {
             return
         }
 
-        _ = if let window {
+        let initialWindowFrame = await {
             // In case of a stashed window, use the revealed frame instead to prevent issue with frame calculation later.
             await StashManager.shared.getRevealedFrameForStashedWindow(
                 id: window.cgWindowID
             ) ?? window.frame
-        } else {
-            CGRect.zero
-        }
+        }()
         if shouldAbortOpening() {
             await cancelPartiallyOpenedLine()
             return

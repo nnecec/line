@@ -187,7 +187,7 @@ final class WindowDragManager {
             }
 
             guard let window = WindowUtility.windowAtPosition(currentMousePosition),
-                  !window.isAppExcluded
+                  !WindowStateValidator.shouldIgnore(window)
             else {
                 didFailToResolveDraggedWindow = true
                 return

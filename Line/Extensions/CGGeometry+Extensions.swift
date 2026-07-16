@@ -122,25 +122,7 @@ extension CGRect {
     }
 
     func pushInside(_ rect2: CGRect) -> CGRect {
-        var result = self
-
-        if result.minX < rect2.minX {
-            result.origin.x = rect2.minX
-        }
-
-        if result.minY < rect2.minY {
-            result.origin.y = rect2.minY
-        }
-
-        if result.maxX > rect2.maxX {
-            result.origin.x = rect2.maxX - result.width
-        }
-
-        if result.maxY > rect2.maxY {
-            result.origin.y = rect2.maxY - result.height
-        }
-
-        return result
+        WindowFrameUtility.pushInside(self, bounds: rect2)
     }
 
     var topLeftPoint: CGPoint {
@@ -181,25 +163,7 @@ extension CGRect {
     }
 
     func getEdgesTouchingBounds(_ rect2: CGRect) -> Edge.Set {
-        var result: Edge.Set = []
-
-        if minX.approximatelyEquals(to: rect2.minX) {
-            result.insert(.leading)
-        }
-
-        if minY.approximatelyEquals(to: rect2.minY) {
-            result.insert(.top)
-        }
-
-        if maxX.approximatelyEquals(to: rect2.maxX) {
-            result.insert(.trailing)
-        }
-
-        if maxY.approximatelyEquals(to: rect2.maxY) {
-            result.insert(.bottom)
-        }
-
-        return result
+        WindowFrameUtility.edgesTouchingBounds(self, rect2)
     }
 
     /// Returns true if the rectangle is finite, false otherwise.

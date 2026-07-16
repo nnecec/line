@@ -67,7 +67,7 @@ extension WindowUtility {
             .filter { window in
                 !window.minimized &&
                     !window.isWindowHidden &&
-                    !window.isAppExcluded
+                    !WindowStateValidator.shouldIgnore(window)
             }
 
         guard !availableWindows.isEmpty else {
@@ -135,7 +135,7 @@ extension WindowUtility {
             .filter { window in
                 !window.minimized &&
                     !window.isWindowHidden &&
-                    !window.isAppExcluded
+                    !WindowStateValidator.shouldIgnore(window)
             }
 
         guard !availableWindows.isEmpty else {
