@@ -12,15 +12,6 @@ import UserNotifications
 
 @Loggable(style: .static)
 enum IconManager {
-    static func returnUnlockedIcons() -> [Icon] {
-        var returnValue: [Icon] = []
-        for icon in Icon.all where icon.unlockTime <= Defaults[.timesUsed] {
-            returnValue.append(icon)
-        }
-
-        return returnValue.reversed()
-    }
-
     static func setAppIcon(to icon: Icon) {
         Defaults[.currentIcon] = icon.assetName
         refreshCurrentAppIcon()
@@ -67,36 +58,6 @@ enum IconManager {
         #endif
 
         log.info("Set app icon to: \(iconName)")
-    }
-
-    static func checkIfUnlockedNewIcon() {
-        guard Defaults[.notificationWhenIconUnlocked] else { return }
-
-        for icon in Icon.all where icon.unlockTime == Defaults[.timesUsed] {
-            let content = UNMutableNotificationContent()
-
-            content.title = Bundle.main.appName
-
-            if let message = icon.unlockMessage {
-                content.body = message
-            } else {
-                content.body = String(
-                    localized: "Icon Unlock Message",
-                    defaultValue: "You've unlocked a new icon: \(icon.name)!",
-                    comment: "Default message shown when a new icon is unlocked"
-                )
-            }
-
-            if let data = NSImage(named: icon.assetName)?.tiffRepresentation,
-               let attachment = UNNotificationAttachment.create(NSData(data: data)) {
-                content.attachments = [attachment]
-                content.userInfo = ["icon": icon.assetName]
-            }
-
-            content.categoryIdentifier = "icon_unlocked"
-
-            AppDelegate.sendNotification(content)
-        }
     }
 
     /// Best-effort deletion of the Dock's icon cache file, forcing it to rebuild on next access.

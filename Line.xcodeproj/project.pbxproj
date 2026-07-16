@@ -20,16 +20,16 @@
 		2A0260052FB2600000ABC026 /* WallpaperImageFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0260042FB2600000ABC026 /* WallpaperImageFetcherTests.swift */; };
 		2A0360012FC3600000ABC036 /* LineCoordinatorPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0360002FC3600000ABC036 /* LineCoordinatorPolicyTests.swift */; };
 		2A0510012FC5100000ABC051 /* CycleActionConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0510002FC5100000ABC051 /* CycleActionConfigurationTests.swift */; };
-		5A1000012FD1000000A10001 /* ApplicationInfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */; };
-		5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */; };
-		5A1000052FD1000000A10001 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */; };
-		5A1000072FD1000000A10001 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000082FD1000000A10001 /* LICENSE */; };
 		2A28B6292EE5050C00A1E26B /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 2A28B6282EE5050C00A1E26B /* Defaults */; };
 		2A70A4012FE1000000A70A40 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 2A70A4032FE1000000A70A40 /* Sparkle */; };
 		2A86890D2F80968A005B521B /* LineDockTile.plugin in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2A8689072F809625005B521B /* LineDockTile.plugin */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2AC4F4A82FDCAF1F00CB2FBE /* Scribe in Frameworks */ = {isa = PBXBuildFile; productRef = 2AF9238D2F540B1300F467FD /* Scribe */; };
 		2AC4F62C2FDCAF7100CB2FBE /* Luminare in Frameworks */ = {isa = PBXBuildFile; productRef = 2AC4F62B2FDCAF7100CB2FBE /* Luminare */; };
 		2AE091C72F81A22800EF6149 /* Scribe in Frameworks */ = {isa = PBXBuildFile; productRef = 2AE091C62F81A22800EF6149 /* Scribe */; };
+		5A1000012FD1000000A10001 /* ApplicationInfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */; };
+		5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */; };
+		5A1000052FD1000000A10001 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */; };
+		5A1000072FD1000000A10001 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000082FD1000000A10001 /* LICENSE */; };
 		F06D768A2DFF7A77007EEDA9 /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F06D76892DFF7A77007EEDA9 /* SkyLight.framework */; };
 /* End PBXBuildFile section */
 
@@ -78,11 +78,11 @@
 		2A0260042FB2600000ABC026 /* WallpaperImageFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperImageFetcherTests.swift; sourceTree = "<group>"; };
 		2A0360002FC3600000ABC036 /* LineCoordinatorPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineCoordinatorPolicyTests.swift; sourceTree = "<group>"; };
 		2A0510002FC5100000ABC051 /* CycleActionConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleActionConfigurationTests.swift; sourceTree = "<group>"; };
+		2A8689072F809625005B521B /* LineDockTile.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LineDockTile.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationInfrastructureTests.swift; sourceTree = "<group>"; };
 		5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashOverlapPolicyTests.swift; sourceTree = "<group>"; };
 		5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = THIRD_PARTY_NOTICES.md; sourceTree = "<group>"; };
 		5A1000082FD1000000A10001 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
-		2A8689072F809625005B521B /* LineDockTile.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LineDockTile.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		A848130C2BD1A8D100B02E93 /* .github */ = {isa = PBXFileReference; lastKnownFileType = folder; path = .github; sourceTree = "<group>"; };
 		A86AFD7529888B29008F4892 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A883642E298B7288005D6C19 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
@@ -620,7 +620,7 @@
 		2AC87FA62F09E3A600082F90 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Developer";
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Custom";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Line/Line.entitlements;
@@ -794,7 +794,7 @@
 		A8E59C45297F5E9B0064D4BA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Developer";
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Custom";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Line/Line.entitlements;
@@ -834,7 +834,7 @@
 		A8E59C46297F5E9B0064D4BA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Classic";
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Custom";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Line/Line.entitlements;
@@ -925,20 +925,20 @@
 				minimumVersion = 9.0.0;
 			};
 		};
-		2AC4F62A2FDCAF7100CB2FBE /* XCRemoteSwiftPackageReference "Luminare" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/MrKai77/Luminare";
-			requirement = {
-				kind = revision;
-				revision = 25056d7ac24b9a45a4225ea36da90329ea16d9a1;
-			};
-		};
 		2A70A4022FE1000000A70A40 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.0.0;
+			};
+		};
+		2AC4F62A2FDCAF7100CB2FBE /* XCRemoteSwiftPackageReference "Luminare" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MrKai77/Luminare";
+			requirement = {
+				kind = revision;
+				revision = 25056d7ac24b9a45a4225ea36da90329ea16d9a1;
 			};
 		};
 		2AF9238C2F540B1300F467FD /* XCRemoteSwiftPackageReference "Scribe" */ = {

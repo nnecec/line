@@ -15,9 +15,7 @@ import SwiftUI
 extension Defaults.Keys {
     // App icon customization and Dock presentation
     static let currentIcon = Key<String>("currentIcon", default: "AppIcon-Classic")
-    static let timesUsed = Key<Int>("timesUsed", default: 0)
     static let showDockIcon = Key<Bool>("showDockIcon", default: false)
-    static let notificationWhenIconUnlocked = Key<Bool>("notificationWhenIconUnlocked", default: true)
 }
 
 // MARK: - Keybinds Configuration
