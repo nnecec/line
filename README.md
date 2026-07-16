@@ -34,6 +34,32 @@ Do not install binaries shared through issues, pull requests, or unrelated downl
 
 Use Xcode 26.4 or a compatible Xcode 26 release. The `Line` scheme is used for local development and tests. `Line (GH ACTIONS)` exercises the release configuration used by CI.
 
+For local development, sign the `Line` target with an Apple Development identity. A free Apple ID is enough for this local signing path: add the account in Xcode Settings, create an Apple Development certificate, then choose the account's Personal Team in the `Line` target's Signing & Capabilities tab. This gives the app a stable designated requirement so macOS Accessibility permission survives rebuilds more reliably than ad hoc signing.
+
+Verify the local app is not ad hoc signed:
+
+```bash
+security find-identity -v -p codesigning
+xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug build
+codesign -dv --verbose=4 ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app 2>&1 | grep -E 'Authority=|TeamIdentifier=|Signature='
+codesign -dr - ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app 2>&1
+```
+
+If Line was previously granted Accessibility permission while ad hoc signed, reset the stale TCC record once and grant permission again to the newly signed app:
+
+```bash
+tccutil reset Accessibility com.nnecec.Line
+```
+
+To package a local Development-signed DMG for install/Accessibility testing (not for release distribution):
+
+```bash
+VERSION=0.0.1 scripts/release/build_local_signed_package.sh
+# or: make package-local VERSION=0.0.1
+```
+
+Do not use `scripts/release/build_unsigned_package.sh` for Accessibility testing: unsigned/ad hoc apps cannot keep a stable TCC grant.
+
 **快速开始**:
 
 ```bash

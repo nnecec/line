@@ -2,3 +2,5 @@
 "CFBundleDisplayName" = "Line";
 /* Copyright (human-readable) */
 "NSHumanReadableCopyright" = "Copyright © 2026 Line";
+/* Accessibility permission usage description */
+"NSAccessibilityUsageDescription" = "Line needs accessibility permission to manage and resize windows on your behalf.";

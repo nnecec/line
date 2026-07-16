@@ -5,7 +5,7 @@
 //  Created by nnecec on 2023-04-08.
 //
 
-import Defaults
+import AppKit
 import SwiftUI
 
 /// Stores and manages the accessibility permission state for Line.
@@ -14,6 +14,7 @@ final class AccessibilityManager {
     static let shared: AccessibilityManager = .init()
 
     private var permissionCheckerTask: Task<(), Never>!
+    private var activationRefreshObserver: NSObjectProtocol?
 
     private var continuations: [UUID: AsyncStream<Bool>.Continuation] = [:]
     private(set) var isGranted: Bool
@@ -37,10 +38,24 @@ final class AccessibilityManager {
                 self.yield(status)
             }
         }
+
+        self.activationRefreshObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                AccessibilityManager.shared.refreshStatus()
+            }
+        }
     }
 
     deinit {
         permissionCheckerTask.cancel()
+
+        if let activationRefreshObserver {
+            NotificationCenter.default.removeObserver(activationRefreshObserver)
+        }
 
         let currentContinuations = Array(continuations.values)
         continuations.removeAll()
@@ -95,13 +110,9 @@ final class AccessibilityManager {
     /// - Returns: whether the user granted the permission.
     @discardableResult
     static func requestAccess() -> Bool {
-        if getStatus() {
+        if shared.refreshStatus() {
             return true
         }
-
-        // In case Line is actually in the list, but the signature is different
-        resetAccessibility()
-        resetInputMonitoring()
 
         let alert = NSAlert()
         alert.messageText = .init(
@@ -123,6 +134,7 @@ final class AccessibilityManager {
 
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: true]
         let status = AXIsProcessTrustedWithOptions(options)
+        shared.yield(status)
 
         return status
     }
@@ -133,33 +145,15 @@ final class AccessibilityManager {
         AXIsProcessTrusted()
     }
 
-    /// Executes `/usr/bin/tccutil reset Accessibility <Bundle ID>`.
-    /// This fully removes any accessibility permissions the user may have previously granted to anything with Line's bundle ID.
-    private static func resetAccessibility() {
-        let process = Process()
-        process.executableURL = URL(filePath: "/usr/bin/tccutil")
-        process.arguments = ["reset", "Accessibility", Bundle.main.bundleID]
-
-        // Redirect output and errors to /dev/null
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-
-        try? process.run()
+    /// Re-reads the current TCC state and publishes any change.
+    /// - Returns: whether the app currently has accessibility permissions.
+    @discardableResult
+    func refreshStatus() -> Bool {
+        let status = Self.getStatus()
+        yield(status)
+        return status
     }
 
-    /// Executes `/usr/bin/tccutil reset ListenEvent <Bundle ID>`.
-    /// This fully removes any input monitoring permissions the user may have previously granted to anything with Line's bundle ID.
-    private static func resetInputMonitoring() {
-        let process = Process()
-        process.executableURL = URL(filePath: "/usr/bin/tccutil")
-        process.arguments = ["reset", "ListenEvent", Bundle.main.bundleID]
-
-        // Redirect output and errors to /dev/null
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-
-        try? process.run()
-    }
 }
 
 private extension Notification.Name {

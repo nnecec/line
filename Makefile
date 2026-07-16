@@ -1,6 +1,6 @@
 # Makefile for Line
 
-.PHONY: help test test-coverage build build-release lint format clean
+.PHONY: help test test-coverage build build-release package-local lint format clean
 
 help:
 	@echo "Line 开发命令:"
@@ -8,6 +8,7 @@ help:
 	@echo "  make test-coverage  - 运行测试并生成覆盖率报告"
 	@echo "  make build          - Debug 构建"
 	@echo "  make build-release  - Release 构建（无签名）"
+	@echo "  make package-local  - 本地 Development 签名 DMG（测辅助功能用）"
 	@echo "  make lint           - 运行 SwiftFormat 检查"
 	@echo "  make format         - 格式化代码"
 	@echo "  make clean          - 清理构建产物"
@@ -48,6 +49,12 @@ build-release:
 		-destination 'generic/platform=macOS' \
 		CODE_SIGNING_ALLOWED=NO \
 		build
+
+# 本地 Development 签名 DMG（测辅助功能；非正式发布）
+# 用法: make package-local
+# 或:   make package-local VERSION=0.0.1
+package-local:
+	scripts/release/build_local_signed_package.sh
 
 # Lint 检查
 lint:

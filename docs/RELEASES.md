@@ -2,6 +2,41 @@
 
 Official binaries come from GitHub Actions. Local Xcode archives are development artifacts unless the same signing, notarization, Sparkle, and verification steps are completed.
 
+## Local development signing
+
+Local builds should use an Apple Development certificate, which can be created from a free Apple ID in Xcode. This is enough for running Line on the developer's Mac and gives Accessibility permission a stable code signing requirement across rebuilds.
+
+This is not a release credential. Apple Development signing does not replace Developer ID signing, notarization, or the protected Sparkle appcast flow used for official binaries.
+
+To validate a local build:
+
+```bash
+security find-identity -v -p codesigning
+xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug build
+codesign -dv --verbose=4 ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app
+codesign -dr - ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app
+```
+
+The designated requirement should include the app identifier and Apple Development certificate, not only a `cdhash`. If macOS still shows Accessibility enabled but Line cannot use it after switching away from ad hoc signing, reset the old TCC row once:
+
+```bash
+tccutil reset Accessibility com.nnecec.Line
+```
+
+### Local Development-signed DMG
+
+`scripts/release/build_unsigned_package.sh` intentionally builds with `CODE_SIGNING_ALLOWED=NO`. Those packages have no stable designated requirement, so System Settings may show Accessibility enabled while `AXIsProcessTrusted()` still returns false.
+
+For local install/Accessibility testing, build a Development-signed package instead:
+
+```bash
+VERSION=1.2.3 scripts/release/build_local_signed_package.sh
+```
+
+Optional overrides: `CODE_SIGN_IDENTITY`, `DEVELOPMENT_TEAM`, `CONFIGURATION`, `SCHEME`, `BUILD_NUMBER`, `OUTPUT_DIR`.
+
+The script writes `Line-local.dmg` / `Line-local.zip` under `dist/`, verifies the app is Apple Development signed (not ad hoc), and prints the TCC reset command. These packages are not notarized and must not replace official Developer ID releases.
+
 ## Unsigned release without an Apple Developer membership
 
 The `Unsigned Release` workflow builds installable DMG and ZIP packages without Apple signing credentials. Push a three-component version tag for a commit on `main` to publish automatically:

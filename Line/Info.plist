@@ -13,6 +13,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>Line needs accessibility permissions to manage and resize windows on your behalf.</string>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
 	<key>NSDockTilePlugIn</key>
