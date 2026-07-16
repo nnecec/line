@@ -264,10 +264,9 @@ extension CGKeyCode {
         .kVK_ANSI_Keypad7: "7\u{20e3}",
         .kVK_ANSI_Keypad8: "8\u{20e3}",
         .kVK_ANSI_Keypad9: "9\u{20e3}",
-        // There's "⌧“ 'X In A Rectangle Box' (U+2327), "☒" 'Ballot Box with X' (U+2612), "×" 'Multiplication Sign' (U+00d7), "⨯" 'Vector or Cross Product' (U+2a2f), or a plain small x. All combined symbols appear bigger.
+        // There's “⌧” 'X In A Rectangle Box' (U+2327), “☒” 'Ballot Box with X' (U+2612), “×” 'Multiplication Sign' (U+00d7), “⨯” 'Vector or Cross Product' (U+2a2f), or a plain small x. All combined symbols appear bigger.
         .kVK_ANSI_KeypadClear: "☒\u{20e3}", // The combined symbol appears bigger than the other combined 'keycaps'
-        // TODO: Respect locale decimal separator ("." or ",")
-        .kVK_ANSI_KeypadDecimal: ".\u{20e3}",
+        .kVK_ANSI_KeypadDecimal: "\(Locale.current.decimalSeparator ?? ".")\u{20e3}",
         .kVK_ANSI_KeypadDivide: "/\u{20e3}",
         // "⏎" 'Return Symbol' (U+23CE) but "↩" 'Leftwards Arrow with Hook' (U+00d7) seems to be more common on macOS.
         .kVK_ANSI_KeypadEnter: "↩\u{20e3}", // The combined symbol appears bigger than the other combined 'keycaps'

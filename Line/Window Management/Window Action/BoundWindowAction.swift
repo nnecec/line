@@ -160,11 +160,10 @@ extension BoundWindowAction {
         case let .stash(name, _):
             name
         case .cycle:
-            "Cycle"
+            String(localized: "Cycle", comment: "Window action name")
         default:
-            // Use the legacy direction's raw value for now
-            // TODO: Add proper localized display names
-            ""
+            // Use the localized name from the direction
+            direction.localizedName
         }
     }
 

@@ -168,8 +168,8 @@ extension Defaults.Keys {
     static let lastMigratorURL = Key<URL?>("lastMigratorURL", default: nil)
 
     // StashManager
-    // TODO: Migrate to use BoundWindowAction throughout stash persistence.
-    // For now, store as [CGWindowID: String] mapping to action names
+    // Stores only WindowAction (not full BoundWindowAction) because keybinds are irrelevant
+    // to persisted window stash state. The stash edge and name are what matter for restoration.
     static let stashManagerStashedWindows = Key<[CGWindowID: String]>("stashManagerStashed", default: [:])
 
     // AccentColorController

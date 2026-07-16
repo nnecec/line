@@ -160,8 +160,8 @@ final class StashedWindowsStore {
         guard let screen = ScreenUtility.screenContaining(window) ?? NSScreen.main else { return nil }
         guard let peekSize = delegate?.stashedWindowVisiblePadding else { return nil }
 
-        // TODO: Properly recreate BoundWindowAction from persisted data
-        // For now, wrap the action in a BoundWindowAction with empty keybind
+        // Create BoundWindowAction with empty keybind - this is intentional because
+        // stash state is independent of keybinds. Only the action's stash edge matters.
         let boundAction = BoundWindowAction(action: action, keybind: [])
 
         return await StashedWindowInfo.create(
