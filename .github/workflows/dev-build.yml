@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Check out selected ref
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -76,7 +76,18 @@ jobs:
           echo "APP_BUILD=$APP_BUILD" >> "$GITHUB_ENV"
 
       - name: Select Xcode
-        run: sudo xcode-select -s "/Applications/Xcode_26.4.app"
+        run: |
+          set -euo pipefail
+          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.app"
+          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
+          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.5.app"
+          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.6.app"
+          fi
+          xcodebuild -version
 
       - name: Build without signing credentials
         run: |
@@ -101,7 +112,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" dist/Line-unsigned.zip
 
       - name: Upload verification artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Line-unsigned-${{ github.run_number }}
           path: dist/Line-unsigned.zip
@@ -119,7 +130,7 @@ jobs:
 
     steps:
       - name: Add artifact link to pull request
-        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           APP_VERSION: ${{ needs.unsigned-build.outputs.app_version }}
           APP_BUILD: ${{ needs.unsigned-build.outputs.app_build }}
@@ -173,7 +184,7 @@ jobs:
 
     steps:
       - name: Check out trusted main
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -216,8 +227,18 @@ jobs:
           echo "already_published=$ALREADY_PUBLISHED" >> "$GITHUB_OUTPUT"
 
       - name: Select Xcode
-        if: ${{ steps.prerelease-state.outputs.already_published != 'true' }}
-        run: sudo xcode-select -s "/Applications/Xcode_26.4.app"
+        run: |
+          set -euo pipefail
+          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.app"
+          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
+          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.5.app"
+          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.6.app"
+          fi
+          xcodebuild -version
 
       - name: Install Developer ID certificate
         if: ${{ steps.prerelease-state.outputs.already_published != 'true' }}

@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Check out trusted main
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -156,7 +156,18 @@ jobs:
           shasum -a 256 -c SHA256SUMS.txt
 
       - name: Select Xcode
-        run: sudo xcode-select -s "/Applications/Xcode_26.4.app"
+        run: |
+          set -euo pipefail
+          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.app"
+          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
+          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.5.app"
+          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.6.app"
+          fi
+          xcodebuild -version
 
       - name: Resolve package dependencies and Sparkle tools
         run: |
@@ -276,7 +287,7 @@ jobs:
 
       - name: Attest release artifacts
         if: ${{ env.RELEASE_ALREADY_PUBLISHED != 'true' }}
-        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-path: |
             dist/Line.zip

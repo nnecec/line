@@ -29,15 +29,26 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
       - name: Select Xcode
-        run: sudo xcode-select -s "/Applications/Xcode_26.4.app"
+        run: |
+          set -euo pipefail
+          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.app"
+          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
+          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.5.app"
+          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.6.app"
+          fi
+          xcodebuild -version
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@1ad29ea4a422cce9a242a9fae469541dcd08addc # v4
+        uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
         with:
           languages: swift
           build-mode: manual
@@ -53,4 +64,4 @@ jobs:
             build
 
       - name: Analyze
-        uses: github/codeql-action/analyze@1ad29ea4a422cce9a242a9fae469541dcd08addc # v4
+        uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
