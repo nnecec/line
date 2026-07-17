@@ -1,10 +1,14 @@
 #!/bin/bash
-# Build unsigned (no Developer ID) installable packages:
+# Build installable packages:
 #   dist/Line-<VERSION>.zip
 #   dist/Line-<VERSION>.dmg
 #   dist/SHA256SUMS.txt
 #
+# Default: Apple Development–signed (stable Accessibility TCC).
+# Set ALLOW_UNSIGNED=1 to skip signing (verification / CI compile checks only).
+#
 # Requires VERSION (x.y.z) and optional BUILD_NUMBER (default: git commit count).
+# Optional: CODE_SIGN_IDENTITY, DEVELOPMENT_TEAM.
 
 set -euo pipefail
 
@@ -19,6 +23,9 @@ PRODUCTS_DIR="$OUTPUT_DIR/DerivedData/Build/Products/$CONFIGURATION"
 APP_PATH="$PRODUCTS_DIR/Line.app"
 ZIP_NAME="Line-${VERSION}.zip"
 DMG_NAME="Line-${VERSION}.dmg"
+ALLOW_UNSIGNED=${ALLOW_UNSIGNED:-0}
+DEVELOPMENT_TEAM=${DEVELOPMENT_TEAM:-3F4PBYM8L4}
+ENTITLEMENTS="$ROOT_DIR/Line/Line.entitlements"
 
 if [[ ! "$VERSION" =~ ^[0-9]+(\.[0-9]+){2}$ ]]; then
   echo "VERSION must look like 1.2.3." >&2
@@ -29,6 +36,70 @@ if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
   echo "BUILD_NUMBER must be a positive integer." >&2
   exit 1
 fi
+
+resolve_development_identity() {
+  if [[ -n "${CODE_SIGN_IDENTITY:-}" ]]; then
+    printf '%s\n' "$CODE_SIGN_IDENTITY"
+    return 0
+  fi
+
+  security find-identity -v -p codesigning |
+    sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' |
+    head -n 1
+}
+
+sign_app_development() {
+  local identity="$1"
+  local nested
+
+  echo "Signing with: $identity (team $DEVELOPMENT_TEAM)"
+
+  # Sign nested Mach-O first, then the app bundle (stable DR for Accessibility).
+  while IFS= read -r nested; do
+    [[ -n "$nested" ]] || continue
+    codesign --force --options runtime --timestamp=none --sign "$identity" "$nested"
+  done < <(
+    find "$APP_PATH/Contents" \
+      \( -name '*.framework' -o -name '*.dylib' -o -name '*.appex' -o -name '*.xpc' -o -name '*.plugin' \) \
+      2>/dev/null |
+      sort -r
+  )
+
+  if [[ -f "$ENTITLEMENTS" ]]; then
+    codesign --force --options runtime --timestamp=none \
+      --entitlements "$ENTITLEMENTS" \
+      --sign "$identity" \
+      "$APP_PATH"
+  else
+    codesign --force --options runtime --timestamp=none \
+      --sign "$identity" \
+      "$APP_PATH"
+  fi
+
+  codesign --verify --deep --strict "$APP_PATH"
+
+  local signing_info designated
+  signing_info=$(codesign -dv --verbose=4 "$APP_PATH" 2>&1)
+  echo "$signing_info"
+
+  if echo "$signing_info" | grep -q 'Signature=adhoc'; then
+    echo "App is still ad hoc signed; Accessibility permission will be unstable." >&2
+    exit 1
+  fi
+
+  if ! echo "$signing_info" | grep -q 'Authority=Apple Development'; then
+    echo "Expected an Apple Development authority on the signed app." >&2
+    exit 1
+  fi
+
+  designated=$(codesign -dr - "$APP_PATH" 2>&1)
+  echo "$designated"
+
+  if ! echo "$designated" | grep -q 'identifier "com.nnecec.Line"'; then
+    echo "Designated requirement is missing the app identifier." >&2
+    exit 1
+  fi
+}
 
 rm -rf \
   "$OUTPUT_DIR/dmg-root" \
@@ -41,6 +112,8 @@ rm -f \
   "$OUTPUT_DIR/Line-unsigned.dmg"
 mkdir -p "$OUTPUT_DIR"
 
+# Build unsigned, then apply Development signature. Avoids Automatic signing /
+# Apple portal access on CI (free Apple ID + imported .p12 is enough).
 xcodebuild \
   -project Line.xcodeproj \
   -scheme "Line (GH ACTIONS)" \
@@ -59,11 +132,24 @@ ACTUAL_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Co
 test "$ACTUAL_VERSION" = "$VERSION"
 test "$ACTUAL_BUILD" = "$BUILD_NUMBER"
 
+if [[ "$ALLOW_UNSIGNED" == "1" ]]; then
+  echo "ALLOW_UNSIGNED=1: skipping code signature (Accessibility will be unstable)."
+else
+  IDENTITY=$(resolve_development_identity)
+  if [[ -z "$IDENTITY" ]]; then
+    echo "No Apple Development identity found." >&2
+    echo "Import a Development .p12 (CI secrets) or create a certificate in Xcode," >&2
+    echo "or set CODE_SIGN_IDENTITY. For unsigned packages only, set ALLOW_UNSIGNED=1." >&2
+    exit 1
+  fi
+  sign_app_development "$IDENTITY"
+fi
+
 ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$OUTPUT_DIR/$ZIP_NAME"
 
 mkdir -p "$OUTPUT_DIR/dmg-root"
 ditto "$APP_PATH" "$OUTPUT_DIR/dmg-root/Line.app"
-ln -s /Applications "$OUTPUT_DIR/dmg-root/Applications"
+ln -sf /Applications "$OUTPUT_DIR/dmg-root/Applications"
 
 hdiutil create \
   -volname Line \

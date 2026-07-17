@@ -191,6 +191,20 @@ jobs:
         run: |
           echo "dry_run: would re-sign Line-${{ steps.mode.outputs.latest_version }}.zip and open appcast PR for ${{ steps.mode.outputs.latest_tag }} (no publish)."
 
+      - name: Install Apple Development certificate
+        if: ${{ steps.mode.outputs.mode == 'full' }}
+        env:
+          APPLE_DEVELOPMENT_CERT_BASE64: ${{ secrets.APPLE_DEVELOPMENT_CERT_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: |
+          set -euo pipefail
+          bash scripts/release/install_development_cert.sh
+          if [[ -n "${DEVELOPMENT_TEAM:-}" ]]; then
+            echo "DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM" >> "$GITHUB_ENV"
+          fi
+
       - name: Run semantic-release
         if: ${{ steps.mode.outputs.mode == 'full' }}
         id: release
@@ -269,11 +283,12 @@ jobs:
           **Distribution notes**
 
           - Assets: \`Line-${APP_VERSION}.zip\`, \`Line-${APP_VERSION}.dmg\`, \`SHA256SUMS.txt\`
-          - This build is **not** signed with an Apple Developer ID and is **not** notarized. macOS may require manual approval under Privacy & Security.
+          - Signed with an **Apple Development** certificate (free Apple ID) so Accessibility permission can stick. **Not** Developer ID signed and **not** notarized.
+          - First launch: right-click the app → **Open**, then grant **Accessibility** in System Settings → Privacy & Security.
           - In-app Sparkle updates apply only after the \`automation/appcast-${RELEASE_TAG}\` pull request is merged into \`main\`.
           EOF
           )
-          if ! grep -q 'not notarized' <<<"$BODY"; then
+          if ! grep -q 'Apple Development' <<<"$BODY"; then
             BODY="${BODY}${NOTICE}"
           fi
           gh release edit "$RELEASE_TAG" --prerelease=false --latest --notes "$BODY"

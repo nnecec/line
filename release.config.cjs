@@ -2,7 +2,7 @@
  * semantic-release config for Line open-source GitHub releases.
  *
  * - Version from Conventional Commits on main
- * - prepare: build Line-<version>.zip/dmg (no Developer ID)
+ * - prepare: build Development-signed Line-<version>.zip/dmg (not notarized)
  * - github: full Release (not prerelease) with assets
  * - no npm, no CHANGELOG.md commit
  * - appcast PR is handled by the workflow after publish
@@ -68,11 +68,11 @@ module.exports = {
         assets: [
           {
             path: "dist/Line-*.zip",
-            label: "Line macOS zip (not Apple-notarized)"
+            label: "Line macOS zip (Apple Development–signed, not notarized)"
           },
           {
             path: "dist/Line-*.dmg",
-            label: "Line macOS dmg (not Apple-notarized)"
+            label: "Line macOS dmg (Apple Development–signed, not notarized)"
           },
           {
             path: "dist/SHA256SUMS.txt",

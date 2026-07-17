@@ -166,8 +166,8 @@ struct AboutConfigurationView: View {
             Text("Updates", comment: "Section header shown in settings")
         } footer: {
             Text(
-                "Official Line releases are signed with a Developer ID certificate, notarized by Apple, and published through GitHub Releases.",
-                comment: "Footer describing the signing, notarization, and distribution of official releases"
+                "Official Line releases are signed with a free Apple Development certificate and published through GitHub Releases. They are not notarized; grant Accessibility in System Settings after the first launch.",
+                comment: "Footer describing the signing and distribution of official releases"
             )
             .foregroundStyle(.secondary)
         }

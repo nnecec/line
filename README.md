@@ -26,7 +26,7 @@ Official packages are published on [GitHub Releases](https://github.com/nnecec/L
 - `Line-X.Y.Z.zip`
 - `SHA256SUMS.txt`
 
-These builds are produced on GitHub Actions **without** an Apple Developer ID certificate and are **not** notarized. macOS may require you to allow the app under Privacy & Security (or open it via right-click → Open). Prefer assets from this repository’s Releases page only.
+These builds are produced on GitHub Actions with a free **Apple Development** signature so Accessibility permission can stick. They are **not** Developer ID signed and **not** notarized. First launch: right-click → **Open**, then enable Line under System Settings → Privacy & Security → **Accessibility**. Prefer assets from this repository’s Releases page only.
 
 In-app **Check for Updates** uses Sparkle and the feed at [`appcast.xml`](appcast.xml) on `main`. That file is updated through a reviewable pull request after each publish; until that PR is merged, GitHub Releases may already have the new build while the app still reports “up to date.”
 
@@ -46,7 +46,12 @@ open Line.xcodeproj
 
 semantic-release chooses the next `vX.Y.Z` tag, builds packages, creates a full GitHub Release, then opens an appcast PR. Details: [docs/RELEASES.md](docs/RELEASES.md).
 
-Required repository secret: `SPARKLE_PRIVATE_KEY` (Ed25519 seed matching `SPARKLE_PUBLIC_ED_KEY` in `Line/Config.xcconfig`).
+Required repository secrets:
+
+- `SPARKLE_PRIVATE_KEY` (Ed25519 seed matching `SPARKLE_PUBLIC_ED_KEY` in `Line/Config.xcconfig`)
+- `APPLE_DEVELOPMENT_CERT_BASE64`, `P12_PASSWORD`, `KEYCHAIN_PASSWORD` (free Apple Development `.p12` for Accessibility-stable Release builds)
+
+See [docs/RELEASES.md](docs/RELEASES.md) for exporting the certificate.
 
 ## Build and test
 
@@ -64,7 +69,7 @@ make help
 ```
 
 ```bash
-VERSION=0.1.0 scripts/release/build_package.sh   # dist/Line-0.1.0.{zip,dmg}
+VERSION=0.1.0 scripts/release/build_package.sh   # Development-signed dist/Line-0.1.0.{zip,dmg}
 mint run swiftformat --lint . --reporter github-actions-log
 ```
 

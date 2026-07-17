@@ -3361,8 +3361,16 @@
         }
       }
     },
-    "Official Line releases are signed with a Developer ID certificate, notarized by Apple, and published through GitHub Releases." : {
-      "comment" : "Footer describing the signing, notarization, and distribution of official releases"
+    "Official Line releases are signed with a free Apple Development certificate and published through GitHub Releases. They are not notarized; grant Accessibility in System Settings after the first launch." : {
+      "comment" : "Footer describing the signing and distribution of official releases",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正式版 Line 使用免费的 Apple Development 证书签名，并通过 GitHub Releases 发布。未经公证；首次启动后请在系统设置中授予辅助功能权限。"
+          }
+        }
+      }
     },
     "OK" : {
       "localizations" : {
