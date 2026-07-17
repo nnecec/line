@@ -11,13 +11,18 @@ Line 是一个使用 Swift、SwiftUI 和 AppKit 构建的 macOS 26 窗口管理�
 ```bash
 xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line
 xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build
-xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS'
+# Required CI path (skip Accessibility e2e):
+xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS' \
+  -skip-testing:LineTests/EndToEndIntegrationTests
+# Or: make test-unit / make test-coverage
 xcodebuild -project Line.xcodeproj -scheme "Line (GH ACTIONS)" -configuration Release -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
 ruby scripts/release/update_appcast_test.rb
 mint run swiftformat --lint . --reporter github-actions-log
 ```
 
-本地调试使用 `Line` scheme。CI 和发布配置检查使用 `Line (GH ACTIONS)`。版本与 Sparkle 公钥位于 `Line/Config.xcconfig`，SwiftPM 锁定结果位于 `Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`。
+本地调试使用 `Line` scheme。CI 的必过 job 是 unit tests + 计算器覆盖率下限；`EndToEndIntegrationTests` 单独 job，无权限时用 `XCTSkip`。发布配置检查使用 `Line (GH ACTIONS)`。
+
+公开发版使用 **Publish** 工作流（仅 `workflow_dispatch` on `main`）：semantic-release 按 Conventional Commits 计算 `vX.Y.Z`，产物为 `Line-X.Y.Z.zip` / `Line-X.Y.Z.dmg` / `SHA256SUMS.txt`（无 Developer ID），正式 GitHub Release，再用 `SPARKLE_PRIVATE_KEY` 签 zip 并开 `automation/appcast-vX.Y.Z` PR。Sparkle 公钥在 `Line/Config.xcconfig`；`Config` 里的 VERSION 可为 `0.0.0`，打包时注入版本。Node 发版依赖见根目录 `package.json` / `package-lock.json`（仅 tooling）。
 
 ## 现行架构
 

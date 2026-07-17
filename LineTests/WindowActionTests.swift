@@ -523,6 +523,44 @@ final class WindowActionMigrationTests: XCTestCase {
         XCTAssertEqual(undoResult.frame, currentFrame, accuracy: 0.01)
     }
 
+    func testSpecialFrameActionsReturnZeroWithoutRecordOrWindowProperties() {
+        let actions: [WindowAction] = [
+            .special(.undo),
+            .special(.initialFrame)
+        ]
+
+        for action in actions {
+            let request = WindowResizeRequest(
+                window: nil,
+                action: action,
+                screen: testScreen,
+                bounds: testBounds,
+                padding: .zero,
+                windowProperties: nil,
+                record: nil
+            )
+            let result = WindowFrameResolver.calculateFrame(for: request)
+            XCTAssertEqual(result.frame, .zero, "\(action) should return zero without context")
+        }
+    }
+
+    func testNonGeometrySpecialActionsReturnZeroFrames() {
+        let actions: [WindowAction] = [
+            .special(.noAction),
+            .special(.noSelection),
+            .special(.hide),
+            .special(.minimize),
+            .special(.minimizeOthers)
+        ]
+
+        for action in actions {
+            let result = WindowFrameResolver.calculateFrame(for: makeRequest(action: action))
+            XCTAssertEqual(result.frame.size, .zero, "\(action) is not a frame action")
+            XCTAssertTrue(result.frame.origin.x.isFinite)
+            XCTAssertTrue(result.frame.origin.y.isFinite)
+        }
+    }
+
     func testCustomActionPreserveSizeUsesInjectedWindowProperties() {
         let action = makeCustomSizeModeAction(sizeMode: .preserveSize)
         let request = makeRequest(action: .custom(action))

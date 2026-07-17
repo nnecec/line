@@ -1,130 +1,108 @@
 # Release process
 
-Official binaries come from GitHub Actions. Local Xcode archives are development artifacts unless the same signing, notarization, Sparkle, and verification steps are completed.
+Line publishes **installable GitHub Release assets** from Actions without requiring an Apple Developer Program membership. Packages are **not** Developer ID signed and **not** notarized. In-app updates still use **Sparkle** and a signed `appcast.xml` feed.
+
+For local day-to-day Development signing (Accessibility testing only), see [Local development signing](#local-development-signing) at the end.
+
+## Supported publish path (current)
+
+Workflow: **`Publish`** (`.github/workflows/publish.yml`).
+
+| Trigger | Only `workflow_dispatch` on **`main` tip** |
+| --- | --- |
+| Version | **Git tags** `vX.Y.Z` from [Conventional Commits](https://www.conventionalcommits.org/) via **semantic-release** |
+| Assets | `Line-X.Y.Z.zip`, `Line-X.Y.Z.dmg`, `SHA256SUMS.txt` |
+| GitHub Release | **Full release** (Latest), not prerelease |
+| Code signature | `CODE_SIGNING_ALLOWED=NO` |
+| Sparkle | After Release succeeds, open `automation/appcast-vX.Y.Z` PR; **merge to enable in-app updates** |
+| Changelog | GitHub Release body only (no auto `CHANGELOG.md` commit) |
+
+### How to publish
+
+1. Merge releasable commits to `main` using Conventional Commits (`feat:`, `fix:`, `perf:`, `BREAKING CHANGE`, etc.).
+2. Wait until **CI** and **Lint** are green on that tip commit.
+3. Open **Actions → Publish → Run workflow** on `main`.
+   - `dry_run: true` — compute version, build packages, **do not** tag / Release / appcast.
+   - `dry_run: false` — full publish when there are releasable commits.
+
+```bash
+gh workflow run Publish --ref main -f dry_run=false
+gh run watch
+```
+
+### Version rules
+
+| Commits since last `v*` tag | Next version |
+| --- | --- |
+| only `fix` / `perf` / … patch types | patch (`x.y.z+1`) |
+| at least one `feat` | minor |
+| breaking (`!` or `BREAKING CHANGE`) | major |
+| no releasable commits | **skip** (job succeeds, nothing published) |
+
+**First release** (no prior `vX.Y.Z` tags): the workflow seeds a local-only bootstrap tag `v0.0.0` at the root commit so semantic-release stays on the `0.x` / conventional path (`0.0.1` / `0.1.0` / `1.0.0`) instead of jumping to `1.0.0` by default. That bootstrap tag is **not** pushed.
+
+`CFBundleShortVersionString` is the computed marketing version. `CFBundleVersion` is `git rev-list --count HEAD` on the release commit. `Line/Config.xcconfig` may remain `0.0.0` for day-to-day development; the package build injects VERSION / BUILD_NUMBER at archive time.
+
+### Asset names
+
+```text
+Line-0.1.0.zip
+Line-0.1.0.dmg
+SHA256SUMS.txt
+```
+
+Tag and Release name: `v0.1.0`. Do not use `Line-unsigned.*`.
+
+### Order of operations
+
+1. Require dispatch from current `main` tip; require successful **CI** + **Lint** runs for that SHA.
+2. If the latest GitHub Release already has the three assets but `appcast.xml` lacks that version → **appcast-only** repair (download assets, sign zip, open PR). No new tag.
+3. Otherwise run **semantic-release**:
+   - analyze commits → if no release, exit successfully;
+   - **build** packages (`scripts/release/build_package.sh`) before git/GitHub publish;
+   - create tag + **full** GitHub Release with assets;
+4. Attest build provenance (when not dry-run).
+5. Append distribution notes on the Release (not notarized; appcast PR required for Sparkle).
+6. Sign `Line-X.Y.Z.zip` with `SPARKLE_PRIVATE_KEY`, update `appcast.xml`, open **`automation/appcast-vX.Y.Z`** PR.
+
+If step 6 fails after step 3 succeeded, the Release **remains**. Re-run **Publish** on the same main tip to take the **appcast-only** path.
+
+### Secrets
+
+| Secret | Required for |
+| --- | --- |
+| `SPARKLE_PRIVATE_KEY` | Ed25519 seed (base64) matching `SPARKLE_PUBLIC_ED_KEY` in `Line/Config.xcconfig` — zip signing + appcast |
+
+No Apple Developer certificates are required for **Publish**.
+
+Store the private key only in GitHub Actions secrets. Never commit it.
+
+### Local package build
+
+```bash
+VERSION=0.1.0 BUILD_NUMBER=42 scripts/release/build_package.sh
+# writes dist/Line-0.1.0.zip, dist/Line-0.1.0.dmg, dist/SHA256SUMS.txt
+```
+
+`scripts/release/build_unsigned_package.sh` is a thin wrapper around the same script.
+
+### Trust model
+
+| Channel | Trust |
+| --- | --- |
+| GitHub Release download | SHA-256 + optional Actions provenance; **manual** Gatekeeper approval |
+| Sparkle in-app update | EdDSA of the zip against the public key embedded in the app; feed only after appcast PR merge |
+
+## Developer ID / notarized workflow (optional, paid)
+
+`.github/workflows/release.yml` remains for maintainers who later enroll in the Apple Developer Program. It is **not** required for the open-source Publish path above. See git history and that workflow for certificate, notarization, and immutable-release requirements.
 
 ## Local development signing
 
-Local builds should use an Apple Development certificate, which can be created from a free Apple ID in Xcode. This is enough for running Line on the developer's Mac and gives Accessibility permission a stable code signing requirement across rebuilds.
-
-This is not a release credential. Apple Development signing does not replace Developer ID signing, notarization, or the protected Sparkle appcast flow used for official binaries.
-
-To validate a local build:
+Local builds should use an Apple Development certificate from a free Apple ID when testing Accessibility. This is not a release credential.
 
 ```bash
-security find-identity -v -p codesigning
-xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug build
-codesign -dv --verbose=4 ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app
-codesign -dr - ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app
+VERSION=0.0.1 scripts/release/build_local_signed_package.sh
 ```
 
-The designated requirement should include the app identifier and Apple Development certificate, not only a `cdhash`. If macOS still shows Accessibility enabled but Line cannot use it after switching away from ad hoc signing, reset the old TCC row once:
-
-```bash
-tccutil reset Accessibility com.nnecec.Line
-```
-
-### Local Development-signed DMG
-
-`scripts/release/build_unsigned_package.sh` intentionally builds with `CODE_SIGNING_ALLOWED=NO`. Those packages have no stable designated requirement, so System Settings may show Accessibility enabled while `AXIsProcessTrusted()` still returns false.
-
-For local install/Accessibility testing, build a Development-signed package instead:
-
-```bash
-VERSION=1.2.3 scripts/release/build_local_signed_package.sh
-```
-
-Optional overrides: `CODE_SIGN_IDENTITY`, `DEVELOPMENT_TEAM`, `CONFIGURATION`, `SCHEME`, `BUILD_NUMBER`, `OUTPUT_DIR`.
-
-The script writes `Line-local.dmg` / `Line-local.zip` under `dist/`, verifies the app is Apple Development signed (not ad hoc), and prints the TCC reset command. These packages are not notarized and must not replace official Developer ID releases.
-
-## Unsigned release without an Apple Developer membership
-
-The `Unsigned Release` workflow builds installable DMG and ZIP packages without Apple signing credentials. Push a three-component version tag for a commit on `main` to publish automatically:
-
-```bash
-git tag v1.2.3
-git push origin v1.2.3
-```
-
-The workflow can also be dispatched manually from `main` with a version input. It creates `Line-unsigned.dmg`, `Line-unsigned.zip`, and `SHA256SUMS.txt`, verifies the uploaded assets, records GitHub build provenance, and then publishes a GitHub prerelease. The build number is the commit count on `main`, and one semantic version tag is allowed per release commit.
-
-These packages are not signed with a Developer ID and are not notarized. macOS may require the user to approve the app manually in Privacy & Security. The unsigned workflow does not update `appcast.xml`; Sparkle updates still require an archive signed with the private key matching `SPARKLE_PUBLIC_ED_KEY`.
-
-Use the same packaging flow locally:
-
-```bash
-VERSION=1.2.3 scripts/release/build_unsigned_package.sh
-```
-
-Set `BUILD_NUMBER` to override the default Git commit count or `OUTPUT_DIR` to choose another destination. By default, packages are written to `dist/`.
-
-## Repository setup
-
-Before the first release:
-
-1. Create the public `nnecec/Line` repository and make `main` the default branch.
-2. Protect `main`. Require CI, Lint, CodeQL, and Secret Scan, require pull requests, block force pushes and branch deletion, and require review for workflow changes.
-3. Enable secret scanning, push protection, Dependabot alerts, private vulnerability reporting, immutable releases, and GitHub Actions artifact attestations.
-4. Create protected GitHub environments named `development-release` and `stable-release`. Require maintainer approval for both and restrict their deployment branches to `main`.
-5. Allow the stable release workflow to create `automation/appcast-*` branches and pull requests. It does not push directly to `main`.
-
-## Required secrets
-
-Store signing credentials in the protected environments, not in repository files:
-
-| Secret | Purpose |
-| --- | --- |
-| `DEVELOPER_ID_CERT_BASE64` | Base64-encoded Developer ID Application certificate and private key in PKCS#12 format |
-| `P12_PASSWORD` | Password for the PKCS#12 file |
-| `KEYCHAIN_PASSWORD` | Temporary CI keychain password |
-| `REPOSITORY_POLICY_TOKEN` | Fine-grained token with read-only repository Administration permission, used only to require release immutability before publication |
-| `APPLE_TEAM_ID` | Apple Developer team identifier |
-| `APPLE_ID` | Apple account used by `notarytool` |
-| `APPLE_ID_PWD` | App-specific password used by `notarytool` |
-| `SPARKLE_PRIVATE_KEY` | Base64-encoded 32-byte Ed25519 seed matching `SPARKLE_PUBLIC_ED_KEY` |
-
-The Sparkle private key is available only to the appcast signing step. Certificate and Apple credentials are limited to their signing or notarization steps.
-
-## Stable release
-
-Update `VERSION` and `BUILD_NUMBER` in `Line/Config.xcconfig` through a reviewed pull request before releasing. The version must use three numeric components, and the build number must be a positive integer that has not shipped before.
-
-After that pull request is merged, dispatch the `Release` workflow from `main` with the same version, such as `1.4.4`.
-
-The workflow:
-
-1. Validates the version and monotonically increasing build in source control, branch, public Sparkle key, existing tag, appcast, and existing release state.
-2. Archives with Developer ID and exports the signed app.
-3. Notarizes and staples the app, then verifies it with `codesign`, `stapler`, and `spctl`.
-4. Creates a Sparkle ZIP and notarized DMG, plus `SHA256SUMS.txt`.
-5. Creates GitHub Actions provenance attestations.
-6. Uploads assets to a draft release, downloads them again, and verifies their names and checksums.
-7. Publishes the immutable GitHub Release, verifies its release and asset attestations, verifies Actions provenance, and inspects the released app's signature, Team ID, version, update feed, and public key.
-8. Derives the public key from the protected Sparkle private seed, requires it to match the key embedded in the verified app, signs the ZIP, and validates the generated appcast XML.
-9. Opens an `automation/appcast-vX.Y.Z` pull request. The update feed changes only after that pull request passes CI and is merged.
-
-Publishing the Release before opening the appcast pull request avoids an update feed that points to missing assets. If Release publication succeeds but appcast PR creation fails, rerun the same workflow from the same `main` commit. The workflow requires every published asset, verifies the immutable Release attestation and Actions provenance, inspects the signed app, and rebuilds the appcast entry from the released ZIP. The release timestamp makes that entry deterministic. If an appcast branch or pull request already exists, its feed must match the regenerated result.
-
-If release immutability was not enabled, the workflow stops before loading the Sparkle private key or updating the feed. Remove that mutable release, enable immutability, and rerun from the same commit.
-
-## Development builds
-
-The `Development Build` workflow always creates an unsigned verification artifact without loading signing credentials. It can run on a branch and can comment on a matching pull request.
-
-The optional prerelease job runs only when the workflow is dispatched from `main`. It uses the protected `development-release` environment, creates a Developer ID signed and notarized ZIP, uploads it to a draft, verifies the downloaded checksum, and then publishes a uniquely tagged immutable prerelease. Rerunning an already published prerelease verifies its assets and exits without attempting to modify them.
-
-## Manual verification
-
-After a stable release and appcast merge:
-
-```bash
-gh release download vX.Y.Z --pattern 'Line.zip' --pattern 'Line.dmg' --pattern 'SHA256SUMS.txt'
-gh release verify vX.Y.Z
-gh release verify-asset vX.Y.Z Line.zip
-gh attestation verify Line.zip --repo nnecec/Line
-shasum -a 256 -c SHA256SUMS.txt
-codesign --verify --deep --strict /Applications/Line.app
-spctl --assess --type execute --verbose=2 /Applications/Line.app
-```
-
-Open the previous official version, run Check for Updates, install the new version, and confirm the version and build number after relaunch.
+Writes `Line-local.dmg` / `Line-local.zip` under `dist/`. Not for public distribution.

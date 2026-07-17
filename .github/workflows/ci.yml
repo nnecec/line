@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build and Test
+  unit-tests:
+    name: Unit Tests and Coverage
     runs-on: macos-26
     timeout-minutes: 45
 
@@ -38,8 +38,22 @@ jobs:
       - name: Build Line
         run: xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build
 
-      - name: Test Line
-        run: xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS'
+      - name: Run unit tests with coverage
+        run: |
+          set -euo pipefail
+          # End-to-end tests need Accessibility + a real frontmost window.
+          # Keep them out of the required unit job so CI green means pure logic passed.
+          xcodebuild test \
+            -project Line.xcodeproj \
+            -scheme Line \
+            -destination 'platform=macOS' \
+            -skip-testing:LineTests/EndToEndIntegrationTests \
+            -enableCodeCoverage YES \
+            -resultBundlePath "$RUNNER_TEMP/UnitTests.xcresult" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Enforce calculator coverage floor
+        run: scripts/ci/check_calculator_coverage.sh "$RUNNER_TEMP/UnitTests.xcresult"
 
       - name: Smoke-archive release scheme
         run: |
@@ -53,3 +67,64 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             VERSION=1.2.3 \
             BUILD_NUMBER=123
+
+  integration-tests:
+    name: Integration Tests (Accessibility)
+    runs-on: macos-26
+    timeout-minutes: 30
+    # GitHub-hosted runners normally lack Accessibility permission.
+    # This job still runs so skip/pass counts are visible; it must not hide real failures.
+    continue-on-error: false
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "/Applications/Xcode_26.4.app"
+
+      - name: Resolve package dependencies
+        run: xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line
+
+      - name: Run end-to-end integration tests
+        id: integration
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          LOG="$RUNNER_TEMP/integration-tests.log"
+          # XCTSkip is a pass for xcodebuild. Real assertion failures still fail the job.
+          xcodebuild test \
+            -project Line.xcodeproj \
+            -scheme Line \
+            -destination 'platform=macOS' \
+            -only-testing:LineTests/EndToEndIntegrationTests \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$LOG"
+
+          # Match classic XCTest lines and newer "Test skipped/passed/failed" summaries.
+          SKIP_COUNT=$(grep -Eic 'Test Case .* skipped|Test skipped' "$LOG" || true)
+          FAIL_COUNT=$(grep -Eic 'Test Case .* failed|Test failed|failed \(' "$LOG" || true)
+          PASS_COUNT=$(grep -Eic 'Test Case .* passed|Test passed' "$LOG" || true)
+
+          {
+            echo "### Integration test summary"
+            echo ""
+            echo "| Result | Count |"
+            echo "| --- | ---: |"
+            echo "| passed | ${PASS_COUNT} |"
+            echo "| skipped | ${SKIP_COUNT} |"
+            echo "| failed | ${FAIL_COUNT} |"
+            echo ""
+            if [[ "$SKIP_COUNT" -gt 0 && "$PASS_COUNT" -eq 0 && "$FAIL_COUNT" -eq 0 ]]; then
+              echo "All integration cases were **explicitly skipped** (typical on runners without Accessibility permission or a controllable frontmost window)."
+              echo "Unit Tests and Coverage remains the required correctness gate."
+            elif [[ "$PASS_COUNT" -gt 0 ]]; then
+              echo "At least one integration case **executed** on this runner."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "passed=${PASS_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "skipped=${SKIP_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "failed=${FAIL_COUNT}" >> "$GITHUB_OUTPUT"

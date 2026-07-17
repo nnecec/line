@@ -20,36 +20,51 @@ xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line
 
 ## Build and test
 
-Run the core local checks below. CI also performs an unsigned archive smoke test for the Release scheme.
+Run the core local checks below. CI splits **unit** tests (required) from **integration** tests (real windows; usually skipped on GitHub-hosted runners).
 
-在提交 PR 前运行完整验证：
+Before opening a pull request:
 
 ```bash
-make test           # 所有测试
-make lint           # SwiftFormat 检查
-make build-release  # Release 构建验证
+make test-unit         # required CI path
+make lint              # SwiftFormat
+make build-release     # unsigned Release configuration
+# optional when you changed real-window behavior:
+make test-integration  # needs Accessibility + a frontmost window
+make test-coverage     # unit coverage + calculator floor
 ```
 
-或使用详细命令：
+Equivalent detailed commands:
 
 ```bash
 xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build
-xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS'
-xcodebuild -project Line.xcodeproj -scheme "Line (GH ACTIONS)" -configuration Release -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
+xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS' \
+  -skip-testing:LineTests/EndToEndIntegrationTests
+xcodebuild -project Line.xcodeproj -scheme "Line (GH ACTIONS)" -configuration Release \
+  -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
 ruby scripts/release/update_appcast_test.rb
 mint run swiftformat --lint . --reporter github-actions-log
 gitleaks git . --redact
 gitleaks dir . --redact
 ```
 
-Tests that manipulate real windows require Accessibility permission. Unit tests should use policy or calculation types that do not require permission whenever possible.
+### Test layers
+
+| Layer | What it proves | CI job |
+| --- | --- | --- |
+| Unit / policy / calculator | Geometry and state without controlling other apps | **Unit Tests and Coverage** (required) |
+| End-to-end integration | `WindowActionEngine` against a real frontmost window | **Integration Tests (Accessibility)** — cases `XCTSkip` without permission |
+| Manual | Multi-display, Stage Manager, grid UI, drag capture | PR checklist |
+
+Tests that manipulate real windows require Accessibility permission. Prefer policy or calculation types that do not need permission. When you touch a large coordinator or UI file, add or extend tests only for the pure seam you changed — do not expand the whole file for coverage theater.
+
+Calculator coverage for `WindowActionCalculator`, `CustomWindowActionCalculator`, `SpecialActionCalculator`, and `GridGeometry` is gated at a minimum line percentage in CI (`scripts/ci/check_calculator_coverage.sh`).
 
 ## Engineering rules
 
 - Keep application and UI work on the main actor where AppKit requires it.
 - Put window geometry calculations in testable domain types instead of views or event monitors.
 - Treat window titles, file paths, URLs, and application content as private. Do not add them to public logs, fixtures, screenshots, or issues.
-- Keep Sparkle as the only update implementation. Changes to signing, appcast generation, entitlements, or release URLs need tests and release documentation updates.
+- Keep Sparkle as the only update implementation. Changes to signing, appcast generation, entitlements, or release URLs need tests and release documentation updates. Public releases use the **Publish** workflow and Conventional Commits; see [docs/RELEASES.md](docs/RELEASES.md).
 - Access SkyLight through the existing symbol loader and preserve graceful fallback behavior.
 - Add user-facing strings to `Line/Localizable.xcstrings`.
 - Do not commit credentials, certificates, provisioning profiles, keychains, generated archives, DerivedData, or local planning notes.

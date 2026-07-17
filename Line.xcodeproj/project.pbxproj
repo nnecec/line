@@ -935,7 +935,7 @@
 			repositoryURL = "https://github.com/MrKai77/Luminare";
 			requirement = {
 				kind = revision;
-				revision = 25056d7ac24b9a45a4225ea36da90329ea16d9a1;
+				revision = d77be7db1f3db80e579ec6d85b2058b0dd1b968e;
 			};
 		};
 		2AF9238C2F540B1300F467FD /* XCRemoteSwiftPackageReference "Scribe" */ = {

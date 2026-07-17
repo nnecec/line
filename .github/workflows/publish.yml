@@ -1,0 +1,302 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview version, notes, and build packages without tag/Release/appcast"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: line-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Semantic release
+    runs-on: macos-26
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+      attestations: write
+      statuses: read
+      checks: read
+      actions: read
+
+    env:
+      APP_NAME: Line
+      MINIMUM_SYSTEM_VERSION: "26.0"
+      HUSKY: "0"
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Require main branch tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "Publish must be dispatched from main."
+            exit 1
+          fi
+          MAIN_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')
+          if [[ "$MAIN_SHA" != "$GITHUB_SHA" ]]; then
+            echo "Checkout $GITHUB_SHA is not the current main tip ($MAIN_SHA). Re-run from latest main."
+            exit 1
+          fi
+
+      - name: Require CI green on tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Require successful completed runs of CI and Lint for this commit.
+          require_workflow() {
+            local name="$1"
+            local json
+            json=$(gh run list \
+              --commit "$GITHUB_SHA" \
+              --workflow "$name" \
+              --json databaseId,conclusion,status,displayTitle \
+              --limit 20)
+            local ok
+            ok=$(echo "$json" | jq -r '[.[] | select(.status=="completed" and .conclusion=="success")] | length')
+            if [[ "$ok" -lt 1 ]]; then
+              echo "No successful completed run of workflow '$name' for $GITHUB_SHA."
+              echo "$json" | jq .
+              exit 1
+            fi
+            echo "OK: $name has a successful run for this commit."
+          }
+          require_workflow "CI"
+          require_workflow "Lint"
+
+      - name: Select Xcode
+        run: |
+          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
+            sudo xcode-select -s "/Applications/Xcode_26.4.app"
+          fi
+          xcodebuild -version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install release tooling
+        run: npm ci
+
+      - name: Seed virtual base tag for first release (local only)
+        run: |
+          set -euo pipefail
+          # semantic-release treats the first release as 1.0.0 unless a previous
+          # tag exists. Seed v0.0.0 at the root commit so conventional rules yield
+          # 0.0.1 / 0.1.0 / 1.0.0 as designed. Do not push this tag.
+          if ! git tag --list 'v[0-9]*' | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            ROOT=$(git rev-list --max-parents=0 HEAD | tail -1)
+            git tag v0.0.0 "$ROOT"
+            echo "Created local bootstrap tag v0.0.0 at $ROOT"
+          fi
+
+      - name: Detect appcast-only repair
+        id: mode
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          MODE=full
+
+          LATEST_TAG=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx 'v0.0.0' | head -1 || true)
+          if [[ -n "$LATEST_TAG" ]] && gh release view "$LATEST_TAG" >/dev/null 2>&1; then
+            VER="${LATEST_TAG#v}"
+            EXPECTED=$(printf '%s\n' "Line-${VER}.dmg" "Line-${VER}.zip" "SHA256SUMS.txt" | sort | paste -sd, -)
+            ASSETS_SORTED=$(gh release view "$LATEST_TAG" --json assets --jq '[.assets[].name] | sort | join(",")')
+            HAS_APPCAST_ITEM=$(ruby -rrexml/document -e '
+              doc = REXML::Document.new(File.read("appcast.xml"))
+              ver = ARGV[0]
+              items = REXML::XPath.match(doc, "//item")
+              found = items.any? { |i|
+                i.elements.to_a.find { |c| c.expanded_name == "sparkle:shortVersionString" }&.text == ver
+              }
+              puts found ? "yes" : "no"
+            ' "$VER")
+
+            if [[ "$ASSETS_SORTED" == "$EXPECTED" && "$HAS_APPCAST_ITEM" == "no" ]]; then
+              MODE=appcast-only
+              echo "Release $LATEST_TAG is complete but appcast is missing the entry → appcast-only."
+            elif [[ "$ASSETS_SORTED" != "$EXPECTED" ]]; then
+              echo "Warning: $LATEST_TAG assets are $ASSETS_SORTED (expected $EXPECTED). Continuing in full mode for the next version."
+            else
+              echo "Latest $LATEST_TAG is complete with appcast entry; full mode will compute the next version if commits allow."
+            fi
+          fi
+
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          if [[ -n "${LATEST_TAG:-}" ]]; then
+            echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+            echo "latest_version=${LATEST_TAG#v}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Publish mode: $MODE"
+
+      - name: Appcast-only repair
+        if: ${{ steps.mode.outputs.mode == 'appcast-only' && inputs.dry_run == false }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          RELEASE_TAG: ${{ steps.mode.outputs.latest_tag }}
+          APP_VERSION: ${{ steps.mode.outputs.latest_version }}
+        run: |
+          set -euo pipefail
+          test -n "${SPARKLE_PRIVATE_KEY:-}" || { echo "SPARKLE_PRIVATE_KEY secret is required for appcast."; exit 1; }
+
+          mkdir -p dist
+          gh release download "$RELEASE_TAG" \
+            --dir dist \
+            --pattern "Line-${APP_VERSION}.zip" \
+            --pattern "Line-${APP_VERSION}.dmg" \
+            --pattern "SHA256SUMS.txt"
+          (
+            cd dist
+            shasum -a 256 -c SHA256SUMS.txt
+          )
+
+          APP_BUILD=$(git rev-list --count "$(git rev-list -n 1 "$RELEASE_TAG")")
+          export APP_BUILD
+          export ZIP_PATH="dist/Line-${APP_VERSION}.zip"
+          export DERIVED_DATA="${{ github.workspace }}/dist/DerivedData"
+          bash scripts/release/open_appcast_pr.sh
+
+      - name: Appcast-only dry-run note
+        if: ${{ steps.mode.outputs.mode == 'appcast-only' && inputs.dry_run == true }}
+        run: |
+          echo "dry_run: would re-sign Line-${{ steps.mode.outputs.latest_version }}.zip and open appcast PR for ${{ steps.mode.outputs.latest_tag }} (no publish)."
+
+      - name: Run semantic-release
+        if: ${{ steps.mode.outputs.mode == 'full' }}
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          LOG="$RUNNER_TEMP/semantic-release.log"
+          EXTRA=()
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            EXTRA+=(--dry-run)
+          fi
+
+          # Capture next version from output when published / dry-run
+          npx semantic-release "${EXTRA[@]}" 2>&1 | tee "$LOG"
+
+          if grep -Eq 'There are no relevant changes|no new version is released|The next release version is not determined' "$LOG"; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            echo "No releasable conventional commits since the last tag. Nothing to publish."
+            {
+              echo "### Publish skipped"
+              echo "No releasable commits (need feat / fix / perf / breaking)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [[ -f dist/release-meta.env ]]; then
+            # shellcheck disable=SC1091
+            source dist/release-meta.env
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "build=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          else
+            # dry-run may still leave packages if prepare ran
+            if grep -Eo 'The next release version is [0-9]+\.[0-9]+\.[0-9]+' "$LOG" | tail -1; then
+              VER=$(grep -Eo 'The next release version is [0-9]+\.[0-9]+\.[0-9]+' "$LOG" | tail -1 | awk '{print $NF}')
+              echo "version=$VER" >> "$GITHUB_OUTPUT"
+              echo "tag=v$VER" >> "$GITHUB_OUTPUT"
+              echo "skipped=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Verify checksums after build
+        if: ${{ steps.mode.outputs.mode == 'full' && steps.release.outputs.skipped != 'true' && hashFiles('dist/SHA256SUMS.txt') != '' }}
+        run: |
+          set -euo pipefail
+          cd dist
+          shasum -a 256 -c SHA256SUMS.txt
+
+      - name: Attest build provenance
+        if: ${{ steps.mode.outputs.mode == 'full' && inputs.dry_run == false && steps.release.outputs.skipped != 'true' && steps.release.outputs.version != '' }}
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: |
+            dist/Line-${{ steps.release.outputs.version }}.dmg
+            dist/Line-${{ steps.release.outputs.version }}.zip
+            dist/SHA256SUMS.txt
+
+      - name: Annotate GitHub Release notes
+        if: ${{ steps.mode.outputs.mode == 'full' && inputs.dry_run == false && steps.release.outputs.skipped != 'true' && steps.release.outputs.tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Ensure full (non-prerelease) release and append trust notice.
+          BODY=$(gh release view "$RELEASE_TAG" --json body --jq '.body')
+          NOTICE=$(cat <<EOF
+
+          ---
+
+          **Distribution notes**
+
+          - Assets: \`Line-${APP_VERSION}.zip\`, \`Line-${APP_VERSION}.dmg\`, \`SHA256SUMS.txt\`
+          - This build is **not** signed with an Apple Developer ID and is **not** notarized. macOS may require manual approval under Privacy & Security.
+          - In-app Sparkle updates apply only after the \`automation/appcast-${RELEASE_TAG}\` pull request is merged into \`main\`.
+          EOF
+          )
+          if ! grep -q 'not notarized' <<<"$BODY"; then
+            BODY="${BODY}${NOTICE}"
+          fi
+          gh release edit "$RELEASE_TAG" --prerelease=false --latest --notes "$BODY"
+
+      - name: Open appcast pull request
+        if: ${{ steps.mode.outputs.mode == 'full' && inputs.dry_run == false && steps.release.outputs.skipped != 'true' && steps.release.outputs.tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          APP_VERSION: ${{ steps.release.outputs.version }}
+          APP_BUILD: ${{ steps.release.outputs.build }}
+          ZIP_PATH: dist/Line-${{ steps.release.outputs.version }}.zip
+          DERIVED_DATA: ${{ github.workspace }}/dist/DerivedData
+        run: |
+          set -euo pipefail
+          test -n "${SPARKLE_PRIVATE_KEY:-}" || { echo "SPARKLE_PRIVATE_KEY secret is required."; exit 1; }
+          test -n "${APP_BUILD:-}" || APP_BUILD=$(git rev-list --count HEAD)
+          export APP_BUILD
+          bash scripts/release/open_appcast_pr.sh
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Publish summary"
+            echo ""
+            echo "- mode: \`${{ steps.mode.outputs.mode }}\`"
+            echo "- dry_run: \`${{ inputs.dry_run }}\`"
+            echo "- version: \`${{ steps.release.outputs.version || steps.mode.outputs.latest_version || 'n/a' }}\`"
+            echo "- tag: \`${{ steps.release.outputs.tag || steps.mode.outputs.latest_tag || 'n/a' }}\`"
+            echo "- skipped: \`${{ steps.release.outputs.skipped || 'n/a' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -4,10 +4,12 @@ Describe the user-visible change and why it is needed.
 
 ## Verification
 
-- [ ] `xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build`
-- [ ] `xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS'`
+- [ ] `make test-unit` (or the equivalent `xcodebuild test` with `-skip-testing:LineTests/EndToEndIntegrationTests`)
 - [ ] `mint run swiftformat --lint . --reporter github-actions-log`
-- [ ] I tested any changed window behavior with more than one display when applicable.
+- [ ] Debug or Release build as appropriate (`make build` / `make build-release`)
+- [ ] If this PR changes real-window behavior: `make test-integration` with Accessibility granted, or explain why it was skipped
+- [ ] If this PR touches calculator / geometry code: `make test-coverage` (or rely on the CI calculator floor)
+- [ ] Multi-display / Stage Manager manual check when the change affects layout
 
 ## Safety and compatibility
 

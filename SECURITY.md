@@ -16,4 +16,4 @@ Line requires macOS Accessibility permission to move and resize windows. A proce
 
 Line dynamically loads private SkyLight symbols for optional window-management behavior. Missing symbols must disable the related feature without bypassing macOS permission checks.
 
-The release workflow is designed to build from protected `main`, sign with Developer ID, notarize with Apple, sign Sparkle archives with EdDSA, publish checksums, and generate GitHub artifact attestations. Only GitHub Releases produced by that workflow should be treated as official binaries.
+Official binaries are the GitHub Releases produced by the **Publish** workflow on protected `main`: unnotarized installable packages with SHA-256 checksums (and Actions provenance when enabled), plus Sparkle EdDSA signatures for the zip enclosure after the appcast PR is merged. Treat only assets from this repository’s Releases page as official. Optional Developer ID + notarization remains available in a separate workflow for maintainers who enroll in the Apple Developer Program.

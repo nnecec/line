@@ -28,7 +28,7 @@ Migrations in `Line/Migration` run during application startup. A migration shoul
 
 ## Updates
 
-Sparkle is the only supported updater. `SparkleUpdater` wraps the framework for application lifecycle and SwiftUI state. The app reads a signed appcast from GitHub and accepts archives signed by the EdDSA public key in `Line/Config.xcconfig`.
+Sparkle is the only supported updater. `SparkleUpdater` wraps the framework for application lifecycle and SwiftUI state. The app reads a signed appcast from GitHub (`appcast.xml` on `main`) and accepts zip archives signed by the EdDSA public key in `Line/Config.xcconfig`. GitHub Releases hold `Line-X.Y.Z` packages; the feed is updated through a post-publish pull request so in-app updates lag the Release until that PR merges.
 
 The application is not sandboxed. Do not enable Sparkle's installer launcher service unless App Sandbox is introduced together with the required XPC service and entitlements.
 

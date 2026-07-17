@@ -58,11 +58,20 @@ xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macO
 
 ### CI 环境
 
-在 CI 中运行集成测试需要特殊配置：
+GitHub Actions 的 **Integration Tests (Accessibility)** job 会单独运行本目录中的测试（`-only-testing:LineTests/EndToEndIntegrationTests`）。
 
-- CI 环境可能没有 Accessibility 权限
-- 某些测试可能需要跳过（使用 `XCTSkip`）
-- 建议使用专门的测试环境或模拟窗口
+期望行为：
+
+- 无 Accessibility 权限或没有可控前台窗口时，用例必须 **`XCTSkip`**（显式跳过），不能静默 `return` 后假装通过。
+- `XCTSkip` 对 `xcodebuild` 计为通过；job 会在 Step Summary 里打印 passed / skipped / failed 计数。
+- **真正的 assertion 失败仍会使 CI 失败**。
+- 合并门禁以 **Unit Tests and Coverage** 为准（跳过本类，并强制计算器覆盖率下限）。
+
+本地需要真实窗口时：
+
+```bash
+make test-integration
+```
 
 ## 测试限制
 

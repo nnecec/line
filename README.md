@@ -1,5 +1,9 @@
 # Line
 
+<p align="center">
+  <img src="logo.png" alt="Line logo" width="128" height="128">
+</p>
+
 Line is a keyboard, mouse, and grid-driven window manager for macOS. It is a personal fork of [MrKai77/Loop](https://github.com/MrKai77/Loop), based on upstream commit [9661bcb](https://github.com/MrKai77/Loop/tree/9661bcbba0ba6dae38838d712998f76ebd57cc66).
 
 Line targets macOS 26 and requires Accessibility permission to move and resize windows.
@@ -12,15 +16,21 @@ Line targets macOS 26 and requires Accessibility permission to move and resize w
 - Window cycling, padding, snapping, and edge stashing
 - Configurable appearance and app icons
 - Local automation through the `line://` URL scheme
-- Signed updates through Sparkle
+- In-app updates through Sparkle (after the appcast PR for a release is merged)
 
 ## Install
 
-Official binaries are published on the repository's [GitHub Releases](https://github.com/nnecec/Line/releases) page. Release artifacts built by the protected workflow are Developer ID signed, Apple-notarized, accompanied by SHA-256 checksums, and covered by GitHub artifact attestations.
+Official packages are published on [GitHub Releases](https://github.com/nnecec/Line/releases) as:
 
-The repository also supports unsigned releases for maintainers without an Apple Developer membership. These assets are named `Line-unsigned.dmg` and `Line-unsigned.zip`, include SHA-256 checksums and GitHub build provenance, but are not Apple-notarized. macOS may require manual approval in Privacy & Security before opening them.
+- `Line-X.Y.Z.dmg`
+- `Line-X.Y.Z.zip`
+- `SHA256SUMS.txt`
 
-Until an official release is available, build Line from source:
+These builds are produced on GitHub Actions **without** an Apple Developer ID certificate and are **not** notarized. macOS may require you to allow the app under Privacy & Security (or open it via right-click → Open). Prefer assets from this repository’s Releases page only.
+
+In-app **Check for Updates** uses Sparkle and the feed at [`appcast.xml`](appcast.xml) on `main`. That file is updated through a reviewable pull request after each publish; until that PR is merged, GitHub Releases may already have the new build while the app still reports “up to date.”
+
+### Build from source
 
 ```bash
 git clone https://github.com/nnecec/Line.git
@@ -28,80 +38,35 @@ cd Line
 open Line.xcodeproj
 ```
 
-Do not install binaries shared through issues, pull requests, or unrelated download sites.
+### Maintainers: publish a release
+
+1. Land Conventional Commits on `main` (`feat:`, `fix:`, …).
+2. Ensure **CI** and **Lint** are green on the tip.
+3. Run **Actions → Publish** (`dry_run` optional).
+
+semantic-release chooses the next `vX.Y.Z` tag, builds packages, creates a full GitHub Release, then opens an appcast PR. Details: [docs/RELEASES.md](docs/RELEASES.md).
+
+Required repository secret: `SPARKLE_PRIVATE_KEY` (Ed25519 seed matching `SPARKLE_PUBLIC_ED_KEY` in `Line/Config.xcconfig`).
 
 ## Build and test
 
-Use Xcode 26.4 or a compatible Xcode 26 release. The `Line` scheme is used for local development and tests. `Line (GH ACTIONS)` exercises the release configuration used by CI.
+Use Xcode 26.4 or a compatible Xcode 26 release. The `Line` scheme is for local development and tests. `Line (GH ACTIONS)` is the release configuration used by CI and Publish.
 
-For local development, sign the `Line` target with an Apple Development identity. A free Apple ID is enough for this local signing path: add the account in Xcode Settings, create an Apple Development certificate, then choose the account's Personal Team in the `Line` target's Signing & Capabilities tab. This gives the app a stable designated requirement so macOS Accessibility permission survives rebuilds more reliably than ad hoc signing.
-
-Verify the local app is not ad hoc signed:
+For local Accessibility testing, sign with an Apple Development identity (free Apple ID). See [docs/RELEASES.md](docs/RELEASES.md).
 
 ```bash
-security find-identity -v -p codesigning
-xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug build
-codesign -dv --verbose=4 ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app 2>&1 | grep -E 'Authority=|TeamIdentifier=|Signature='
-codesign -dr - ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/Line.app 2>&1
-```
-
-If Line was previously granted Accessibility permission while ad hoc signed, reset the stale TCC record once and grant permission again to the newly signed app:
-
-```bash
-tccutil reset Accessibility com.nnecec.Line
-```
-
-To package a local Development-signed DMG for install/Accessibility testing (not for release distribution):
-
-```bash
-VERSION=0.0.1 scripts/release/build_local_signed_package.sh
-# or: make package-local VERSION=0.0.1
-```
-
-Do not use `scripts/release/build_unsigned_package.sh` for Accessibility testing: unsigned/ad hoc apps cannot keep a stable TCC grant.
-
-**快速开始**:
-
-```bash
-# 运行所有测试
-make test
-
-# 运行测试并查看覆盖率
-make test-coverage
-
-# Debug 构建
+make test-unit         # required CI path
+make test-integration  # needs Accessibility
+make test-coverage     # unit + calculator floor
 make build
-
-# 查看所有命令
+make build-release
 make help
 ```
 
-**详细命令** (如果不使用 Makefile):
-
 ```bash
-xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line
-xcodebuild -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build
-xcodebuild test -project Line.xcodeproj -scheme Line -destination 'platform=macOS'
-xcodebuild -project Line.xcodeproj -scheme "Line (GH ACTIONS)" -configuration Release -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
-ruby scripts/release/update_appcast_test.rb
-```
-
-Build unsigned DMG and ZIP packages locally:
-
-```bash
-VERSION=1.2.3 scripts/release/build_unsigned_package.sh
-```
-
-The packages are written to `dist/`. Pushing a `vX.Y.Z` tag for a commit on `main` runs the `Unsigned Release` workflow and publishes the same packages as a GitHub prerelease.
-
-SwiftFormat is pinned through Mint:
-
-```bash
-brew install mint
+VERSION=0.1.0 scripts/release/build_package.sh   # dist/Line-0.1.0.{zip,dmg}
 mint run swiftformat --lint . --reporter github-actions-log
 ```
-
-Luminare and Scribe are pinned to exact revisions in `Package.resolved`. Review their upstream changes before updating those revisions.
 
 ## Architecture and automation
 
@@ -109,19 +74,14 @@ Luminare and Scribe are pinned to exact revisions in `Package.resolved`. Review 
 - [URL scheme](docs/URL_SCHEME.md)
 - [Release process](docs/RELEASES.md)
 - [Privacy](docs/PRIVACY.md)
-
-Line uses Sparkle as its only updater. Stable releases are built from protected `main`. The workflow publishes and verifies the GitHub Release before opening a pull request that updates `appcast.xml`. The update tool keeps older feed entries and replaces the current version idempotently.
+- [Logo assets](logo/LOGO.md)
 
 ## Contributing and support
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a pull request. Use GitHub's issue forms for bugs and feature requests. Security reports must follow [SECURITY.md](SECURITY.md), and general support expectations are in [SUPPORT.md](SUPPORT.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before sending a pull request. Use GitHub issue forms for bugs and features. Security: [SECURITY.md](SECURITY.md). Support: [SUPPORT.md](SUPPORT.md).
 
-Project participation follows the [Code of Conduct](CODE_OF_CONDUCT.md). Dependency and asset notices are recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Logo and icons
-
-Editable logo sources and final exports live in [`logo/`](logo/LOGO.md).
+[Code of Conduct](CODE_OF_CONDUCT.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 ## License and upstream credit
 
-Line is distributed under the [GNU General Public License v3](LICENSE). The original design and implementation came from [MrKai77/Loop](https://github.com/MrKai77/Loop). Review that project for upstream documentation, releases, and community support.
+Line is distributed under the [GNU General Public License v3](LICENSE). The original design and implementation came from [MrKai77/Loop](https://github.com/MrKai77/Loop).
