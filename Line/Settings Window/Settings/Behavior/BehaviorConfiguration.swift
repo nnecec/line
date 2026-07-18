@@ -119,7 +119,6 @@ struct BehaviorConfigurationView: View {
                     Button("Configure…") {
                         isPaddingConfigurationViewPresented = true
                     }
-                    .keyboardShortcut(.defaultAction)
                     .help("Open padding configuration")
                 }
             }
@@ -130,18 +129,17 @@ struct BehaviorConfigurationView: View {
 
     private var cursorSection: some View {
         Section {
-            // This can only be enabled when the preview is visible.
-            // Because when the preview is disabled, the window moves live with cursor movement,
-            // so moving the cursor would be unusable.
-            if previewVisibility {
-                Toggle(isOn: $moveCursorWithWindow) {
-                    SettingsRowLabel(
-                        "Move cursor with window",
-                        detail: "Keep the pointer near the arranged window after a move.",
-                        systemImage: "cursorarrow"
-                    )
-                }
+            // Preview must be visible: without it the window follows the cursor live.
+            Toggle(isOn: $moveCursorWithWindow) {
+                SettingsRowLabel(
+                    "Move cursor with window",
+                    detail: previewVisibility
+                        ? "Keep the pointer near the arranged window after a move."
+                        : "Requires “Show preview while arranging windows” in Preview settings.",
+                    systemImage: "cursorarrow"
+                )
             }
+            .disabled(!previewVisibility)
 
             Toggle(isOn: $resizeWindowUnderCursor) {
                 SettingsRowLabel(
@@ -151,16 +149,15 @@ struct BehaviorConfigurationView: View {
                 )
             }
 
-            // If the system WM is enabled, the window under the cursor requires focus.
-            if resizeWindowUnderCursor, !useSystemWindowManagerWhenAvailable {
-                Toggle(isOn: $focusWindowOnResize) {
-                    SettingsRowLabel(
-                        "Focus window on resize",
-                        detail: "Bring the targeted window forward before applying the resize.",
-                        systemImage: "scope"
-                    )
-                }
+            // System WM always focuses the window under the cursor.
+            Toggle(isOn: $focusWindowOnResize) {
+                SettingsRowLabel(
+                    "Focus window on resize",
+                    detail: "Bring the targeted window forward before applying the resize.",
+                    systemImage: "scope"
+                )
             }
+            .disabled(!resizeWindowUnderCursor || useSystemWindowManagerWhenAvailable)
         } header: {
             Text("Cursor", comment: "Section header shown in settings")
         }
@@ -170,16 +167,17 @@ struct BehaviorConfigurationView: View {
         Section {
             windowSnappingToggle
 
-            if windowSnapping {
-                Toggle(isOn: $suppressMissionControlOnTopDrag) {
-                    SettingsRowLabel(
-                        "Suppress Mission Control",
-                        detail: "Prevent Mission Control from opening when a dragged window touches the top edge.",
-                        systemImage: "rectangle.topthird.inset.filled"
-                    )
-                    .help("Whether to allow Mission Control to open when windows are dragged to the top of the screen.")
-                }
+            Toggle(isOn: $suppressMissionControlOnTopDrag) {
+                SettingsRowLabel(
+                    "Suppress Mission Control",
+                    detail: windowSnapping
+                        ? "Prevent Mission Control from opening when a dragged window touches the top edge."
+                        : "Requires window snapping to be enabled.",
+                    systemImage: "rectangle.topthird.inset.filled"
+                )
+                .help("Whether to allow Mission Control to open when windows are dragged to the top of the screen.")
             }
+            .disabled(!windowSnapping)
         } header: {
             Text("Window Snapping", comment: "Section header shown in settings")
         }
@@ -227,14 +225,14 @@ struct BehaviorConfigurationView: View {
                 )
             }
 
-            if respectStageManager {
-                SettingsSlider.pixels(
-                    title: "Stage strip size",
-                    value: $stageStripSize.doubleBinding,
-                    range: 50...250,
-                    step: 1
-                )
-            }
+            SettingsSlider.pixels(
+                title: "Stage strip size",
+                value: $stageStripSize.doubleBinding,
+                range: 50...250,
+                step: 1
+            )
+            .disabled(!respectStageManager)
+            .opacity(respectStageManager ? 1 : 0.45)
         } header: {
             Text("Stage Manager", comment: "Section header shown in settings")
         }

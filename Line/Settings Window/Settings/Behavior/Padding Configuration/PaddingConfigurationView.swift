@@ -62,9 +62,9 @@ struct PaddingConfigurationView: View {
                     Button {
                         isPresented = false
                     } label: {
-                        Text("Close", comment: "Label for a button that closes a modal window")
+                        Text("Done", comment: "Label for a button that dismisses a settings sheet")
                     }
-                    .keyboardShortcut(.cancelAction)
+                    .keyboardShortcut(.defaultAction)
                 }
             }
         }

@@ -179,7 +179,7 @@ struct KeybindsConfigurationView: View {
                 }
             }
         } header: {
-            Text("Settings", comment: "Section header shown in settings")
+            Text("Trigger Options", comment: "Section header shown in settings for trigger-related options")
         }
 
         if showCycleRestartOption || showCycleBackwardsOption {

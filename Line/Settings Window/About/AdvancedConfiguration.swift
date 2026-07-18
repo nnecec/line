@@ -167,7 +167,7 @@ struct AdvancedConfigurationView: View {
                 step: 5
             )
         } header: {
-            Text("General", comment: "Section header shown in settings")
+            Text("Performance", comment: "Section header shown in advanced settings for power and animation options")
         }
     }
 
