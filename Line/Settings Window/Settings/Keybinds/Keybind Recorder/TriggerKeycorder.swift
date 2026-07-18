@@ -69,7 +69,7 @@ struct TriggerKeycorder: View {
         } label: {
             if selectionKey.isEmpty {
                 Text(isActive ? "Set a trigger key…" : "None")
-                    .frame(height: 32)
+                    .frame(height: 36)
                     .padding(.horizontal, 12)
             } else {
                 HStack(spacing: 12) {
@@ -82,7 +82,7 @@ struct TriggerKeycorder: View {
                         }
                     }
                 }
-                .frame(height: 32)
+                .frame(height: 36)
                 .padding(.horizontal, 12)
             }
         }
@@ -122,7 +122,7 @@ struct TriggerKeycorder: View {
             startObservingKeys()
         } label: {
             Text("Change")
-                .frame(height: 32)
+                .frame(height: 36)
                 .padding(.horizontal, 12)
         }
         .keybindKeyCap(cornerRadius: 8)

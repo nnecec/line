@@ -25,21 +25,28 @@ struct CompactGridPreview: View {
         self.aspectRatio = aspectRatio
     }
 
+    /// Outer bezel radius; inner surface uses concentric radius (outer − padding).
+    private static let bezelRadius: CGFloat = 11
+    private static let bezelPadding: CGFloat = 7
+    private static var surfaceRadius: CGFloat { bezelRadius - bezelPadding }
+
     var body: some View {
         VStack(spacing: 5) {
             ZStack {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                RoundedRectangle(cornerRadius: Self.bezelRadius, style: .continuous)
                     .fill(Color(nsColor: .controlBackgroundColor))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .strokeBorder(.primary.opacity(0.16), lineWidth: 0.75)
+                        RoundedRectangle(cornerRadius: Self.bezelRadius, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.75)
                     }
+                    .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
 
                 GridPreviewSurface(
                     template: template,
-                    accentColor: accentColor
+                    accentColor: accentColor,
+                    cornerRadius: Self.surfaceRadius
                 )
-                .padding(7)
+                .padding(Self.bezelPadding)
             }
             .aspectRatio(monitorAspectRatio, contentMode: .fit)
             .overlay(alignment: .top) {
@@ -88,6 +95,7 @@ struct CompactGridPreview: View {
 private struct GridPreviewSurface: View {
     let template: GridTemplate
     let accentColor: Color
+    let cornerRadius: CGFloat
 
     var body: some View {
         GeometryReader { proxy in
@@ -105,7 +113,7 @@ private struct GridPreviewSurface: View {
             )
 
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(.black.opacity(0.9))
 
                 ForEach(0 ..< template.rows, id: \.self) { row in
@@ -125,9 +133,9 @@ private struct GridPreviewSurface: View {
                 )
             }
         }
-        .clipShape(.rect(cornerRadius: 6, style: .continuous))
+        .clipShape(.rect(cornerRadius: cornerRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
         }
     }

@@ -32,12 +32,13 @@ struct KeybindItemView: View {
     }
 
     var body: some View {
-        ZStack {
+        HStack(spacing: 8) {
             titleAndButtons
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(0)
 
             keybindCombination
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .layoutPriority(1)
         }
         .padding(.horizontal, 12)
         .onChange(of: action.direction) {
@@ -52,7 +53,7 @@ struct KeybindItemView: View {
     }
 
     private var titleAndButtons: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             label()
 
             Group {
@@ -61,6 +62,8 @@ struct KeybindItemView: View {
                         isConfiguringCustom = true
                     } label: {
                         Image(systemName: "slider.horizontal.3")
+                            .frame(minWidth: 28, minHeight: 28)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .sheet(isPresented: $isConfiguringCustom) {
@@ -92,6 +95,8 @@ struct KeybindItemView: View {
                         isConfiguringCycle = true
                     } label: {
                         Image(systemName: "repeat")
+                            .frame(minWidth: 28, minHeight: 28)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .sheet(isPresented: $isConfiguringCycle) {
@@ -146,6 +151,7 @@ struct KeybindItemView: View {
                     if hasDuplicateKeybinds {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)
+                            .transition(.opacity.combined(with: .scale(scale: 0.25)))
                             .help("There are other keybinds that conflict with this key combination.")
                     }
                 }

@@ -69,6 +69,8 @@ struct Keycorder: View {
                     .frame(width: 27, height: 27)
                     .font(.callout)
                     .keybindKeyCap(isHighlighted: isActive || isHovering)
+                    .frame(minWidth: 40, minHeight: 40)
+                    .contentShape(Rectangle())
             } else {
                 HStack(spacing: 4) {
                     // First show modifiers in order
@@ -93,6 +95,7 @@ struct Keycorder: View {
                     .font(.callout)
                     .keybindKeyCap(isHighlighted: isActive || isHovering)
                 }
+                .frame(minHeight: 40)
                 .contentShape(.rect)
             }
         }

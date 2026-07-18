@@ -71,6 +71,7 @@ struct AccentColorConfigurationView: View {
                     Image(systemName: "checkmark")
                         .foregroundStyle(.green)
                         .bold()
+                        .transition(.opacity.combined(with: .scale(scale: 0.25)))
                 }
             }
         }

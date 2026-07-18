@@ -240,11 +240,13 @@ private struct ScreenTemplateRow: View {
             .frame(height: 80)
         }
         .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor), in: .rect(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
-        }
+        .background(
+            Color(nsColor: .controlBackgroundColor),
+            in: .rect(cornerRadius: 12, style: .continuous)
+        )
+        .shadow(color: .black.opacity(0.06), radius: 1, y: 0)
+        .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
+        .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
         .onAppear(perform: synchronizeState)
         .onChange(of: defaultTemplate) { _, newDefault in
             if !useCustom {
