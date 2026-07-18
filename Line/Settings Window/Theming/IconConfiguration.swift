@@ -57,10 +57,7 @@ struct IconConfigurationView: View {
                 Text("Options", comment: "Section header shown in settings")
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden) // Liquid glass: transparent form background
-        .contentMarginsIfAvailable(.top, 8) // Breathing room below toolbar
-        .scrollEdgeEffectStyleSoftIfAvailable() // macOS 26 progressive blur
+        .settingsFormPanel()
         .alert(notificationPermissionTitle, isPresented: $model.showingNotificationSettingsAlert) {
             Button(String(localized: "Notification permits: open notification settings", defaultValue: "Open Settings")) {
                 openNotificationSettings()
@@ -141,24 +138,3 @@ private struct AppIconThumbnail: View {
     }
 }
 
-// MARK: - macOS 26 Availability Helper
-
-private extension View {
-    @ViewBuilder
-    func scrollEdgeEffectStyleSoftIfAvailable() -> some View {
-        if #available(macOS 26.0, *) {
-            scrollEdgeEffectStyle(.soft, for: .all)
-        } else {
-            self
-        }
-    }
-
-    @ViewBuilder
-    func contentMarginsIfAvailable(_ edges: Edge.Set, _ length: CGFloat) -> some View {
-        if #available(macOS 14.0, *) {
-            contentMargins(edges, length, for: .scrollContent)
-        } else {
-            self
-        }
-    }
-}

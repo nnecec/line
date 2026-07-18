@@ -58,10 +58,7 @@ struct AccentColorConfigurationView: View {
                 .animation(.default, value: useGradient)
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden) // Liquid glass: transparent form background
-        .contentMarginsIfAvailable(.top, 8) // Breathing room below toolbar
-        .scrollEdgeEffectStyleSoftIfAvailable() // macOS 26 progressive blur
+        .settingsFormPanel()
         .animation(.default, value: accentColorMode)
     }
 
@@ -102,24 +99,3 @@ struct AccentColorConfigurationView: View {
     }
 }
 
-// MARK: - macOS 26 Availability Helper
-
-private extension View {
-    @ViewBuilder
-    func scrollEdgeEffectStyleSoftIfAvailable() -> some View {
-        if #available(macOS 26.0, *) {
-            scrollEdgeEffectStyle(.soft, for: .all)
-        } else {
-            self
-        }
-    }
-
-    @ViewBuilder
-    func contentMarginsIfAvailable(_ edges: Edge.Set, _ length: CGFloat) -> some View {
-        if #available(macOS 14.0, *) {
-            contentMargins(edges, length, for: .scrollContent)
-        } else {
-            self
-        }
-    }
-}

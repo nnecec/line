@@ -32,20 +32,19 @@ struct SettingsContentView: View {
                     String(localized: "Settings sidebar section: Controls", defaultValue: "Controls"),
                     tabs: SettingsTab.settingsTabs
                 )
-                sidebarSection("Line", tabs: SettingsTab.loopTabs)
+                sidebarSection(
+                    String(localized: "Settings sidebar section: App", defaultValue: "App"),
+                    tabs: SettingsTab.loopTabs
+                )
             }
             .listStyle(.sidebar)
             .scrollEdgeEffectStyleSoftIfAvailable()
             .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 320)
         } detail: {
-            // Wrap detail view in ScrollView to push scrollbar to window edge
-            ScrollView {
-                state.currentTab.view()
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .navigationTitle(state.currentTab.title)
-            .scrollContentBackground(.hidden)
-            .settingsScrollEdgeEffect()
+            // Form panes own scrolling; wrapping in ScrollView creates nested scroll views.
+            state.currentTab.view()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .navigationTitle(state.currentTab.title)
         }
         .navigationSplitViewStyle(.balanced)
         .environmentObject(state)
@@ -55,11 +54,7 @@ struct SettingsContentView: View {
         Section(title) {
             ForEach(tabs) { tab in
                 Label {
-                    HStack {
-                        Text(tab.title)
-
-                        Spacer()
-                    }
+                    Text(tab.title)
                 } icon: {
                     tab.image
                 }
@@ -122,48 +117,5 @@ struct SettingsStatusBadge: View {
         Label(title, systemImage: systemImage)
             .font(.caption)
             .foregroundStyle(isProminent ? Color.accentColor : .secondary)
-    }
-}
-
-extension View {
-    @ViewBuilder
-    func settingsFormPanel(maxWidth: CGFloat = 520) -> some View {
-        if #available(macOS 14.0, *) {
-            formStyle(.grouped)
-                .scrollContentBackground(.hidden)
-                .contentMargins(.top, 16, for: .scrollContent)
-                .contentMargins(.horizontal, 24, for: .scrollContent)
-                .contentMargins(.bottom, 24, for: .scrollContent)
-                .frame(maxWidth: maxWidth + 48) // Content width plus horizontal padding
-        } else {
-            formStyle(.grouped)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .padding(.bottom, 24)
-                .frame(maxWidth: maxWidth + 48)
-        }
-    }
-
-    @ViewBuilder
-    func settingsScrollEdgeEffect() -> some View {
-        if #available(macOS 26.0, *) {
-            scrollEdgeEffectStyle(.soft, for: .all)
-        } else {
-            self
-        }
-    }
-}
-
-// MARK: - macOS 26 Availability Helper
-
-private extension View {
-    @ViewBuilder
-    func scrollEdgeEffectStyleSoftIfAvailable() -> some View {
-        if #available(macOS 26.0, *) {
-            scrollEdgeEffectStyle(.soft, for: .all)
-        } else {
-            self
-        }
     }
 }

@@ -13,6 +13,8 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
 
     case grid
     case preview
+    case icon
+    case accentColor
 
     case behavior
     case keybinds
@@ -26,6 +28,8 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
         switch self {
         case .grid: .init(localized: "Settings tab: Grid", defaultValue: "Grid")
         case .preview: .init(localized: "Settings tab: Preview", defaultValue: "Preview")
+        case .icon: .init(localized: "Settings tab: Icon", defaultValue: "Icon")
+        case .accentColor: .init(localized: "Settings tab: Accent Color", defaultValue: "Accent Color")
         case .behavior: .init(localized: "Settings tab: General", defaultValue: "General")
         case .keybinds: .init(localized: "Settings tab: Keyboard Shortcuts", defaultValue: "Keyboard Shortcuts")
         case .permissions: .init(localized: "Settings tab: Permissions", defaultValue: "Permissions")
@@ -39,6 +43,8 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
         switch self {
         case .grid: Image(systemName: "square.grid.3x3")
         case .preview: Image(systemName: "inset.filled.center.rectangle")
+        case .icon: Image(systemName: "app.fill")
+        case .accentColor: Image(systemName: "paintpalette.fill")
         case .behavior: Image(systemName: "gearshape.fill")
         case .keybinds: Image(systemName: "keyboard.fill")
         case .permissions: Image(systemName: "checkmark.shield.fill")
@@ -57,6 +63,8 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
                 Text("Grid configuration requires macOS 15.0 or later")
             }
         case .preview: PreviewConfigurationView()
+        case .icon: IconConfigurationView()
+        case .accentColor: AccentColorConfigurationView()
         case .behavior: BehaviorConfigurationView()
         case .keybinds: KeybindsConfigurationView()
         case .permissions: PermissionsConfigurationView()
@@ -66,7 +74,7 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
         }
     }
 
-    static let themingTabs: [Self] = [.grid, .preview]
+    static let themingTabs: [Self] = [.grid, .preview, .icon, .accentColor]
     static let settingsTabs: [Self] = [.behavior, .keybinds]
     static let loopTabs: [Self] = [.permissions, .advanced, .excludedApps, .about]
 }

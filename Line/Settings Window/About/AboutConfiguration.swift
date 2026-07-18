@@ -242,29 +242,3 @@ struct AboutConfigurationView: View {
     }
 }
 
-// MARK: - macOS 26 Availability Helper
-
-private extension View {
-    @ViewBuilder
-    func scrollEdgeEffectStyleSoftIfAvailable() -> some View {
-        if #available(macOS 26.0, *) {
-            scrollEdgeEffectStyle(.soft, for: .all)
-        } else {
-            self
-        }
-    }
-
-    @available(macOS 14.0, *)
-    func contentMarginsIfAvailable(_ edges: Edge.Set, _ length: CGFloat, for placement: ContentMarginPlacement) -> some View {
-        contentMargins(edges, length, for: placement)
-    }
-
-    @ViewBuilder
-    func contentMarginsIfAvailable(_ edges: Edge.Set, _ length: CGFloat) -> some View {
-        if #available(macOS 14.0, *) {
-            contentMargins(edges, length, for: .scrollContent)
-        } else {
-            self
-        }
-    }
-}
