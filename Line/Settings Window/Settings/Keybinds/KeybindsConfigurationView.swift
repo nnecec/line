@@ -85,30 +85,15 @@ struct KeybindsConfigurationView: View {
             // Show a diagnostic recovery prompt when stored keybinds are missing.
             if keybinds.isEmpty {
                 Section {
-                    VStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.red)
-
-                        Text("Keybind list is empty", comment: "Warning title shown when settings have no keybinds")
-                            .font(.headline)
-
-                        Text("This can make every keybind show a red warning icon. Restore the default configuration below.", comment: "Warning detail shown when settings have no keybinds")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Button {
+                    SettingsEmptyState(
+                        systemImage: "exclamationmark.triangle.fill",
+                        title: "Keybind list is empty",
+                        message: "This can make every keybind show a red warning icon. Restore the default configuration below.",
+                        actionTitle: "Restore Default Keybinds",
+                        action: {
                             keybinds = BoundWindowAction.defaultKeybinds
-                        } label: {
-                            Label("Restore Default Keybinds", systemImage: "arrow.counterclockwise")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
+                    )
                 }
             }
 
@@ -229,30 +214,25 @@ struct KeybindsConfigurationView: View {
         let duplicateKeybindIDs = conflictingKeybindIDs
 
         return Section {
-            HStack {
-                Button {
+            SettingsListToolbar(
+                onAdd: {
                     keybinds.insert(BoundWindowAction(action: .special(.noAction), keybind: []), at: 0)
-                } label: {
-                    Label("Add", systemImage: "plus")
-                }
-                .keyboardShortcut("n", modifiers: .command)
-                .help("Add a new keybind (⌘N)")
-
-                Button(role: .destructive) {
-                    removeSelectedKeybinds()
-                } label: {
-                    Label("Remove", systemImage: "minus")
-                }
-                .disabled(model.selectedKeybindIDs.isEmpty)
-                .keyboardShortcut(.delete)
-                .help("Remove selected keybinds (⌫)")
-
-                Spacer()
-            }
+                },
+                addHelp: "Add a new keybind (⌘N)",
+                addKeyboardShortcut: "n",
+                onRemove: removeSelectedKeybinds,
+                removeHelp: "Remove selected keybinds (⌫)",
+                canRemove: !model.selectedKeybindIDs.isEmpty
+            )
 
             List(selection: $model.selectedKeybindIDs) {
                 if keybinds.isEmpty {
-                    emptyKeybindsView
+                    SettingsEmptyState(
+                        systemImage: "keyboard",
+                        title: "No keybinds",
+                        message: "Press Add to add a keybind"
+                    )
+                    .listRowBackground(Color.clear)
                 } else {
                     ForEach($keybinds) { keybind in
                         KeybindItemView(
@@ -278,21 +258,6 @@ struct KeybindsConfigurationView: View {
         } footer: {
             Text("Select one shortcut to preview its action in the settings window.")
         }
-    }
-
-    private var emptyKeybindsView: some View {
-        HStack {
-            Spacer()
-            VStack {
-                Text("No keybinds")
-                    .font(.title3)
-                Text("Press \"Add\" to add a keybind")
-                    .font(.caption)
-            }
-            Spacer()
-        }
-        .foregroundStyle(.secondary)
-        .padding()
     }
 
     private func removeSelectedKeybinds() {

@@ -273,9 +273,17 @@ private struct ScreenTemplateRow: View {
             Spacer(minLength: 12)
 
             if useCustom {
-                SettingsStatusBadge(title: "Custom", systemImage: "slider.horizontal.3", isProminent: true)
+                SettingsStatusBadge(
+                    title: "Custom",
+                    systemImage: "slider.horizontal.3",
+                    style: .accent
+                )
             } else {
-                SettingsStatusBadge(title: "Default", systemImage: "arrow.triangle.2.circlepath")
+                SettingsStatusBadge(
+                    title: "Default",
+                    systemImage: "arrow.triangle.2.circlepath",
+                    style: .neutral
+                )
             }
         }
     }

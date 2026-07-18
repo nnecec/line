@@ -56,15 +56,24 @@ struct PermissionsConfigurationView: View {
         LabeledContent {
             HStack(spacing: 8) {
                 if model.isAccessibilityAccessGranted {
-                    SettingsStatusBadge(title: "Granted", systemImage: "checkmark.seal.fill", isProminent: true)
+                    SettingsStatusBadge(
+                        title: "Granted",
+                        systemImage: "checkmark.seal.fill",
+                        style: .success
+                    )
                 } else {
-                    SettingsStatusBadge(title: "Required", systemImage: "exclamationmark.triangle")
-                }
+                    SettingsStatusBadge(
+                        title: "Required",
+                        systemImage: "exclamationmark.triangle.fill",
+                        style: .warning
+                    )
 
-                Button("Request...") {
-                    _ = AccessibilityManager.requestAccess()
+                    Button("Request…") {
+                        _ = AccessibilityManager.requestAccess()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
                 }
-                .disabled(model.isAccessibilityAccessGranted)
             }
         } label: {
             SettingsRowLabel(

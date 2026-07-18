@@ -86,7 +86,9 @@ struct AboutConfigurationView: View {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(height: 60)
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .settingsImageOutline(cornerRadius: 12)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(productDisplayName)
@@ -99,17 +101,13 @@ struct AboutConfigurationView: View {
 
                 Spacer()
 
-                SettingsStatusBadge(
-                    title: "Installed",
-                    systemImage: "checkmark.seal",
-                    isProminent: true
-                )
-
                 Button {
                     model.copyVersionToClipboard()
                 } label: {
                     Label("Copy version", systemImage: "document.on.clipboard")
                         .labelStyle(.iconOnly)
+                        .frame(minWidth: 28, minHeight: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
                 .help("Copy version to clipboard")
@@ -188,7 +186,7 @@ struct AboutConfigurationView: View {
             } label: {
                 Label("Send Feedback", systemImage: "bubble.left")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.borderedProminent)
             .controlSize(.large)
         } header: {
             Text("Community", comment: "Section header shown in settings")
@@ -210,12 +208,9 @@ struct AboutConfigurationView: View {
             credit.avatar
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(height: 40)
-                .overlay {
-                    Circle()
-                        .strokeBorder(.white.opacity(0.1), lineWidth: 1)
-                }
+                .frame(width: 40, height: 40)
                 .clipShape(.circle)
+                .settingsCircleImageOutline()
 
             VStack(alignment: .leading) {
                 Text(credit.name)

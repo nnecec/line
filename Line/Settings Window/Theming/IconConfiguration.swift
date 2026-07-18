@@ -135,6 +135,7 @@ private struct AppIconThumbnail: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.2, style: .continuous))
+        .settingsImageOutline(cornerRadius: size * 0.2)
     }
 }
 

@@ -108,14 +108,4 @@ struct SettingsRowLabel: View {
     }
 }
 
-struct SettingsStatusBadge: View {
-    let title: LocalizedStringKey
-    let systemImage: String
-    var isProminent = false
 
-    var body: some View {
-        Label(title, systemImage: systemImage)
-            .font(.caption)
-            .foregroundStyle(isProminent ? Color.accentColor : .secondary)
-    }
-}

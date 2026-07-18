@@ -24,26 +24,20 @@ struct ExcludedAppsConfigurationView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                HStack {
-                    Button {
-                        showAppChooser()
-                    } label: {
-                        Label("Add", systemImage: "plus")
-                    }
-
-                    Button(role: .destructive) {
-                        removeSelectedApps()
-                    } label: {
-                        Label("Remove", systemImage: "minus")
-                    }
-                    .disabled(selectedApps.isEmpty)
-                    .keyboardShortcut(.delete)
-                }
-                .buttonStyle(.borderless)
-                .controlSize(.large)
+                SettingsListToolbar(
+                    onAdd: showAppChooser,
+                    addHelp: "Add an application",
+                    onRemove: removeSelectedApps,
+                    removeHelp: "Remove selected applications",
+                    canRemove: !selectedApps.isEmpty
+                )
 
                 if excludedApps.isEmpty {
-                    emptyState
+                    SettingsEmptyState(
+                        systemImage: "app.dashed",
+                        title: "No excluded applications",
+                        message: "Press Add to add an application."
+                    )
                 } else {
                     List(selection: $selectedApps) {
                         ForEach(excludedApps, id: \.self) { url in
@@ -61,23 +55,6 @@ struct ExcludedAppsConfigurationView: View {
             }
         }
         .settingsFormPanel()
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 4) {
-            Image(systemName: "app.dashed")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-
-            Text("No excluded applications")
-                .font(.headline)
-
-            Text("Press Add to add an application.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, minHeight: 160)
-        .padding()
     }
 
     private func removeSelectedApps() {
@@ -134,6 +111,8 @@ struct ExcludedListAppView: View, Equatable {
                 }
             }
             .frame(width: 32, height: 32)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .settingsImageOutline(cornerRadius: 6)
 
             VStack(alignment: .leading) {
                 Text(app.displayName)
@@ -141,6 +120,8 @@ struct ExcludedListAppView: View, Equatable {
                 Text(app.path)
                     .foregroundStyle(.secondary)
                     .font(.caption)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
 
             Spacer()
