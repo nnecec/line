@@ -88,60 +88,74 @@ struct PaddingConfigurationView: View {
     }
 
     private func nonScreenPaddingConfiguration() -> some View {
-        pixelSlider(
-            Text("Padding"),
+        SettingsSlider.pixels(
+            title: "Padding",
             value: uniformPaddingBinding,
-            in: range,
-            clampsUpper: false
+            range: range,
+            showsTextField: true,
+            clampsUpper: false,
+            onEditingChanged: handleSliderEditingChanged
         )
     }
 
     @ViewBuilder
     private func screenSidesPaddingConfiguration() -> some View {
-        pixelSlider(
-            Text("Top", comment: "Label for a slider in Line’s padding settings"),
+        SettingsSlider.pixels(
+            title: "Top",
             value: $paddingModel.top.doubleBinding,
-            in: range,
-            clampsUpper: false
+            range: range,
+            showsTextField: true,
+            clampsUpper: false,
+            onEditingChanged: handleSliderEditingChanged
         )
 
-        pixelSlider(
-            Text("Bottom", comment: "Label for a slider in Line’s padding settings"),
+        SettingsSlider.pixels(
+            title: "Bottom",
             value: $paddingModel.bottom.doubleBinding,
-            in: range,
-            clampsUpper: false
+            range: range,
+            showsTextField: true,
+            clampsUpper: false,
+            onEditingChanged: handleSliderEditingChanged
         )
 
-        pixelSlider(
-            Text("Right", comment: "Label for a slider in Line’s padding settings"),
+        SettingsSlider.pixels(
+            title: "Right",
             value: $paddingModel.right.doubleBinding,
-            in: range,
-            clampsUpper: false
+            range: range,
+            showsTextField: true,
+            clampsUpper: false,
+            onEditingChanged: handleSliderEditingChanged
         )
 
-        pixelSlider(
-            Text("Left", comment: "Label for a slider in Line’s padding settings"),
+        SettingsSlider.pixels(
+            title: "Left",
             value: $paddingModel.left.doubleBinding,
-            in: range,
-            clampsUpper: false
+            range: range,
+            showsTextField: true,
+            clampsUpper: false,
+            onEditingChanged: handleSliderEditingChanged
         )
     }
 
     @ViewBuilder
     private func screenInsetsPaddingConfiguration() -> some View {
-        pixelSlider(
-            Text("Window gaps", comment: "Label for a slider in Line’s padding settings"),
+        SettingsSlider.pixels(
+            title: "Window gaps",
             value: $paddingModel.window.doubleBinding,
-            in: range,
-            clampsUpper: false
+            range: range,
+            showsTextField: true,
+            clampsUpper: false,
+            onEditingChanged: handleSliderEditingChanged
         )
 
-        pixelSlider(
-            Text("External bar", comment: "Label for a slider in Line’s padding settings"),
+        SettingsSlider.pixels(
+            title: "External bar",
             value: $paddingModel.externalBar.doubleBinding,
-            in: range,
+            range: range,
+            showsTextField: true,
             clampsUpper: false,
-            help: "Use this if you are using a custom menubar."
+            help: "Use this if you are using a custom menubar.",
+            onEditingChanged: handleSliderEditingChanged
         )
     }
 
@@ -181,75 +195,6 @@ struct PaddingConfigurationView: View {
             paddingModel.bottom = padding
             paddingModel.right = padding
             paddingModel.left = padding
-        }
-    }
-
-    private func pixelSlider(
-        _ title: Text,
-        value: Binding<Double>,
-        in range: ClosedRange<Double>,
-        step: Double = 1,
-        clampsUpper: Bool = true,
-        help: String? = nil
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            LabeledContent {
-                HStack(spacing: 4) {
-                    TextField(
-                        "Value",
-                        value: numericBinding(value, in: range, clampsUpper: clampsUpper),
-                        format: .number.precision(.fractionLength(0...1))
-                    )
-                    .multilineTextAlignment(.trailing)
-                    .monospacedDigit()
-                    .frame(width: 64)
-                    .accessibilityLabel(title)
-
-                    Text("px", comment: "Unit symbol: pixels")
-                        .foregroundStyle(.secondary)
-                }
-            } label: {
-                if let help {
-                    title.help(help)
-                } else {
-                    title
-                }
-            }
-
-            Slider(
-                value: sliderBinding(value, in: range),
-                in: range,
-                step: step,
-                onEditingChanged: handleSliderEditingChanged
-            )
-        }
-    }
-
-    private func numericBinding(
-        _ value: Binding<Double>,
-        in range: ClosedRange<Double>,
-        clampsUpper: Bool
-    ) -> Binding<Double> {
-        Binding {
-            value.wrappedValue
-        } set: { newValue in
-            let lowerClampedValue = max(range.lowerBound, newValue)
-            value.wrappedValue = if clampsUpper {
-                min(lowerClampedValue, range.upperBound)
-            } else {
-                lowerClampedValue
-            }
-        }
-    }
-
-    private func sliderBinding(
-        _ value: Binding<Double>,
-        in range: ClosedRange<Double>
-    ) -> Binding<Double> {
-        Binding {
-            min(max(value.wrappedValue, range.lowerBound), range.upperBound)
-        } set: { newValue in
-            value.wrappedValue = min(max(newValue, range.lowerBound), range.upperBound)
         }
     }
 

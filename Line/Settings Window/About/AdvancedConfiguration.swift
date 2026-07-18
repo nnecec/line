@@ -160,10 +160,10 @@ struct AdvancedConfigurationView: View {
                 )
             }
 
-            pixelSlider(
-                Text("Size increment"),
+            SettingsSlider.pixels(
+                title: "Size increment",
                 value: $sizeIncrement.doubleBinding,
-                in: 5...50,
+                range: 5...50,
                 step: 5
             )
         } header: {
@@ -263,33 +263,12 @@ struct AdvancedConfigurationView: View {
                     Image(systemName: "checkmark")
                         .foregroundStyle(.green)
                         .bold()
+                        .transition(.opacity.combined(with: .scale(scale: 0.25)))
                 }
             }
+            .animation(.easeOut(duration: 0.3), value: showsSuccessIndicator)
         } icon: {
             Image(systemName: systemImage)
-        }
-    }
-
-    private func pixelSlider(
-        _ title: Text,
-        value: Binding<Double>,
-        in range: ClosedRange<Double>,
-        step: Double
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            LabeledContent {
-                HStack(spacing: 2) {
-                    Text(value.wrappedValue, format: .number.precision(.fractionLength(0)))
-                        .monospacedDigit()
-
-                    Text("px", comment: "Unit symbol: pixels")
-                }
-                .foregroundStyle(.secondary)
-            } label: {
-                title
-            }
-
-            Slider(value: value, in: range, step: step)
         }
     }
 }
