@@ -102,7 +102,7 @@
       }
     },
     "%lld columns, %lld rows, %lld pixel gap": {
-      "comment": "Accessibility value for the grid preview\nAccessibility value for the grid preview. The values are columns, rows, and gap in pixels.",
+      "comment": "Accessibility value for the grid preview",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -292,6 +292,7 @@
       }
     },
     "Add a new keybind (⌘N)": {},
+    "Add an application": {},
     "Almost Maximize": {
       "comment": "Window action\nWindow action name",
       "localizations": {
@@ -1294,6 +1295,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "捐赠"
+          }
+        }
+      }
+    },
+    "Done": {
+      "comment": "Label for a button that dismisses a settings sheet",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
           }
         }
       }
@@ -2499,7 +2517,6 @@
         }
       }
     },
-    "Installed": {},
     "Instant": {
       "comment": "Animation speed setting",
       "localizations": {
@@ -2623,7 +2640,7 @@
     },
     "Leave fullscreen apps out of Line’s window actions.": {},
     "Left": {
-      "comment": "Label for a slider in Line’s padding settings\nSide of a trigger key",
+      "comment": "Side of a trigger key",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3416,6 +3433,23 @@
         }
       }
     },
+    "Performance": {
+      "comment": "Section header shown in advanced settings for power and animation options",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Performance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "性能"
+          }
+        }
+      }
+    },
     "Permissions": {
       "comment": "Section header shown in settings",
       "extractionState": "stale",
@@ -3502,6 +3536,7 @@
       }
     },
     "Press \"Add\" to add a keybind": {
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3534,6 +3569,7 @@
         }
       }
     },
+    "Press Add to add a keybind": {},
     "Press Add to add an application.": {},
     "Prevent Mission Control from opening when a dragged window touches the top edge.": {},
     "Preview": {
@@ -3691,11 +3727,10 @@
         }
       }
     },
+    "Remove selected applications": {},
     "Remove selected keybinds (⌫)": {},
-    "Request...": {},
     "Request…": {
       "comment": "Button to request accessibility access",
-      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -3713,6 +3748,8 @@
     },
     "Required": {},
     "Required for reading and moving windows across apps.": {},
+    "Requires “Show preview while arranging windows” in Preview settings.": {},
+    "Requires window snapping to be enabled.": {},
     "Reset": {
       "localizations": {
         "en": {
@@ -3817,7 +3854,7 @@
     "Return a resized window to its previous frame before dragging.": {},
     "Reveal in Finder": {},
     "Right": {
-      "comment": "Label for a slider in Line’s padding settings\nSide of a trigger key",
+      "comment": "Side of a trigger key",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4099,6 +4136,7 @@
     },
     "Settings": {
       "comment": "Section header shown in settings",
+      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4110,6 +4148,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置"
+          }
+        }
+      }
+    },
+    "Settings sidebar section: App": {
+      "comment": "Settings sidebar section title for app-level pages",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用"
           }
         }
       }
@@ -4171,7 +4226,6 @@
       }
     },
     "Settings tab: Accent Color": {
-      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -4259,7 +4313,6 @@
       }
     },
     "Settings tab: Icon": {
-      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -5210,6 +5263,23 @@
         }
       }
     },
+    "Trigger Options": {
+      "comment": "Section header shown in settings for trigger-related options",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trigger Options"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "触发选项"
+          }
+        }
+      }
+    },
     "Undo": {
       "comment": "Window action\nWindow action name",
       "localizations": {
@@ -5367,23 +5437,6 @@
       }
     },
     "Use selected window corner radius": {},
-    "Use the current system accent color so highlights match native controls.": {
-      "comment": "Toggle description for using the app accent color in the grid overlay",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use the current system accent color so highlights match native controls."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高亮色使用系统当前强调色，和原生控件保持一致。"
-          }
-        }
-      }
-    },
     "Use the display under the pointer as the target display.": {},
     "Use the mouse wheel button as an additional trigger.": {},
     "Use the native translucent material for previews when transparency is allowed.": {},
@@ -5406,7 +5459,6 @@
       }
     },
     "Use this if you are using a custom menubar.": {
-      "extractionState": "stale",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -5747,70 +5799,19 @@
         }
       }
     },
-    "Settings sidebar section: App": {
-      "comment": "Settings sidebar section title for app-level pages",
+    "Use Line's current accent color from Theming so grid highlights match previews.": {
+      "comment": "Toggle description for using the app accent color in the grid overlay",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "App"
+            "value": "Use Line's current accent color from Theming so grid highlights match previews."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "应用"
-          }
-        }
-      }
-    },
-    "Trigger Options": {
-      "comment": "Section header shown in settings for trigger-related options",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trigger Options"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "触发选项"
-          }
-        }
-      }
-    },
-    "Performance": {
-      "comment": "Section header shown in advanced settings for power and animation options",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Performance"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "性能"
-          }
-        }
-      }
-    },
-    "Done": {
-      "comment": "Label for a button that dismisses a settings sheet",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Done"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "完成"
+            "value": "使用 Theming 中的 Line 主题色，让网格高亮与预览一致。"
           }
         }
       }

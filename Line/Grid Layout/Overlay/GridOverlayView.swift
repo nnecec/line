@@ -17,6 +17,7 @@ private let gridOverlayCornerRadius: CGFloat = 10
 struct GridOverlayView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ObservedObject var viewModel: GridOverlayViewModel
+    @ObservedObject private var accentColorController: AccentColorController = .shared
 
     let geometry: GridGeometry
     let template: GridTemplate
@@ -115,7 +116,7 @@ struct GridOverlayView: View {
     @ViewBuilder
     private func highlightView(for region: GridRegion) -> some View {
         let localRect = geometry.localRect(for: region)
-        let effectiveAccent = followsAppAccent ? Color.accentColor : accentColor
+        let effectiveAccent = followsAppAccent ? accentColorController.color1 : accentColor
         let shape = RoundedRectangle(cornerRadius: cornerRadius)
 
         shape

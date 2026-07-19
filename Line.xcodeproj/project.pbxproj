@@ -28,6 +28,7 @@
 		2AE091C72F81A22800EF6149 /* Scribe in Frameworks */ = {isa = PBXBuildFile; productRef = 2AE091C62F81A22800EF6149 /* Scribe */; };
 		5A1000012FD1000000A10001 /* ApplicationInfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */; };
 		5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */; };
+		5A1000092FD1000000A10009 /* AccentColorControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */; };
 		5A1000052FD1000000A10001 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */; };
 		5A1000072FD1000000A10001 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000082FD1000000A10001 /* LICENSE */; };
 		F06D768A2DFF7A77007EEDA9 /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F06D76892DFF7A77007EEDA9 /* SkyLight.framework */; };
@@ -81,6 +82,7 @@
 		2A8689072F809625005B521B /* LineDockTile.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LineDockTile.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationInfrastructureTests.swift; sourceTree = "<group>"; };
 		5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashOverlapPolicyTests.swift; sourceTree = "<group>"; };
+		5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorControllerTests.swift; sourceTree = "<group>"; };
 		5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = THIRD_PARTY_NOTICES.md; sourceTree = "<group>"; };
 		5A1000082FD1000000A10001 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A848130C2BD1A8D100B02E93 /* .github */ = {isa = PBXFileReference; lastKnownFileType = folder; path = .github; sourceTree = "<group>"; };
@@ -166,6 +168,7 @@
 				2A0510002FC5100000ABC051 /* CycleActionConfigurationTests.swift */,
 				5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */,
 				5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */,
+				5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */,
 			);
 			path = LineTests;
 			sourceTree = "<group>";
@@ -374,6 +377,7 @@
 				2A0510012FC5100000ABC051 /* CycleActionConfigurationTests.swift in Sources */,
 				5A1000012FD1000000A10001 /* ApplicationInfrastructureTests.swift in Sources */,
 				5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */,
+				5A1000092FD1000000A10009 /* AccentColorControllerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

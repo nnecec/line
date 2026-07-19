@@ -14,6 +14,8 @@ private let gridOverlayMinimumOpacity = 0.16
 
 @available(macOS 15.0, *)
 struct GridConfigurationView: View {
+    @ObservedObject private var accentColorController: AccentColorController = .shared
+
     @Default(.defaultGridTemplate) private var defaultTemplate
     @Default(.gridFollowsAppAccentColor) private var followsAppAccent
     @Default(.gridOverlayAccentColor) private var accentColor
@@ -97,7 +99,7 @@ struct GridConfigurationView: View {
             Toggle(isOn: $followsAppAccent) {
                 SettingsRowLabel(
                     "Follow App Accent Color",
-                    detail: "Use the current system accent color so highlights match native controls.",
+                    detail: "Use Line's current accent color from Theming so grid highlights match previews.",
                     systemImage: "paintpalette"
                 )
             }
@@ -167,7 +169,7 @@ struct GridConfigurationView: View {
     // MARK: - Helpers
 
     private var effectiveAccentColor: Color {
-        followsAppAccent ? .accentColor : accentColor
+        followsAppAccent ? accentColorController.color1 : accentColor
     }
 
     private var overlayOpacityBinding: Binding<Double> {

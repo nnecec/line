@@ -41,9 +41,11 @@ struct SettingsContentView: View {
             .scrollEdgeEffectStyleSoftIfAvailable()
             .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 320)
         } detail: {
-            // Form panes own scrolling; wrapping in ScrollView creates nested scroll views.
+            // Form panes own scrolling and fill the column so the scrollbar sits
+            // on the detail panel's trailing edge (not beside a narrow content column).
+            // Do not wrap in ScrollView — nested scroll views fight Form.
             state.currentTab.view()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle(state.currentTab.title)
         }
         .navigationSplitViewStyle(.balanced)

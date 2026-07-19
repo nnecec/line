@@ -9,22 +9,29 @@ import SwiftUI
 
 extension View {
     /// Standard grouped form chrome for settings detail panes.
+    ///
+    /// The Form fills the detail column so the scroll indicator sits on the panel's
+    /// trailing edge (System Settings style). Horizontal inset comes from
+    /// `.formStyle(.grouped)` section chrome — do not add horizontal
+    /// `contentMargins` or a narrow `maxWidth` on the Form itself, or the
+    /// scrollbar tracks the content column instead of the panel edge.
+    ///
+    /// - Parameter maxWidth: Retained for call-site compatibility; ignored so the
+    ///   scroll view can span the full detail width.
     @ViewBuilder
-    func settingsFormPanel(maxWidth: CGFloat = 520) -> some View {
+    func settingsFormPanel(maxWidth _: CGFloat = 520) -> some View {
         if #available(macOS 14.0, *) {
             formStyle(.grouped)
                 .scrollContentBackground(.hidden)
-                .contentMargins(.top, 16, for: .scrollContent)
-                .contentMargins(.horizontal, 24, for: .scrollContent)
+                .contentMargins(.top, 8, for: .scrollContent)
                 .contentMargins(.bottom, 24, for: .scrollContent)
-                .frame(maxWidth: maxWidth + 48) // Content width plus horizontal padding
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         } else {
             formStyle(.grouped)
                 .scrollContentBackground(.hidden)
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
+                .padding(.top, 8)
                 .padding(.bottom, 24)
-                .frame(maxWidth: maxWidth + 48)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 

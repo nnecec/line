@@ -9,21 +9,63 @@ import Defaults
 import Scribe
 import SwiftUI
 
-/// Publishes Line's effective accent color.
+/// Publishes Line's effective accent color according to the user's accent settings.
+/// Automatically refreshes when `accentColorMode`, `customAccentColor`, `useGradient`,
+/// or `gradientColor` changes.
 @Loggable
 @MainActor
 final class AccentColorController: ObservableObject {
     static let shared = AccentColorController()
 
-    @Published var color1: Color = .accentColor
-    @Published var color2: Color = .accentColor
+    @Published var color1: Color = Defaults[.lastUsedAccentColor1]
+    @Published var color2: Color = Defaults[.lastUsedAccentColor2]
 
-    private init() {}
+    private let wallpaperProcessor = WallpaperProcessor()
+    private var observationTask: Task<(), Never>?
 
-    func refresh(ignoreThrottle _: Bool = false) async {
-        log.info("Refreshing accent color based on system accent setting")
-        color1 = .accentColor
-        color2 = .accentColor
+    private init() {
+        observationTask = Task { [weak self] in
+            let updates = Defaults.updates(
+                .accentColorMode,
+                .customAccentColor,
+                .useGradient,
+                .gradientColor
+            )
+
+            for await _ in updates {
+                guard
+                    !Task.isCancelled,
+                    let self
+                else {
+                    break
+                }
+                await refresh()
+            }
+        }
+    }
+
+    deinit {
+        observationTask?.cancel()
+    }
+
+    func refresh(ignoreThrottle: Bool = false) async {
+        switch Defaults[.accentColorMode] {
+        case .system:
+            log.info("Refreshing accent color based on system accent setting")
+            color1 = Color.accentColor
+            color2 = Defaults[.useGradient]
+                ? Color(nsColor: NSColor.controlAccentColor.blended(withFraction: 0.5, of: .black)!)
+                : Color.accentColor
+        case .wallpaper:
+            log.info("Refreshing accent color based on wallpaper analysis")
+            let colors = await wallpaperProcessor.fetchLatest(ignoreThrottle: ignoreThrottle)
+            color1 = colors.primary
+            color2 = Defaults[.useGradient] ? colors.secondary : colors.primary
+        case .custom:
+            log.info("Refreshing accent color based on custom selection")
+            color1 = Defaults[.customAccentColor]
+            color2 = Defaults[.useGradient] ? Defaults[.gradientColor] : Defaults[.customAccentColor]
+        }
 
         Defaults[.lastUsedAccentColor1] = color1
         Defaults[.lastUsedAccentColor2] = color2
