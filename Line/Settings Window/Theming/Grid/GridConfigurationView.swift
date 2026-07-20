@@ -23,6 +23,9 @@ struct GridConfigurationView: View {
     @Default(.gridLineThickness) private var lineThickness
     @Default(.gridCellCornerRadius) private var cornerRadius
     @Default(.gridOverlayBlurEnabled) private var glassEnabled
+    @Default(.gridGlassStyle) private var glassStyle
+    @Default(.gridOverlayDrawStyle) private var drawStyle
+    @Default(.gridSelectionGlow) private var selectionGlow
 
     @State private var connectedScreens: [NSScreen] = []
     @State private var showClearMemoryConfirmation = false
@@ -96,6 +99,18 @@ struct GridConfigurationView: View {
 
     private var visualStyleSection: some View {
         Section {
+            Picker(selection: $drawStyle) {
+                ForEach(GridOverlayDrawStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            } label: {
+                SettingsRowLabel(
+                    "Grid Style",
+                    detail: drawStyle.detail,
+                    systemImage: "square.grid.3x3"
+                )
+            }
+
             Toggle(isOn: $followsAppAccent) {
                 SettingsRowLabel(
                     "Follow App Accent Color",
@@ -115,7 +130,7 @@ struct GridConfigurationView: View {
             )
 
             SettingsSlider.pixels(
-                title: "Cell Border Thickness",
+                title: drawStyle == .cells ? "Cell Border Thickness" : "Line Thickness",
                 value: $lineThickness.doubleBinding,
                 range: 0.5...3,
                 step: 0.5
@@ -128,12 +143,32 @@ struct GridConfigurationView: View {
                 step: 1
             )
 
+            SettingsSlider.percent(
+                title: "Selection Glow",
+                value: $selectionGlow,
+                range: 0...1
+            )
+
             Toggle(isOn: $glassEnabled) {
                 SettingsRowLabel(
                     "Enable Liquid Glass",
                     detail: "Use the system glass material for the overlay background. Grid cells stay sharp above the blur layer.",
                     systemImage: "sparkles.rectangle.stack"
                 )
+            }
+
+            if glassEnabled {
+                Picker(selection: $glassStyle) {
+                    ForEach(LiquidGlassStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                } label: {
+                    SettingsRowLabel(
+                        "Glass Style",
+                        detail: glassStyle.detail,
+                        systemImage: "rectangle.on.rectangle.angled"
+                    )
+                }
             }
         } header: {
             Text("Mouse Hover Grid Style", comment: "Settings section header for hover grid styling")

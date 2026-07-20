@@ -13,8 +13,7 @@ import SwiftUI
 // MARK: - UI-configurable Settings
 
 extension Defaults.Keys {
-    // App icon customization and Dock presentation
-    static let currentIcon = Key<String>("currentIcon", default: "AppIcon-Classic")
+    // Dock presentation
     static let showDockIcon = Key<Bool>("showDockIcon", default: false)
 }
 
@@ -35,6 +34,7 @@ extension Defaults.Keys {
     static let previewUseWindowCornerRadius = Key<Bool>("previewUseWindowCornerRadius", default: true)
     static let previewBackgroundEnableBlur = Key<Bool>("previewBackgroundEnableBlur", default: true)
     static let previewBackgroundAccentOpacity = Key<CGFloat>("previewBackgroundAccentOpacity", default: 0.12)
+    static let previewGlassStyle = Key<LiquidGlassStyle>("previewGlassStyle", default: .tinted)
 
     // Behavior
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
@@ -122,6 +122,18 @@ extension Defaults.Keys {
     static let gridOverlayBlurEnabled = Key<Bool>(
         "gridOverlayBlurEnabled",
         default: true
+    )
+    static let gridGlassStyle = Key<LiquidGlassStyle>(
+        "gridGlassStyle",
+        default: .regular
+    )
+    static let gridOverlayDrawStyle = Key<GridOverlayDrawStyle>(
+        "gridOverlayDrawStyle",
+        default: .cells
+    )
+    static let gridSelectionGlow = Key<Double>(
+        "gridSelectionGlow",
+        default: 0.55
     )
 }
 

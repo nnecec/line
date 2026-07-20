@@ -20,6 +20,7 @@ struct PreviewView: View {
     @Default(.previewBorderThickness) private var previewBorderThickness
     @Default(.previewBackgroundEnableBlur) private var previewBackgroundEnableBlur
     @Default(.previewBackgroundAccentOpacity) private var previewBackgroundAccentOpacity
+    @Default(.previewGlassStyle) private var glassStyle
 
     /// Matches the settings slider upper bound so the control never appears stuck.
     private static let maxBorderThickness: CGFloat = 2.5
@@ -107,7 +108,7 @@ struct PreviewView: View {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.38),
+                                Color.white.opacity(glassStyle == .clear ? 0.28 : 0.38),
                                 Color.white.opacity(0.0)
                             ],
                             startPoint: .top,
@@ -146,6 +147,7 @@ struct PreviewView: View {
         .animation(luminareAnimation, value: [accentColorController.color1, accentColorController.color2])
         .animation(luminareAnimation, value: previewBackgroundAccentOpacity)
         .animation(luminareAnimation, value: viewModel.isShown)
+        .animation(luminareAnimation, value: glassStyle)
     }
 
     @ViewBuilder
@@ -154,26 +156,56 @@ struct PreviewView: View {
 
         if usesGlass {
             Color.clear
-                .glassEffect(
-                    .regular.tint(accentColorController.color1.opacity(glassTintOpacity)),
-                    in: .rect(cornerRadii: cornerRadii)
-                )
+                .glassEffect(previewGlassEffect, in: .rect(cornerRadii: cornerRadii))
                 .overlay {
-                    // Soft body fill keeps glass readable on busy wallpapers.
-                    shape.fill(
-                        LinearGradient(
-                            colors: [
-                                Color.primary.opacity(0.035),
-                                Color.primary.opacity(0.015)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    shape.fill(previewBodyFill)
                 }
         } else {
             shape
                 .fill(Color(nsColor: .windowBackgroundColor).opacity(0.92))
+        }
+    }
+
+    private var previewGlassEffect: Glass {
+        switch glassStyle {
+        case .clear:
+            .clear
+        case .regular:
+            .regular.tint(Color.primary.opacity(0.04))
+        case .tinted:
+            .regular.tint(accentColorController.color1.opacity(glassTintOpacity))
+        }
+    }
+
+    private var previewBodyFill: some ShapeStyle {
+        switch glassStyle {
+        case .clear:
+            LinearGradient(
+                colors: [
+                    Color.primary.opacity(0.02),
+                    Color.primary.opacity(0.008)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .regular:
+            LinearGradient(
+                colors: [
+                    Color.primary.opacity(0.04),
+                    Color.primary.opacity(0.018)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .tinted:
+            LinearGradient(
+                colors: [
+                    accentColorController.color1.opacity(0.04),
+                    accentColorController.color2.opacity(0.02)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
 }

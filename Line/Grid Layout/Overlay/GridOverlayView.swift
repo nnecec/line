@@ -12,7 +12,7 @@ import SwiftUI
 private let gridOverlayMinimumOpacity = 0.16
 private let gridOverlayCornerRadius: CGFloat = 12
 
-/// SwiftUI view that renders the grid overlay with background, cells, and selection highlight.
+/// SwiftUI view that renders the grid overlay with background, cells/lines, and selection highlight.
 struct GridOverlayView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -28,6 +28,9 @@ struct GridOverlayView: View {
     @Default(.gridLineThickness) private var lineThickness
     @Default(.gridCellCornerRadius) private var cornerRadius
     @Default(.gridOverlayBlurEnabled) private var blurEnabled
+    @Default(.gridGlassStyle) private var glassStyle
+    @Default(.gridOverlayDrawStyle) private var drawStyle
+    @Default(.gridSelectionGlow) private var selectionGlow
 
     private var usesGlass: Bool {
         blurEnabled && !reduceTransparency
@@ -42,7 +45,7 @@ struct GridOverlayView: View {
     }
 
     /// Remap the opacity slider into a range that is visible on glass material.
-    private var glassTintOpacity: Double {
+    private var glassTintStrength: Double {
         let span = 1 - gridOverlayMinimumOpacity
         let t = span > 0
             ? (effectiveOverlayOpacity - gridOverlayMinimumOpacity) / span
@@ -51,11 +54,20 @@ struct GridOverlayView: View {
     }
 
     private var glassScrimOpacity: Double {
+        switch glassStyle {
+        case .clear:
+            return 0.02 + glassNormalizedOpacity * 0.06
+        case .regular:
+            return 0.04 + glassNormalizedOpacity * 0.14
+        case .tinted:
+            return 0.03 + glassNormalizedOpacity * 0.10
+        }
+    }
+
+    private var glassNormalizedOpacity: Double {
         let span = 1 - gridOverlayMinimumOpacity
-        let t = span > 0
-            ? (effectiveOverlayOpacity - gridOverlayMinimumOpacity) / span
-            : 0
-        return 0.04 + t * 0.14
+        guard span > 0 else { return 0 }
+        return (effectiveOverlayOpacity - gridOverlayMinimumOpacity) / span
     }
 
     /// Outer radius stays concentric with cell radius when cells are large.
@@ -69,16 +81,28 @@ struct GridOverlayView: View {
             : .spring(response: 0.2, dampingFraction: 0.86)
     }
 
+    private var glowAmount: Double {
+        min(1, max(0, selectionGlow))
+    }
+
     var body: some View {
         let outerShape = RoundedRectangle(cornerRadius: outerCornerRadius, style: .continuous)
 
         ZStack {
-            backgroundView(in: outerShape)
+            // Background glass (and optionally the selection glass) share one container
+            // so the system can morph material between them.
+            GlassEffectContainer(spacing: max(8, template.gap)) {
+                backgroundView(in: outerShape)
 
-            gridCellsView
+                if usesGlass, let region = viewModel.selectedRegion {
+                    selectionGlass(for: region)
+                }
+            }
+
+            gridContentView
 
             if let region = viewModel.selectedRegion {
-                highlightView(for: region)
+                highlightChrome(for: region)
             }
         }
         .frame(
@@ -87,7 +111,6 @@ struct GridOverlayView: View {
         )
         .clipShape(outerShape)
         .overlay {
-            // Adaptive hairline + top specular rim (liquid-glass edge language).
             ZStack {
                 outerShape
                     .strokeBorder(Color.white.opacity(usesGlass ? 0.14 : 0.22), lineWidth: 1)
@@ -116,19 +139,48 @@ struct GridOverlayView: View {
     private func backgroundView(in shape: RoundedRectangle) -> some View {
         if usesGlass {
             Color.clear
-                .glassEffect(
-                    .regular.tint(.black.opacity(glassTintOpacity)),
-                    in: shape
-                )
+                .glassEffect(backgroundGlassEffect, in: shape)
                 .overlay {
-                    shape.fill(Color.black.opacity(glassScrimOpacity))
+                    shape.fill(backgroundScrim)
                 }
         } else {
             shape.fill(Color.black.opacity(effectiveOverlayOpacity))
         }
     }
 
-    // MARK: - Grid Cells
+    private var backgroundGlassEffect: Glass {
+        switch glassStyle {
+        case .clear:
+            .clear
+        case .regular:
+            .regular.tint(.black.opacity(glassTintStrength * 0.85))
+        case .tinted:
+            .regular.tint(effectiveAccent.opacity(glassTintStrength * 0.7))
+        }
+    }
+
+    private var backgroundScrim: Color {
+        switch glassStyle {
+        case .clear:
+            Color.black.opacity(glassScrimOpacity * 0.5)
+        case .regular:
+            Color.black.opacity(glassScrimOpacity)
+        case .tinted:
+            effectiveAccent.opacity(glassScrimOpacity * 0.45)
+        }
+    }
+
+    // MARK: - Grid Content
+
+    @ViewBuilder
+    private var gridContentView: some View {
+        switch drawStyle {
+        case .cells:
+            gridCellsView
+        case .lines:
+            gridLinesView
+        }
+    }
 
     private var gridCellsView: some View {
         GeometryReader { proxy in
@@ -173,15 +225,72 @@ struct GridOverlayView: View {
         }
     }
 
-    // MARK: - Highlight
+    private var gridLinesView: some View {
+        GeometryReader { proxy in
+            let gap = template.gap
+            let columns = max(1, template.columns)
+            let rows = max(1, template.rows)
+            let cellWidth = cellLength(
+                availableLength: proxy.size.width,
+                count: columns,
+                gap: gap
+            )
+            let cellHeight = cellLength(
+                availableLength: proxy.size.height,
+                count: rows,
+                gap: gap
+            )
+            let stroke = Color.white.opacity(usesGlass ? 0.18 : 0.22)
+            let thickness = max(0.5, lineThickness)
 
+            ZStack {
+                ForEach(0 ..< columns + 1, id: \.self) { col in
+                    let x = CGFloat(col) * (cellWidth + gap) - (col == 0 ? 0 : gap / 2)
+                    Rectangle()
+                        .fill(stroke)
+                        .frame(width: thickness, height: proxy.size.height)
+                        .position(x: x, y: proxy.size.height / 2)
+                }
+
+                ForEach(0 ..< rows + 1, id: \.self) { row in
+                    let y = CGFloat(row) * (cellHeight + gap) - (row == 0 ? 0 : gap / 2)
+                    Rectangle()
+                        .fill(stroke)
+                        .frame(width: proxy.size.width, height: thickness)
+                        .position(x: proxy.size.width / 2, y: y)
+                }
+            }
+        }
+    }
+
+    // MARK: - Selection
+
+    /// Soft glass body for the selection, living inside GlassEffectContainer for morphing.
     @ViewBuilder
-    private func highlightView(for region: GridRegion) -> some View {
+    private func selectionGlass(for region: GridRegion) -> some View {
         let localRect = geometry.localRect(for: region)
         let radius = min(cornerRadius, min(localRect.width, localRect.height) / 2)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let fillOpacity = usesGlass ? 0.26 : 0.34
+
+        Color.clear
+            .frame(width: localRect.width, height: localRect.height)
+            .glassEffect(
+                .regular.tint(effectiveAccent.opacity(0.22 + glowAmount * 0.12)),
+                in: shape
+            )
+            .position(x: localRect.midX, y: localRect.midY)
+            .animation(selectionAnimation, value: region)
+    }
+
+    /// Crisp fill / stroke / specular drawn above the glass layer.
+    @ViewBuilder
+    private func highlightChrome(for region: GridRegion) -> some View {
+        let localRect = geometry.localRect(for: region)
+        let radius = min(cornerRadius, min(localRect.width, localRect.height) / 2)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let fillOpacity = usesGlass ? 0.16 : 0.34
         let strokeWidth = max(1.5, lineThickness + 0.5)
+        let glowOpacity = 0.12 + glowAmount * 0.28
 
         shape
             .fill(
@@ -209,7 +318,6 @@ struct GridOverlayView: View {
                     )
             }
             .overlay {
-                // Specular rim on the selection block.
                 shape
                     .strokeBorder(
                         LinearGradient(
@@ -223,8 +331,8 @@ struct GridOverlayView: View {
                         lineWidth: 0.75
                     )
             }
-            .shadow(color: effectiveAccent.opacity(0.22), radius: 6, y: 2)
-            .shadow(color: effectiveAccent.opacity(0.18), radius: 14, y: 6)
+            .shadow(color: effectiveAccent.opacity(glowOpacity * 0.7), radius: 6, y: 2)
+            .shadow(color: effectiveAccent.opacity(glowOpacity), radius: 14 + glowAmount * 8, y: 6)
             .frame(width: localRect.width, height: localRect.height)
             .position(x: localRect.midX, y: localRect.midY)
             .animation(selectionAnimation, value: region)

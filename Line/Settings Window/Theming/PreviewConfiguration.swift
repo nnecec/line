@@ -17,6 +17,7 @@ struct PreviewConfigurationView: View {
     @Default(.previewUseWindowCornerRadius) private var previewUseWindowCornerRadius
     @Default(.previewBackgroundEnableBlur) private var previewBackgroundEnableBlur
     @Default(.previewBackgroundAccentOpacity) private var previewBackgroundAccentOpacity
+    @Default(.previewGlassStyle) private var glassStyle
 
     var body: some View {
         Form {
@@ -84,12 +85,28 @@ struct PreviewConfigurationView: View {
                     )
                 }
 
-                SettingsSlider.percent(
-                    title: "Glass tint",
-                    value: $previewBackgroundAccentOpacity.doubleBinding,
-                    range: 0...0.25,
-                    step: 0.01
-                )
+                if previewBackgroundEnableBlur {
+                    Picker(selection: $glassStyle) {
+                        ForEach(LiquidGlassStyle.allCases) { style in
+                            Text(style.title).tag(style)
+                        }
+                    } label: {
+                        SettingsRowLabel(
+                            "Glass Style",
+                            detail: glassStyle.detail,
+                            systemImage: "rectangle.on.rectangle.angled"
+                        )
+                    }
+
+                    if glassStyle == .tinted {
+                        SettingsSlider.percent(
+                            title: "Glass tint",
+                            value: $previewBackgroundAccentOpacity.doubleBinding,
+                            range: 0...0.25,
+                            step: 0.01
+                        )
+                    }
+                }
             }
         }
         .settingsFormPanel()
