@@ -30,6 +30,10 @@ These builds are produced on GitHub Actions with a free **Apple Development** si
 
 In-app **Check for Updates** uses Sparkle and the feed at [`appcast.xml`](appcast.xml) on `main`. That file is updated through a reviewable pull request after each publish; until that PR is merged, GitHub Releases may already have the new build while the app still reports “up to date.”
 
+### Screenshot
+
+![screenshot](./assets/Screenshot.webp)
+
 ### Build from source
 
 ```bash
