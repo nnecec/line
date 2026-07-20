@@ -115,9 +115,9 @@ struct GridConfigurationView: View {
             )
 
             SettingsSlider.pixels(
-                title: "Line Thickness",
+                title: "Cell Border Thickness",
                 value: $lineThickness.doubleBinding,
-                range: 1...3,
+                range: 0.5...3,
                 step: 0.5
             )
 
@@ -131,14 +131,14 @@ struct GridConfigurationView: View {
             Toggle(isOn: $glassEnabled) {
                 SettingsRowLabel(
                     "Enable Liquid Glass",
-                    detail: "Use the system glass material for the background while keeping the active grid above the blur layer.",
+                    detail: "Use the system glass material for the overlay background. Grid cells stay sharp above the blur layer.",
                     systemImage: "sparkles.rectangle.stack"
                 )
             }
         } header: {
             Text("Mouse Hover Grid Style", comment: "Settings section header for hover grid styling")
         } footer: {
-            Text("These settings control the grid thumbnail, selection highlight, and overlay material shown while dragging windows.", comment: "Settings footer explaining hover grid style controls")
+            Text("These settings control the cell grid, selection highlight, and overlay material shown while arranging windows.", comment: "Settings footer explaining hover grid style controls")
         }
     }
 

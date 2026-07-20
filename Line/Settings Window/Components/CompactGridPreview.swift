@@ -170,6 +170,20 @@ private struct GridPreviewSurface: View {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(accentColor.opacity(0.9), lineWidth: 1)
             }
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.28),
+                                Color.white.opacity(0.0)
+                            ],
+                            startPoint: .top,
+                            endPoint: UnitPoint(x: 0.5, y: 0.45)
+                        ),
+                        lineWidth: 0.6
+                    )
+            }
             .frame(width: width, height: height)
             .offset(
                 x: CGFloat(startColumn) * (cellWidth + gap),

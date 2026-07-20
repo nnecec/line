@@ -39,7 +39,8 @@ final class GridOverlayController {
         panel.ignoresMouseEvents = false
         panel.collectionBehavior = .canJoinAllSpaces
         panel.isOpaque = false
-        panel.hasShadow = true
+        // Shadow is drawn by GridOverlayView so it stays in sync with the glass edge.
+        panel.hasShadow = false
         panel.backgroundColor = .clear
         panel.level = NSWindow.Level(NSWindow.Level.screenSaver.rawValue)
         let hostingView = NSHostingView(

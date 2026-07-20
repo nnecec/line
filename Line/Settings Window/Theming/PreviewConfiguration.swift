@@ -49,7 +49,7 @@ struct PreviewConfigurationView: View {
                 SettingsSlider.pixels(
                     title: "Border thickness",
                     value: $previewBorderThickness.doubleBinding,
-                    range: 0...4,
+                    range: 0...2.5,
                     step: 0.5
                 )
             }

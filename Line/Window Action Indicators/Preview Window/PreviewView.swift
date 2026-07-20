@@ -11,6 +11,7 @@ import SwiftUI
 struct PreviewView: View {
     @Environment(\.luminareAnimation) private var luminareAnimation
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var accentColorController: AccentColorController = .shared
     @ObservedObject private var viewModel: PreviewViewModel
 
@@ -20,18 +21,29 @@ struct PreviewView: View {
     @Default(.previewBackgroundEnableBlur) private var previewBackgroundEnableBlur
     @Default(.previewBackgroundAccentOpacity) private var previewBackgroundAccentOpacity
 
+    /// Matches the settings slider upper bound so the control never appears stuck.
+    private static let maxBorderThickness: CGFloat = 2.5
+    private static let minimumCornerRadius: CGFloat = 4
+
     init(viewModel: PreviewViewModel) {
         self.viewModel = viewModel
     }
 
+    private var usesGlass: Bool {
+        previewBackgroundEnableBlur && !reduceTransparency
+    }
+
     private var cornerRadii: RectangleCornerRadii {
-        // Prefer the window's own radii, but skip if the padded inset would be sharp.
-        if let inset = viewModel.overrideCornerRadii?.inset(by: effectivePadding),
-           inset != .zero {
+        // Prefer the window's own radii. Keep a small floor after padding inset so
+        // thick borders don't collapse into sharp squares on rounded windows.
+        if let inset = viewModel.overrideCornerRadii?.inset(
+            by: effectivePadding,
+            minRadius: Self.minimumCornerRadius
+        ),
+            inset != .zero {
             return inset
         }
 
-        // Fall back to the user's default radius
         return RectangleCornerRadii(
             topLeading: previewCornerRadius,
             bottomLeading: previewCornerRadius,
@@ -49,12 +61,21 @@ struct PreviewView: View {
     }
 
     private var effectiveBorderThickness: CGFloat {
-        min(2.5, max(0, previewBorderThickness))
+        min(Self.maxBorderThickness, max(0, previewBorderThickness))
+    }
+
+    /// Soft enter scale; disabled entirely when Reduce Motion is on.
+    private var enterScale: CGFloat {
+        if reduceMotion {
+            return 1
+        }
+        return viewModel.isShown ? 1 : 0.98
     }
 
     var body: some View {
         windowView()
             .compositingGroup()
+            .scaleEffect(enterScale)
             .frame(width: viewModel.computedFrame.width, height: viewModel.computedFrame.height)
             .offset(x: viewModel.computedFrame.minX, y: viewModel.computedFrame.minY)
             .frame(
@@ -66,19 +87,43 @@ struct PreviewView: View {
     }
 
     private func windowView() -> some View {
-        ZStack {
+        let shape = UnevenRoundedRectangle(cornerRadii: cornerRadii)
+
+        return ZStack {
             previewSurface
 
-            UnevenRoundedRectangle(cornerRadii: cornerRadii)
-                .strokeBorder(.quinary, lineWidth: 1)
+            // Hairline: softer under glass so it doesn't fight the material edge.
+            if usesGlass {
+                shape
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.75)
+            } else {
+                shape
+                    .strokeBorder(.quinary, lineWidth: 1)
+            }
+
+            // Top specular rim — the detail that sells liquid glass.
+            if usesGlass {
+                shape
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.38),
+                                Color.white.opacity(0.0)
+                            ],
+                            startPoint: .top,
+                            endPoint: UnitPoint(x: 0.5, y: 0.4)
+                        ),
+                        lineWidth: 0.8
+                    )
+            }
 
             if effectiveBorderThickness > 0 {
-                UnevenRoundedRectangle(cornerRadii: cornerRadii)
+                shape
                     .stroke(
                         LinearGradient(
                             colors: [
-                                accentColorController.color1.opacity(0.72),
-                                accentColorController.color2.opacity(0.56)
+                                accentColorController.color1.opacity(usesGlass ? 0.78 : 0.72),
+                                accentColorController.color2.opacity(usesGlass ? 0.52 : 0.56)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -88,23 +133,43 @@ struct PreviewView: View {
             }
         }
         .padding(effectivePadding + effectiveBorderThickness / 2)
-        .shadow(color: .black.opacity(viewModel.isShown ? 0.18 : 0), radius: 18, y: 8)
+        .shadow(
+            color: .black.opacity(viewModel.isShown ? 0.08 : 0),
+            radius: 3,
+            y: 1
+        )
+        .shadow(
+            color: .black.opacity(viewModel.isShown ? 0.16 : 0),
+            radius: 20,
+            y: 10
+        )
         .animation(luminareAnimation, value: [accentColorController.color1, accentColorController.color2])
         .animation(luminareAnimation, value: previewBackgroundAccentOpacity)
+        .animation(luminareAnimation, value: viewModel.isShown)
     }
 
     @ViewBuilder
     private var previewSurface: some View {
         let shape = UnevenRoundedRectangle(cornerRadii: cornerRadii)
 
-        if previewBackgroundEnableBlur, !reduceTransparency {
+        if usesGlass {
             Color.clear
                 .glassEffect(
                     .regular.tint(accentColorController.color1.opacity(glassTintOpacity)),
                     in: .rect(cornerRadii: cornerRadii)
                 )
                 .overlay {
-                    shape.fill(Color.primary.opacity(0.025))
+                    // Soft body fill keeps glass readable on busy wallpapers.
+                    shape.fill(
+                        LinearGradient(
+                            colors: [
+                                Color.primary.opacity(0.035),
+                                Color.primary.opacity(0.015)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
                 }
         } else {
             shape
