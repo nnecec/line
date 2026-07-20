@@ -26,6 +26,7 @@ struct GridConfigurationView: View {
     @Default(.gridGlassStyle) private var glassStyle
     @Default(.gridOverlayDrawStyle) private var drawStyle
     @Default(.gridSelectionGlow) private var selectionGlow
+    @Default(.gridOverlayOuterCornerRadius) private var outerCornerRadius
 
     @State private var connectedScreens: [NSScreen] = []
     @State private var showClearMemoryConfirmation = false
@@ -143,6 +144,13 @@ struct GridConfigurationView: View {
                 step: 1
             )
 
+            SettingsSlider.pixels(
+                title: "Outer Corner Radius",
+                value: $outerCornerRadius.doubleBinding,
+                range: 0...28,
+                step: 1
+            )
+
             SettingsSlider.percent(
                 title: "Selection Glow",
                 value: $selectionGlow,
@@ -170,6 +178,14 @@ struct GridConfigurationView: View {
                     )
                 }
             }
+
+            CompactGridPreview(
+                template: defaultTemplate,
+                accentColor: effectiveAccentColor,
+                showStyleChrome: true
+            )
+            .frame(height: 110)
+            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
         } header: {
             Text("Mouse Hover Grid Style", comment: "Settings section header for hover grid styling")
         } footer: {

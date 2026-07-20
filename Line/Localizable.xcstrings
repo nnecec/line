@@ -1796,6 +1796,7 @@
       }
     },
     "Gradient": {
+      "comment": "Preview border style option",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -5754,6 +5755,193 @@
           "stringUnit": {
             "state": "translated",
             "value": "更轻量的十字线覆盖层。"
+          }
+        }
+      }
+    },
+    "Live Preview": {
+      "comment": "Settings section header for live window preview mock",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Preview"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实时预览"
+          }
+        }
+      }
+    },
+    "Updates as you change padding, border, and glass options below.": {
+      "comment": "Settings footer for live window preview mock",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates as you change padding, border, and glass options below."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会随下方的内边距、描边与玻璃选项实时更新。"
+          }
+        }
+      }
+    },
+    "Border Style": {
+      "comment": "Picker label for preview border style",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Border Style"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描边样式"
+          }
+        }
+      }
+    },
+    "Outer Corner Radius": {
+      "comment": "Slider label for grid overlay outer corner radius",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outer Corner Radius"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外框圆角"
+          }
+        }
+      }
+    },
+    "Hairline": {
+      "comment": "Preview border style option",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hairline"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "细线"
+          }
+        }
+      }
+    },
+    "Accent": {
+      "comment": "Preview border style option",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accent"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "强调色"
+          }
+        }
+      }
+    },
+    "No border — rely on glass edge and shadow alone.": {
+      "comment": "Preview border style detail",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No border — rely on glass edge and shadow alone."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无描边，仅依靠玻璃边缘与阴影。"
+          }
+        }
+      }
+    },
+    "A subtle system edge without accent color.": {
+      "comment": "Preview border style detail",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A subtle system edge without accent color."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不含强调色的细系统边缘。"
+          }
+        }
+      }
+    },
+    "A solid border using the current accent color.": {
+      "comment": "Preview border style detail",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A solid border using the current accent color."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用当前强调色的实线描边。"
+          }
+        }
+      }
+    },
+    "A diagonal gradient between primary and secondary accents.": {
+      "comment": "Preview border style detail",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A diagonal gradient between primary and secondary accents."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主/次强调色之间的对角渐变描边。"
+          }
+        }
+      }
+    },
+    "Window preview style": {
+      "comment": "Accessibility label for compact window preview",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Window preview style"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "窗口预览样式"
           }
         }
       }

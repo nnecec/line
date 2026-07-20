@@ -14,6 +14,7 @@ struct PreviewConfigurationView: View {
     @Default(.previewPadding) private var previewPadding
     @Default(.previewCornerRadius) private var previewCornerRadius
     @Default(.previewBorderThickness) private var previewBorderThickness
+    @Default(.previewBorderStyle) private var borderStyle
     @Default(.previewUseWindowCornerRadius) private var previewUseWindowCornerRadius
     @Default(.previewBackgroundEnableBlur) private var previewBackgroundEnableBlur
     @Default(.previewBackgroundAccentOpacity) private var previewBackgroundAccentOpacity
@@ -21,6 +22,16 @@ struct PreviewConfigurationView: View {
 
     var body: some View {
         Form {
+            Section {
+                CompactWindowPreview()
+                    .frame(height: 150)
+                    .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
+            } header: {
+                Text("Live Preview", comment: "Settings section header for live window preview mock")
+            } footer: {
+                Text("Updates as you change padding, border, and glass options below.", comment: "Settings footer for live window preview mock")
+            }
+
             Section {
                 Toggle(isOn: previewVisibilityBinding) {
                     SettingsRowLabel(
@@ -47,12 +58,26 @@ struct PreviewConfigurationView: View {
                     )
                 }
 
-                SettingsSlider.pixels(
-                    title: "Border thickness",
-                    value: $previewBorderThickness.doubleBinding,
-                    range: 0...2.5,
-                    step: 0.5
-                )
+                Picker(selection: $borderStyle) {
+                    ForEach(PreviewBorderStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                } label: {
+                    SettingsRowLabel(
+                        "Border Style",
+                        detail: borderStyle.detail,
+                        systemImage: "rectangle.dashed.badge.record"
+                    )
+                }
+
+                if borderStyle.usesThickness {
+                    SettingsSlider.pixels(
+                        title: "Border thickness",
+                        value: $previewBorderThickness.doubleBinding,
+                        range: 0...2.5,
+                        step: 0.5
+                    )
+                }
             }
 
             // On macOS Tahoe and above, Line can read the selected window’s corner radius.
@@ -124,4 +149,3 @@ struct PreviewConfigurationView: View {
         }
     }
 }
-

@@ -6,6 +6,7 @@
 //  Simplified, elegant grid layout preview for settings.
 //
 
+import Defaults
 import SwiftUI
 
 /// A compact display mockup that keeps the grid inside a bounded screen area.
@@ -14,15 +15,27 @@ struct CompactGridPreview: View {
     let template: GridTemplate
     let accentColor: Color
     let aspectRatio: CGFloat
+    var showStyleChrome: Bool = false
+
+    @Default(.gridOverlayDrawStyle) private var drawStyle
+    @Default(.gridLineThickness) private var lineThickness
+    @Default(.gridCellCornerRadius) private var cellCornerRadius
+    @Default(.gridOverlayOpacity) private var overlayOpacity
+    @Default(.gridOverlayBlurEnabled) private var glassEnabled
+    @Default(.gridGlassStyle) private var glassStyle
+    @Default(.gridSelectionGlow) private var selectionGlow
+    @Default(.gridOverlayOuterCornerRadius) private var outerCornerRadius
 
     init(
         template: GridTemplate,
         accentColor: Color,
-        aspectRatio: CGFloat = 16.0 / 10.0
+        aspectRatio: CGFloat = 16.0 / 10.0,
+        showStyleChrome: Bool = false
     ) {
         self.template = template
         self.accentColor = accentColor
         self.aspectRatio = aspectRatio
+        self.showStyleChrome = showStyleChrome
     }
 
     /// Outer bezel radius; inner surface uses concentric radius (outer − padding).
@@ -44,7 +57,16 @@ struct CompactGridPreview: View {
                 GridPreviewSurface(
                     template: template,
                     accentColor: accentColor,
-                    cornerRadius: Self.surfaceRadius
+                    cornerRadius: Self.surfaceRadius,
+                    drawStyle: drawStyle,
+                    lineThickness: lineThickness,
+                    cellCornerRadius: cellCornerRadius,
+                    overlayOpacity: overlayOpacity,
+                    glassEnabled: glassEnabled,
+                    glassStyle: glassStyle,
+                    selectionGlow: selectionGlow,
+                    outerCornerRadius: outerCornerRadius,
+                    showStyleChrome: showStyleChrome
                 )
                 .padding(Self.bezelPadding)
             }
@@ -71,6 +93,12 @@ struct CompactGridPreview: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Grid layout preview")
         .accessibilityValue(accessibilityValue)
+        .animation(.snappy(duration: 0.2), value: drawStyle)
+        .animation(.snappy(duration: 0.2), value: glassEnabled)
+        .animation(.snappy(duration: 0.2), value: glassStyle)
+        .animation(.snappy(duration: 0.2), value: lineThickness)
+        .animation(.snappy(duration: 0.2), value: cellCornerRadius)
+        .animation(.snappy(duration: 0.2), value: selectionGlow)
     }
 
     private var monitorAspectRatio: CGFloat {
@@ -93,9 +121,43 @@ struct CompactGridPreview: View {
 
 @available(macOS 15.0, *)
 private struct GridPreviewSurface: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     let template: GridTemplate
     let accentColor: Color
     let cornerRadius: CGFloat
+    let drawStyle: GridOverlayDrawStyle
+    let lineThickness: CGFloat
+    let cellCornerRadius: CGFloat
+    let overlayOpacity: Double
+    let glassEnabled: Bool
+    let glassStyle: LiquidGlassStyle
+    let selectionGlow: Double
+    let outerCornerRadius: CGFloat
+    let showStyleChrome: Bool
+
+    private var usesGlass: Bool {
+        showStyleChrome && glassEnabled && !reduceTransparency
+    }
+
+    private var effectiveOuterRadius: CGFloat {
+        if showStyleChrome {
+            // Scale the full-screen outer radius into this compact surface.
+            return min(cornerRadius, max(3, outerCornerRadius * 0.35))
+        }
+        return cornerRadius
+    }
+
+    private var effectiveCellRadius: CGFloat {
+        if showStyleChrome {
+            return max(1, cellCornerRadius * 0.4)
+        }
+        return 2
+    }
+
+    private var glowAmount: Double {
+        min(1, max(0, selectionGlow))
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -113,17 +175,22 @@ private struct GridPreviewSurface: View {
             )
 
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.black.opacity(0.9))
+                backgroundLayer(in: size)
 
-                ForEach(0 ..< template.rows, id: \.self) { row in
-                    ForEach(0 ..< template.columns, id: \.self) { column in
-                        gridCell(width: cellWidth, height: cellHeight)
-                            .offset(
-                                x: CGFloat(column) * (cellWidth + gap),
-                                y: CGFloat(row) * (cellHeight + gap)
-                            )
-                    }
+                switch drawStyle {
+                case .cells:
+                    cellGrid(
+                        cellWidth: cellWidth,
+                        cellHeight: cellHeight,
+                        gap: gap
+                    )
+                case .lines:
+                    lineGrid(
+                        size: size,
+                        cellWidth: cellWidth,
+                        cellHeight: cellHeight,
+                        gap: gap
+                    )
                 }
 
                 hoverHighlight(
@@ -133,19 +200,122 @@ private struct GridPreviewSurface: View {
                 )
             }
         }
-        .clipShape(.rect(cornerRadius: cornerRadius, style: .continuous))
+        .clipShape(.rect(cornerRadius: effectiveOuterRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: effectiveOuterRadius, style: .continuous)
+                .strokeBorder(.white.opacity(usesGlass ? 0.18 : 0.16), lineWidth: 0.5)
+        }
+        .overlay {
+            if usesGlass {
+                RoundedRectangle(cornerRadius: effectiveOuterRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.3),
+                                Color.white.opacity(0.0)
+                            ],
+                            startPoint: .top,
+                            endPoint: UnitPoint(x: 0.5, y: 0.4)
+                        ),
+                        lineWidth: 0.6
+                    )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func backgroundLayer(in size: CGSize) -> some View {
+        let shape = RoundedRectangle(cornerRadius: effectiveOuterRadius, style: .continuous)
+
+        if usesGlass {
+            Color.clear
+                .frame(width: size.width, height: size.height)
+                .glassEffect(previewGlassEffect, in: shape)
+                .overlay {
+                    shape.fill(backgroundScrim)
+                }
+        } else {
+            shape
+                .fill(Color.black.opacity(showStyleChrome ? max(0.55, overlayOpacity) : 0.9))
+        }
+    }
+
+    private var previewGlassEffect: Glass {
+        switch glassStyle {
+        case .clear:
+            .clear
+        case .regular:
+            .regular.tint(.black.opacity(0.12))
+        case .tinted:
+            .regular.tint(accentColor.opacity(0.14))
+        }
+    }
+
+    private var backgroundScrim: Color {
+        switch glassStyle {
+        case .clear:
+            Color.black.opacity(0.08)
+        case .regular:
+            Color.black.opacity(0.16)
+        case .tinted:
+            accentColor.opacity(0.10)
+        }
+    }
+
+    @ViewBuilder
+    private func cellGrid(
+        cellWidth: CGFloat,
+        cellHeight: CGFloat,
+        gap: CGFloat
+    ) -> some View {
+        ForEach(0 ..< template.rows, id: \.self) { row in
+            ForEach(0 ..< template.columns, id: \.self) { column in
+                gridCell(width: cellWidth, height: cellHeight)
+                    .offset(
+                        x: CGFloat(column) * (cellWidth + gap),
+                        y: CGFloat(row) * (cellHeight + gap)
+                    )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func lineGrid(
+        size: CGSize,
+        cellWidth: CGFloat,
+        cellHeight: CGFloat,
+        gap: CGFloat
+    ) -> some View {
+        let stroke = Color.white.opacity(0.22)
+        let thickness = max(0.5, min(2, lineThickness * 0.75))
+
+        ForEach(0 ..< template.columns + 1, id: \.self) { col in
+            let x = CGFloat(col) * (cellWidth + gap) - (col == 0 ? 0 : gap / 2)
+            Rectangle()
+                .fill(stroke)
+                .frame(width: thickness, height: size.height)
+                .position(x: x, y: size.height / 2)
+        }
+
+        ForEach(0 ..< template.rows + 1, id: \.self) { row in
+            let y = CGFloat(row) * (cellHeight + gap) - (row == 0 ? 0 : gap / 2)
+            Rectangle()
+                .fill(stroke)
+                .frame(width: size.width, height: thickness)
+                .position(x: size.width / 2, y: y)
         }
     }
 
     private func gridCell(width: CGFloat, height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: min(2, min(width, height) / 3), style: .continuous)
+        let radius = min(effectiveCellRadius, min(width, height) / 3)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let border = max(0.5, min(1.5, lineThickness * 0.75))
+
+        return shape
             .fill(accentColor.opacity(0.08))
             .overlay {
-                RoundedRectangle(cornerRadius: min(2, min(width, height) / 3), style: .continuous)
-                    .strokeBorder(accentColor.opacity(0.42), lineWidth: 0.75)
+                shape
+                    .strokeBorder(accentColor.opacity(0.42), lineWidth: border)
             }
             .frame(width: width, height: height)
     }
@@ -162,16 +332,22 @@ private struct GridPreviewSurface: View {
         let startRow = max(0, template.rows - selectedRows)
         let width = CGFloat(selectedColumns) * cellWidth + CGFloat(max(0, selectedColumns - 1)) * gap
         let height = CGFloat(selectedRows) * cellHeight + CGFloat(max(0, selectedRows - 1)) * gap
-        let radius = min(4, min(width, height) / 4)
+        let radius = min(
+            max(2, effectiveCellRadius),
+            min(width, height) / 4
+        )
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let fillOpacity = 0.20 + glowAmount * 0.10
+        let glowOpacity = 0.12 + glowAmount * 0.28
 
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .fill(accentColor.opacity(0.24))
+        shape
+            .fill(accentColor.opacity(fillOpacity))
             .overlay {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(accentColor.opacity(0.9), lineWidth: 1)
+                shape
+                    .strokeBorder(accentColor.opacity(0.9), lineWidth: max(0.75, min(1.5, lineThickness)))
             }
             .overlay {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                shape
                     .strokeBorder(
                         LinearGradient(
                             colors: [
@@ -184,6 +360,7 @@ private struct GridPreviewSurface: View {
                         lineWidth: 0.6
                     )
             }
+            .shadow(color: accentColor.opacity(glowOpacity * 0.6), radius: 4 + glowAmount * 4, y: 2)
             .frame(width: width, height: height)
             .offset(
                 x: CGFloat(startColumn) * (cellWidth + gap),

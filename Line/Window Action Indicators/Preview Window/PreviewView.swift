@@ -18,6 +18,7 @@ struct PreviewView: View {
     @Default(.previewPadding) private var previewPadding
     @Default(.previewCornerRadius) private var previewCornerRadius
     @Default(.previewBorderThickness) private var previewBorderThickness
+    @Default(.previewBorderStyle) private var borderStyle
     @Default(.previewBackgroundEnableBlur) private var previewBackgroundEnableBlur
     @Default(.previewBackgroundAccentOpacity) private var previewBackgroundAccentOpacity
     @Default(.previewGlassStyle) private var glassStyle
@@ -25,6 +26,7 @@ struct PreviewView: View {
     /// Matches the settings slider upper bound so the control never appears stuck.
     private static let maxBorderThickness: CGFloat = 2.5
     private static let minimumCornerRadius: CGFloat = 4
+    private static let hairlineThickness: CGFloat = 0.75
 
     init(viewModel: PreviewViewModel) {
         self.viewModel = viewModel
@@ -62,7 +64,18 @@ struct PreviewView: View {
     }
 
     private var effectiveBorderThickness: CGFloat {
-        min(Self.maxBorderThickness, max(0, previewBorderThickness))
+        switch borderStyle {
+        case .none:
+            0
+        case .hairline:
+            Self.hairlineThickness
+        case .accent, .gradient:
+            min(Self.maxBorderThickness, max(0, previewBorderThickness))
+        }
+    }
+
+    private var borderInsetPadding: CGFloat {
+        effectivePadding + effectiveBorderThickness / 2
     }
 
     /// Soft enter scale; disabled entirely when Reduce Motion is on.
@@ -93,13 +106,13 @@ struct PreviewView: View {
         return ZStack {
             previewSurface
 
-            // Hairline: softer under glass so it doesn't fight the material edge.
-            if usesGlass {
+            // Soft material edge only when the user did not pick an explicit border.
+            if borderStyle == .none, usesGlass {
                 shape
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.75)
-            } else {
+                    .strokeBorder(Color.primary.opacity(0.05), lineWidth: 0.5)
+            } else if borderStyle == .none {
                 shape
-                    .strokeBorder(.quinary, lineWidth: 1)
+                    .strokeBorder(.quinary.opacity(0.6), lineWidth: 0.5)
             }
 
             // Top specular rim — the detail that sells liquid glass.
@@ -120,20 +133,13 @@ struct PreviewView: View {
 
             if effectiveBorderThickness > 0 {
                 shape
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                accentColorController.color1.opacity(usesGlass ? 0.78 : 0.72),
-                                accentColorController.color2.opacity(usesGlass ? 0.52 : 0.56)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
+                    .strokeBorder(
+                        borderStrokeStyle,
                         lineWidth: effectiveBorderThickness
                     )
             }
         }
-        .padding(effectivePadding + effectiveBorderThickness / 2)
+        .padding(borderInsetPadding)
         .shadow(
             color: .black.opacity(viewModel.isShown ? 0.08 : 0),
             radius: 3,
@@ -148,6 +154,7 @@ struct PreviewView: View {
         .animation(luminareAnimation, value: previewBackgroundAccentOpacity)
         .animation(luminareAnimation, value: viewModel.isShown)
         .animation(luminareAnimation, value: glassStyle)
+        .animation(luminareAnimation, value: borderStyle)
     }
 
     @ViewBuilder
@@ -205,6 +212,34 @@ struct PreviewView: View {
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    private var borderStrokeStyle: AnyShapeStyle {
+        switch borderStyle {
+        case .none:
+            AnyShapeStyle(Color.clear)
+        case .hairline:
+            AnyShapeStyle(
+                usesGlass
+                    ? Color.primary.opacity(0.14)
+                    : Color.primary.opacity(0.22)
+            )
+        case .accent:
+            AnyShapeStyle(
+                accentColorController.color1.opacity(usesGlass ? 0.78 : 0.85)
+            )
+        case .gradient:
+            AnyShapeStyle(
+                LinearGradient(
+                    colors: [
+                        accentColorController.color1.opacity(usesGlass ? 0.78 : 0.72),
+                        accentColorController.color2.opacity(usesGlass ? 0.52 : 0.56)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             )
         }
     }

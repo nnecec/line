@@ -59,3 +59,43 @@ enum GridOverlayDrawStyle: String, CaseIterable, Identifiable, Defaults.Serializ
         }
     }
 }
+
+/// Stroke treatment for the window destination preview.
+enum PreviewBorderStyle: String, CaseIterable, Identifiable, Defaults.Serializable {
+    case none
+    case hairline
+    case accent
+    case gradient
+
+    var id: Self { self }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .none: "None"
+        case .hairline: "Hairline"
+        case .accent: "Accent"
+        case .gradient: "Gradient"
+        }
+    }
+
+    var detail: LocalizedStringKey {
+        switch self {
+        case .none:
+            "No border — rely on glass edge and shadow alone."
+        case .hairline:
+            "A subtle system edge without accent color."
+        case .accent:
+            "A solid border using the current accent color."
+        case .gradient:
+            "A diagonal gradient between primary and secondary accents."
+        }
+    }
+
+    /// Whether the thickness slider should be shown for this style.
+    var usesThickness: Bool {
+        switch self {
+        case .none, .hairline: false
+        case .accent, .gradient: true
+        }
+    }
+}

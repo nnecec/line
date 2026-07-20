@@ -10,7 +10,6 @@ import Defaults
 import SwiftUI
 
 private let gridOverlayMinimumOpacity = 0.16
-private let gridOverlayCornerRadius: CGFloat = 12
 
 /// SwiftUI view that renders the grid overlay with background, cells/lines, and selection highlight.
 struct GridOverlayView: View {
@@ -31,6 +30,7 @@ struct GridOverlayView: View {
     @Default(.gridGlassStyle) private var glassStyle
     @Default(.gridOverlayDrawStyle) private var drawStyle
     @Default(.gridSelectionGlow) private var selectionGlow
+    @Default(.gridOverlayOuterCornerRadius) private var outerCornerRadiusSetting
 
     private var usesGlass: Bool {
         blurEnabled && !reduceTransparency
@@ -72,7 +72,8 @@ struct GridOverlayView: View {
 
     /// Outer radius stays concentric with cell radius when cells are large.
     private var outerCornerRadius: CGFloat {
-        max(gridOverlayCornerRadius, cornerRadius + 6)
+        let configured = max(0, outerCornerRadiusSetting)
+        return max(configured, cornerRadius + 6)
     }
 
     private var selectionAnimation: Animation? {

@@ -35,6 +35,7 @@ extension Defaults.Keys {
     static let previewBackgroundEnableBlur = Key<Bool>("previewBackgroundEnableBlur", default: true)
     static let previewBackgroundAccentOpacity = Key<CGFloat>("previewBackgroundAccentOpacity", default: 0.12)
     static let previewGlassStyle = Key<LiquidGlassStyle>("previewGlassStyle", default: .tinted)
+    static let previewBorderStyle = Key<PreviewBorderStyle>("previewBorderStyle", default: .gradient)
 
     // Behavior
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
@@ -134,6 +135,10 @@ extension Defaults.Keys {
     static let gridSelectionGlow = Key<Double>(
         "gridSelectionGlow",
         default: 0.55
+    )
+    static let gridOverlayOuterCornerRadius = Key<CGFloat>(
+        "gridOverlayOuterCornerRadius",
+        default: 12
     )
 }
 
