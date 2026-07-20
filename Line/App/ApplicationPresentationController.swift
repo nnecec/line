@@ -30,7 +30,16 @@ final class ApplicationPresentationController {
         applyPreferredBackgroundPresentation()
     }
 
+    /// Prevents a persisted state where both the menu bar icon and Dock icon are hidden.
+    func ensureReachablePresentation() {
+        if Defaults[.hideMenuBarIcon], !Defaults[.showDockIcon] {
+            Defaults[.hideMenuBarIcon] = false
+        }
+    }
+
     func applyPreferredBackgroundPresentation() {
+        ensureReachablePresentation()
+
         if Defaults[.showDockIcon] {
             NSApp.setActivationPolicy(.regular)
         } else {

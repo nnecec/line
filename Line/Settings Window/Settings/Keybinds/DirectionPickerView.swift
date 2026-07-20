@@ -49,19 +49,28 @@ struct DirectionPickerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TextField(
-                String(localized: "Search for a window action", defaultValue: "Search…"),
-                text: $searchText
-            )
-            .textFieldStyle(.plain)
-            .focused($isSearchFocused)
-            .padding(12)
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+
+                TextField(
+                    String(localized: "Search for a window action", defaultValue: "Search…"),
+                    text: $searchText
+                )
+                .textFieldStyle(.plain)
+                .focused($isSearchFocused)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
 
             Divider()
+                .opacity(0.6)
 
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
-                    LazyVStack(alignment: .leading, spacing: 4) {
+                    LazyVStack(alignment: .leading, spacing: 3) {
                         if searchResults.isEmpty {
                             sectionsView
                         } else {
@@ -70,7 +79,7 @@ struct DirectionPickerView: View {
                     }
                     .padding(8)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .onAppear {
                     setupEventMonitor(proxy: proxy)
                 }
@@ -101,9 +110,12 @@ struct DirectionPickerView: View {
                 }
             } header: {
                 Text(section.title)
-                    .font(.caption)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .padding([.top, .horizontal], 6)
+                    .textCase(nil)
+                    .padding(.top, 8)
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 2)
             }
         }
     }
@@ -229,34 +241,60 @@ private struct DirectionPickerRow: View {
 
     @State private var isHovering = false
 
+    private static let cornerRadius: CGFloat = 8
+
     var body: some View {
         Button(action: select) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 IconView(direction: item)
+                    .opacity(isHighlighted ? 1 : 0.92)
 
                 Text(item.name)
+                    .fontWeight(isHighlighted ? .medium : .regular)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                if isHighlighted {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                }
             }
-            .padding(.horizontal, 6)
-            .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                 .fill(backgroundColor)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.secondary.opacity(isHighlighted ? 0.35 : 0), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                .strokeBorder(borderColor, lineWidth: 1)
         }
+        .animation(.snappy(duration: 0.14), value: isHighlighted)
+        .animation(.snappy(duration: 0.12), value: isHovering)
         .onHover { isHovering = $0 }
     }
 
     private var backgroundColor: Color {
         if isHighlighted {
-            Color.accentColor.opacity(0.18)
+            Color.accentColor.opacity(0.16)
         } else if isHovering {
-            Color.secondary.opacity(0.10)
+            Color.secondary.opacity(0.09)
+        } else {
+            Color.clear
+        }
+    }
+
+    private var borderColor: Color {
+        if isHighlighted {
+            Color.accentColor.opacity(0.28)
+        } else if isHovering {
+            Color.secondary.opacity(0.12)
         } else {
             Color.clear
         }

@@ -5,11 +5,13 @@
 //  Created by nnecec on 2026-03-09.
 //
 
+import Defaults
 import SwiftUI
 
 struct ActionPreview: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ObservedObject private var accentColorController: AccentColorController = .shared
+    @Default(.accentColorMode) private var accentColorMode
 
     let action: WindowAction
 
@@ -26,22 +28,22 @@ struct ActionPreview: View {
 
     @ViewBuilder
     private func blurredWindow() -> some View {
-        let shape = RoundedRectangle(cornerRadius: 7)
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        let usesGlass = !reduceTransparency
+        let usesAccentTint = accentColorMode.usesAccentTint
 
-        if reduceTransparency {
-            shape
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.92))
-                .overlay {
-                    shape.strokeBorder(accentColorController.color1.opacity(0.8), lineWidth: 1.5)
-                }
-        } else {
-            shape
-                .fill(.clear)
-                .glassEffect(.regular.tint(accentColorController.color1.opacity(0.12)), in: shape)
-                .overlay {
-                    shape.strokeBorder(accentColorController.color1.opacity(0.8), lineWidth: 1.5)
-                }
-        }
+        DestinationPreviewChrome(
+            shape: shape,
+            usesGlass: usesGlass,
+            glassStyle: usesAccentTint ? .tinted : .regular,
+            borderStyle: usesAccentTint ? .hairline : .hairline,
+            borderThickness: 0.85,
+            accent: accentColorController.color1,
+            secondaryAccent: accentColorController.color2,
+            tintOpacity: 0.06,
+            usesAccentTint: usesAccentTint,
+            isShown: true
+        )
     }
 
     private func frame(in proxy: GeometryProxy) -> CGRect {

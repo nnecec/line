@@ -22,15 +22,13 @@
 		2A0510012FC5100000ABC051 /* CycleActionConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0510002FC5100000ABC051 /* CycleActionConfigurationTests.swift */; };
 		2A28B6292EE5050C00A1E26B /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 2A28B6282EE5050C00A1E26B /* Defaults */; };
 		2A70A4012FE1000000A70A40 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 2A70A4032FE1000000A70A40 /* Sparkle */; };
-		2A86890D2F80968A005B521B /* LineDockTile.plugin in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2A8689072F809625005B521B /* LineDockTile.plugin */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2AC4F4A82FDCAF1F00CB2FBE /* Scribe in Frameworks */ = {isa = PBXBuildFile; productRef = 2AF9238D2F540B1300F467FD /* Scribe */; };
 		2AC4F62C2FDCAF7100CB2FBE /* Luminare in Frameworks */ = {isa = PBXBuildFile; productRef = 2AC4F62B2FDCAF7100CB2FBE /* Luminare */; };
-		2AE091C72F81A22800EF6149 /* Scribe in Frameworks */ = {isa = PBXBuildFile; productRef = 2AE091C62F81A22800EF6149 /* Scribe */; };
 		5A1000012FD1000000A10001 /* ApplicationInfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */; };
 		5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */; };
-		5A1000092FD1000000A10009 /* AccentColorControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */; };
 		5A1000052FD1000000A10001 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */; };
 		5A1000072FD1000000A10001 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000082FD1000000A10001 /* LICENSE */; };
+		5A1000092FD1000000A10009 /* AccentColorControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */; };
 		F06D768A2DFF7A77007EEDA9 /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F06D76892DFF7A77007EEDA9 /* SkyLight.framework */; };
 /* End PBXBuildFile section */
 
@@ -42,27 +40,7 @@
 			remoteGlobalIDString = A8E59C34297F5E9A0064D4BA;
 			remoteInfo = Line;
 		};
-		2A8689102F809800005B521B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A8E59C2D297F5E9A0064D4BA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 2A8689062F809625005B521B;
-			remoteInfo = LineDockTile;
-		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		2A86890C2F80967B005B521B /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				2A86890D2F80968A005B521B /* LineDockTile.plugin in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2A0130032F90000000ABC001 /* LineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -79,12 +57,11 @@
 		2A0260042FB2600000ABC026 /* WallpaperImageFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperImageFetcherTests.swift; sourceTree = "<group>"; };
 		2A0360002FC3600000ABC036 /* LineCoordinatorPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineCoordinatorPolicyTests.swift; sourceTree = "<group>"; };
 		2A0510002FC5100000ABC051 /* CycleActionConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleActionConfigurationTests.swift; sourceTree = "<group>"; };
-		2A8689072F809625005B521B /* LineDockTile.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LineDockTile.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationInfrastructureTests.swift; sourceTree = "<group>"; };
 		5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashOverlapPolicyTests.swift; sourceTree = "<group>"; };
-		5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorControllerTests.swift; sourceTree = "<group>"; };
 		5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = THIRD_PARTY_NOTICES.md; sourceTree = "<group>"; };
 		5A1000082FD1000000A10001 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorControllerTests.swift; sourceTree = "<group>"; };
 		A848130C2BD1A8D100B02E93 /* .github */ = {isa = PBXFileReference; lastKnownFileType = folder; path = .github; sourceTree = "<group>"; };
 		A86AFD7529888B29008F4892 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A883642E298B7288005D6C19 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
@@ -99,23 +76,12 @@
 			membershipExceptions = (
 				Config.xcconfig,
 				Info.plist,
-				"Resources/AppIcon-Black Hole.icon",
-				"Resources/AppIcon-Black.icon",
-				"Resources/AppIcon-Holo.icon",
-				"Resources/AppIcon-Keycap.icon",
-				"Resources/AppIcon-Line Master.icon",
-				"Resources/AppIcon-Meta Line.icon",
-				"Resources/AppIcon-Rose Pine.icon",
-				"Resources/AppIcon-Summer.icon",
-				"Resources/AppIcon-Synthwave Sunset.icon",
-				"Resources/AppIcon-White.icon",
 			);
 			target = A8E59C34297F5E9A0064D4BA /* Line */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2A86890E2F809700005B521B /* LineDockTile */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = LineDockTile; sourceTree = "<group>"; };
 		A8C751AC2D7BA98600B58784 /* Line */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A8C751FF2D7BA98600B58784 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Line; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -124,14 +90,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		2A8689042F809625005B521B /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				2AE091C72F81A22800EF6149 /* Scribe in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,7 +150,6 @@
 				5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */,
 				A8C751AC2D7BA98600B58784 /* Line */,
 				2A0130062F90000000ABC001 /* LineTests */,
-				2A86890E2F809700005B521B /* LineDockTile */,
 				A8E59C36297F5E9A0064D4BA /* Products */,
 				A883642D298B7288005D6C19 /* Frameworks */,
 			);
@@ -203,7 +160,6 @@
 			children = (
 				A8E59C35297F5E9A0064D4BA /* Line.app */,
 				2A0130032F90000000ABC001 /* LineTests.xctest */,
-				2A8689072F809625005B521B /* LineDockTile.plugin */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -231,42 +187,17 @@
 			productReference = 2A0130032F90000000ABC001 /* LineTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		2A8689062F809625005B521B /* LineDockTile */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 2A8689082F809625005B521B /* Build configuration list for PBXNativeTarget "LineDockTile" */;
-			buildPhases = (
-				2A8689032F809625005B521B /* Sources */,
-				2A8689042F809625005B521B /* Frameworks */,
-				2A8689052F809625005B521B /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				2A86890E2F809700005B521B /* LineDockTile */,
-			);
-			name = LineDockTile;
-			packageProductDependencies = (
-				2AE091C62F81A22800EF6149 /* Scribe */,
-			);
-			productName = LineDockTile;
-			productReference = 2A8689072F809625005B521B /* LineDockTile.plugin */;
-			productType = "com.apple.product-type.bundle";
-		};
 		A8E59C34297F5E9A0064D4BA /* Line */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A8E59C44297F5E9B0064D4BA /* Build configuration list for PBXNativeTarget "Line" */;
 			buildPhases = (
 				A8E59C31297F5E9A0064D4BA /* Sources */,
 				A8E59C32297F5E9A0064D4BA /* Frameworks */,
-				2A86890C2F80967B005B521B /* CopyFiles */,
 				A8E59C33297F5E9A0064D4BA /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				2A8689112F809800005B521B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A8C751AC2D7BA98600B58784 /* Line */,
@@ -296,9 +227,6 @@
 						CreatedOnToolsVersion = 26.4;
 						TestTargetID = A8E59C34297F5E9A0064D4BA;
 					};
-					2A8689062F809625005B521B = {
-						CreatedOnToolsVersion = 26.4;
-					};
 					A8E59C34297F5E9A0064D4BA = {
 						CreatedOnToolsVersion = 14.2;
 					};
@@ -326,20 +254,12 @@
 			targets = (
 				A8E59C34297F5E9A0064D4BA /* Line */,
 				2A01300A2F90000000ABC001 /* LineTests */,
-				2A8689062F809625005B521B /* LineDockTile */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		2A0130092F90000000ABC001 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		2A8689052F809625005B521B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -381,13 +301,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		2A8689032F809625005B521B /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		A8E59C31297F5E9A0064D4BA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -402,11 +315,6 @@
 			isa = PBXTargetDependency;
 			target = A8E59C34297F5E9A0064D4BA /* Line */;
 			targetProxy = 2A01300B2F90000000ABC001 /* PBXContainerItemProxy */;
-		};
-		2A8689112F809800005B521B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 2A8689062F809625005B521B /* LineDockTile */;
-			targetProxy = 2A8689102F809800005B521B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -483,75 +391,6 @@
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Line.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Line";
-			};
-			name = Development;
-		};
-		2A8689092F809625005B521B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nnecec.Line.DockTile;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				WRAPPER_EXTENSION = plugin;
-			};
-			name = Debug;
-		};
-		2A86890A2F809625005B521B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nnecec.Line.DockTile;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				WRAPPER_EXTENSION = plugin;
-			};
-			name = Release;
-		};
-		2A86890B2F809625005B521B /* Development */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nnecec.Line.DockTile;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				WRAPPER_EXTENSION = plugin;
 			};
 			name = Development;
 		};
@@ -885,16 +724,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2A8689082F809625005B521B /* Build configuration list for PBXNativeTarget "LineDockTile" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				2A8689092F809625005B521B /* Debug */,
-				2A86890A2F809625005B521B /* Release */,
-				2A86890B2F809625005B521B /* Development */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		A8E59C30297F5E9A0064D4BA /* Build configuration list for PBXProject "Line" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -967,11 +796,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2AC4F62A2FDCAF7100CB2FBE /* XCRemoteSwiftPackageReference "Luminare" */;
 			productName = Luminare;
-		};
-		2AE091C62F81A22800EF6149 /* Scribe */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 2AF9238C2F540B1300F467FD /* XCRemoteSwiftPackageReference "Scribe" */;
-			productName = Scribe;
 		};
 		2AF9238D2F540B1300F467FD /* Scribe */ = {
 			isa = XCSwiftPackageProductDependency;

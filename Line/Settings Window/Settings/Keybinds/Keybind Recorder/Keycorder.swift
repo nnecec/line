@@ -63,14 +63,19 @@ struct Keycorder: View {
             startObservingKeys()
         } label: {
             if selectionKeybind.isEmpty {
-                Text(isActive ? "\(Image(systemName: "ellipsis"))" : "\(Image(systemName: "exclamationmark.triangle"))")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .fixedSize(horizontal: true, vertical: false)
+                Image(systemName: isActive ? "ellipsis" : "plus")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
                     .frame(width: 27, height: 27)
-                    .font(.callout)
                     .keybindKeyCap(isHighlighted: isActive || isHovering)
                     .frame(minWidth: 40, minHeight: 40)
                     .contentShape(Rectangle())
+                    .accessibilityLabel(
+                        Text(
+                            isActive ? "Listening for keys" : "Record keybind",
+                            comment: "Accessibility label for empty keybind recorder control"
+                        )
+                    )
             } else {
                 HStack(spacing: 4) {
                     // First show modifiers in order
@@ -103,8 +108,12 @@ struct Keycorder: View {
         .animation(Animation.default, value: shouldShake)
         .popover(isPresented: $shouldError, arrowEdge: .bottom) {
             Text(errorMessage)
+                .font(.caption)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
-                .padding(8)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: 240)
         }
         .onHover { hovering in
             isHovering = hovering

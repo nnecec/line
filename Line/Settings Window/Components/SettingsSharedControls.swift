@@ -43,16 +43,18 @@ struct SettingsStatusBadge: View {
         self.style = style
     }
 
+    private static let cornerRadius: CGFloat = 7
+
     var body: some View {
         Label(title, systemImage: systemImage)
-            .font(.caption.weight(.medium))
+            .font(.caption.weight(.semibold))
             .foregroundStyle(foreground)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 9)
             .padding(.vertical, 4)
-            .background(background, in: Capsule(style: .continuous))
+            .background(background, in: RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
             .overlay {
-                Capsule(style: .continuous)
-                    .strokeBorder(border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
+                    .strokeBorder(border, lineWidth: 0.75)
             }
             .accessibilityElement(children: .combine)
     }
@@ -61,29 +63,29 @@ struct SettingsStatusBadge: View {
         switch style {
         case .neutral: .secondary
         case .accent: .accentColor
-        case .success: .green
-        case .warning: .orange
-        case .destructive: .red
+        case .success: Color(nsColor: .systemGreen)
+        case .warning: Color(nsColor: .systemOrange)
+        case .destructive: Color(nsColor: .systemRed)
         }
     }
 
     private var background: Color {
         switch style {
-        case .neutral: Color.secondary.opacity(0.10)
-        case .accent: Color.accentColor.opacity(0.12)
-        case .success: Color.green.opacity(0.12)
-        case .warning: Color.orange.opacity(0.12)
-        case .destructive: Color.red.opacity(0.12)
+        case .neutral: Color.secondary.opacity(0.09)
+        case .accent: Color.accentColor.opacity(0.11)
+        case .success: Color(nsColor: .systemGreen).opacity(0.11)
+        case .warning: Color(nsColor: .systemOrange).opacity(0.11)
+        case .destructive: Color(nsColor: .systemRed).opacity(0.11)
         }
     }
 
     private var border: Color {
         switch style {
-        case .neutral: Color.secondary.opacity(0.18)
-        case .accent: Color.accentColor.opacity(0.28)
-        case .success: Color.green.opacity(0.28)
-        case .warning: Color.orange.opacity(0.28)
-        case .destructive: Color.red.opacity(0.28)
+        case .neutral: Color.secondary.opacity(0.16)
+        case .accent: Color.accentColor.opacity(0.24)
+        case .success: Color(nsColor: .systemGreen).opacity(0.24)
+        case .warning: Color(nsColor: .systemOrange).opacity(0.24)
+        case .destructive: Color(nsColor: .systemRed).opacity(0.24)
         }
     }
 }
@@ -98,32 +100,46 @@ struct SettingsEmptyState: View {
     var action: (() -> ())?
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 14) {
             Image(systemName: systemImage)
-                .font(.system(size: 36, weight: .regular))
+                .font(.system(size: 26, weight: .medium))
                 .foregroundStyle(.secondary)
                 .symbolRenderingMode(.hierarchical)
+                .frame(width: 54, height: 54)
+                .background(
+                    Color.secondary.opacity(0.07),
+                    in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .strokeBorder(Color.secondary.opacity(0.11), lineWidth: 0.75)
+                }
 
-            Text(title)
-                .font(.headline)
+            VStack(spacing: 5) {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .multilineTextAlignment(.center)
 
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+                Text(message)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 300)
+            }
 
             if let actionTitle, let action {
                 Button(action: action) {
                     Text(actionTitle)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .controlSize(.regular)
-                .padding(.top, 4)
+                .padding(.top, 2)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 160)
-        .padding()
+        .frame(maxWidth: .infinity, minHeight: 188)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 26)
     }
 }
 
@@ -195,10 +211,11 @@ private struct OptionalKeyboardShortcut: ViewModifier {
 // MARK: - Image Outline
 
 private enum SettingsOutlineColor {
+    /// Soft edge that stays neutral without pure black/white hard edges.
     static func color(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.10)
-            : Color.black.opacity(0.10)
+            ? Color.primary.opacity(0.14)
+            : Color.primary.opacity(0.10)
     }
 }
 
@@ -230,12 +247,12 @@ struct SettingsCircleImageOutline: ViewModifier {
 }
 
 extension View {
-    /// Outline for rounded-rectangle images using pure black/white at 10% opacity.
+    /// Outline for rounded-rectangle images with a soft primary-tinted edge.
     func settingsImageOutline(cornerRadius: CGFloat = 0) -> some View {
         modifier(SettingsRoundedImageOutline(cornerRadius: cornerRadius))
     }
 
-    /// Outline for circular avatars using pure black/white at 10% opacity.
+    /// Outline for circular avatars with a soft primary-tinted edge.
     func settingsCircleImageOutline() -> some View {
         modifier(SettingsCircleImageOutline())
     }

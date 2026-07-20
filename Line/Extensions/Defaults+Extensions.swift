@@ -21,8 +21,9 @@ extension Defaults.Keys {
 
 extension Defaults.Keys {
     // Accent Color
-    static let accentColorMode: Key<AccentColorOption> = Key("accentColorMode", default: .system)
+    static let accentColorMode: Key<AccentColorOption> = Key("accentColorMode", default: .default)
     static let customAccentColor = Key<Color>("customAccentColor", default: .teal)
+    /// Legacy keys retained so existing UserDefaults values do not break decoding.
     static let useGradient = Key<Bool>("useGradient", default: false)
     static let gradientColor = Key<Color>("gradientColor", default: .blue)
 
@@ -30,12 +31,15 @@ extension Defaults.Keys {
     static let previewVisibility = Key<Bool>("previewVisibility", default: true)
     static let previewPadding = Key<CGFloat>("previewPadding", default: 10)
     static let previewCornerRadius = Key<CGFloat>("previewCornerRadius", default: 10)
-    static let previewBorderThickness = Key<CGFloat>("previewBorderThickness", default: 1.5)
+    static let previewBorderThickness = Key<CGFloat>("previewBorderThickness", default: 1.0)
     static let previewUseWindowCornerRadius = Key<Bool>("previewUseWindowCornerRadius", default: true)
     static let previewBackgroundEnableBlur = Key<Bool>("previewBackgroundEnableBlur", default: true)
-    static let previewBackgroundAccentOpacity = Key<CGFloat>("previewBackgroundAccentOpacity", default: 0.12)
-    static let previewGlassStyle = Key<LiquidGlassStyle>("previewGlassStyle", default: .tinted)
-    static let previewBorderStyle = Key<PreviewBorderStyle>("previewBorderStyle", default: .gradient)
+    static let previewBackgroundAccentOpacity = Key<CGFloat>("previewBackgroundAccentOpacity", default: 0.06)
+    static let previewGlassStyle = Key<LiquidGlassStyle>("previewGlassStyle", default: .regular)
+    static let previewBorderStyle = Key<PreviewBorderStyle>("previewBorderStyle", default: .hairline)
+
+    // Glass Effect Sync (Phase 1 improvement)
+    static let syncGlassEffectSettings = Key<Bool>("syncGlassEffectSettings", default: true)
 
     // Behavior
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
@@ -134,7 +138,7 @@ extension Defaults.Keys {
     )
     static let gridSelectionGlow = Key<Double>(
         "gridSelectionGlow",
-        default: 0.55
+        default: 0.35
     )
     static let gridOverlayOuterCornerRadius = Key<CGFloat>(
         "gridOverlayOuterCornerRadius",

@@ -18,8 +18,7 @@ final class AboutConfigurationModel: ObservableObject {
         .init(
             "Loop",
             Text("Original project", comment: "Role title shown in Line’s credits section."),
-            url: .init(string: "https://github.com/MrKai77/Loop")!,
-            avatar: Image(nsImage: NSApp.applicationIconImage)
+            url: .init(string: "https://github.com/MrKai77/Loop")!
         )
     ]
 
@@ -46,12 +45,10 @@ struct CreditItem: Identifiable {
     let name: String
     let description: Text?
     let url: URL
-    let avatar: Image
 
-    init(_ name: String, _ description: Text? = nil, url: URL, avatar: Image) {
+    init(_ name: String, _ description: Text? = nil, url: URL) {
         self.name = name
         self.description = description
-        self.avatar = avatar
         self.url = url
     }
 }
@@ -82,24 +79,25 @@ struct AboutConfigurationView: View {
 
     private var iconHeader: some View {
         Section {
-            HStack {
+            HStack(spacing: 14) {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 60, height: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .settingsImageOutline(cornerRadius: 12)
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .settingsImageOutline(cornerRadius: 14)
+                    .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(productDisplayName)
-                        .fontWeight(.medium)
+                        .font(.title3.weight(.semibold))
 
                     Text("Version \(Text(VersionDisplay.current.fullDisplay))")
-                        .font(.caption)
+                        .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
 
-                Spacer()
+                Spacer(minLength: 12)
 
                 Button {
                     model.copyVersionToClipboard()
@@ -114,9 +112,12 @@ struct AboutConfigurationView: View {
                 .accessibilityLabel("Copy version to clipboard")
                 .popover(isPresented: $model.didCompleteCopyToClipboard, arrowEdge: .bottom) {
                     Text("Copied")
-                        .padding(8)
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
                 }
             }
+            .padding(.vertical, 4)
         }
     }
 
@@ -180,14 +181,26 @@ struct AboutConfigurationView: View {
             .foregroundStyle(.secondary)
 
             Button {
-                if let repositoryURL = ProjectLinks.repositoryURL {
-                    openURL(repositoryURL)
+                if let issuesURL = ProjectLinks.issuesURL {
+                    openURL(issuesURL)
                 }
             } label: {
                 Label("Send Feedback", systemImage: "bubble.left")
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .controlSize(.regular)
+            .help(Text("Open the GitHub issues page", comment: "Help for Send Feedback button"))
+
+            Button {
+                if let repositoryURL = ProjectLinks.repositoryURL {
+                    openURL(repositoryURL)
+                }
+            } label: {
+                Label("View on GitHub", systemImage: "link")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+            .help(Text("Open the Line repository", comment: "Help for View on GitHub button"))
         } header: {
             Text("Community", comment: "Section header shown in settings")
         }
@@ -204,30 +217,29 @@ struct AboutConfigurationView: View {
     }
 
     private func creditView(_ credit: CreditItem) -> some View {
-        HStack(spacing: 12) {
-            credit.avatar
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 40, height: 40)
-                .clipShape(.circle)
-                .settingsCircleImageOutline()
-
-            VStack(alignment: .leading) {
+        HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Text(credit.name)
+                    .fontWeight(.medium)
 
                 if let description = credit.description {
+                    Text(verbatim: "·")
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+
                     description
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
             }
+            .lineLimit(1)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Button {
                 openURL(credit.url)
             } label: {
-                Label("Open link", systemImage: "link")
+                Label("Open link", systemImage: "arrow.up.right")
                     .labelStyle(.iconOnly)
             }
             .buttonStyle(.borderless)

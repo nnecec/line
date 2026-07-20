@@ -11,10 +11,8 @@ import SwiftUI
 enum SettingsTab: CaseIterable, Hashable, Identifiable {
     var id: Self { self }
 
-    case grid
     case preview
-    case icon
-    case accentColor
+    case gridLayout
 
     case behavior
     case keybinds
@@ -26,10 +24,8 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .grid: .init(localized: "Settings tab: Grid", defaultValue: "Grid")
         case .preview: .init(localized: "Settings tab: Preview", defaultValue: "Preview")
-        case .icon: .init(localized: "Settings tab: Icon", defaultValue: "Icon")
-        case .accentColor: .init(localized: "Settings tab: Accent Color", defaultValue: "Accent Color")
+        case .gridLayout: .init(localized: "Settings tab: Grid Layout", defaultValue: "Grid Layout")
         case .behavior: .init(localized: "Settings tab: General", defaultValue: "General")
         case .keybinds: .init(localized: "Settings tab: Keyboard Shortcuts", defaultValue: "Keyboard Shortcuts")
         case .permissions: .init(localized: "Settings tab: Permissions", defaultValue: "Permissions")
@@ -41,30 +37,31 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
 
     var image: Image {
         switch self {
-        case .grid: Image(systemName: "square.grid.3x3")
-        case .preview: Image(systemName: "inset.filled.center.rectangle")
-        case .icon: Image(systemName: "app.fill")
-        case .accentColor: Image(systemName: "paintpalette.fill")
-        case .behavior: Image(systemName: "gearshape.fill")
-        case .keybinds: Image(systemName: "keyboard.fill")
-        case .permissions: Image(systemName: "checkmark.shield.fill")
-        case .advanced: Image(systemName: "wrench.adjustable.fill")
-        case .excludedApps: Image(systemName: "xmark.octagon.fill")
-        case .about: Image(systemName: "info.circle.fill")
+        case .preview: Image(systemName: "rectangle.dashed")
+        case .gridLayout: Image(systemName: "square.grid.3x3")
+        case .behavior: Image(systemName: "gearshape")
+        case .keybinds: Image(systemName: "keyboard")
+        case .permissions: Image(systemName: "lock.shield")
+        case .advanced: Image(systemName: "slider.horizontal.3")
+        case .excludedApps: Image(systemName: "app.badge.checkmark")
+        case .about: Image(systemName: "info.circle")
         }
     }
 
     @ViewBuilder func view() -> some View {
         switch self {
-        case .grid:
+        case .preview:
             if #available(macOS 15.0, *) {
-                GridConfigurationView()
+                PreviewConfigurationView()
             } else {
-                Text("Grid configuration requires macOS 15.0 or later")
+                Text("Preview configuration requires macOS 15.0 or later")
             }
-        case .preview: PreviewConfigurationView()
-        case .icon: IconConfigurationView()
-        case .accentColor: AccentColorConfigurationView()
+        case .gridLayout:
+            if #available(macOS 15.0, *) {
+                GridLayoutConfigurationView()
+            } else {
+                Text("Grid layout configuration requires macOS 15.0 or later")
+            }
         case .behavior: BehaviorConfigurationView()
         case .keybinds: KeybindsConfigurationView()
         case .permissions: PermissionsConfigurationView()
@@ -74,7 +71,7 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
         }
     }
 
-    static let themingTabs: [Self] = [.grid, .preview, .icon, .accentColor]
+    static let appearanceTabs: [Self] = [.preview, .gridLayout]
     static let settingsTabs: [Self] = [.behavior, .keybinds]
     static let loopTabs: [Self] = [.permissions, .advanced, .excludedApps, .about]
 }

@@ -31,13 +31,21 @@ struct GridOverlayView: View {
     @Default(.gridOverlayDrawStyle) private var drawStyle
     @Default(.gridSelectionGlow) private var selectionGlow
     @Default(.gridOverlayOuterCornerRadius) private var outerCornerRadiusSetting
+    @Default(.accentColorMode) private var accentColorMode
 
     private var usesGlass: Bool {
         blurEnabled && !reduceTransparency
     }
 
+    private var usesAccentTint: Bool {
+        accentColorMode.usesAccentTint
+    }
+
     private var effectiveAccent: Color {
-        followsAppAccent ? accentColorController.color1 : accentColor
+        if !usesAccentTint {
+            return Color.white
+        }
+        return followsAppAccent ? accentColorController.color1 : accentColor
     }
 
     private var effectiveOverlayOpacity: Double {
@@ -50,17 +58,20 @@ struct GridOverlayView: View {
         let t = span > 0
             ? (effectiveOverlayOpacity - gridOverlayMinimumOpacity) / span
             : 0
-        return 0.06 + t * 0.22
+        // Keep glass readable: low base tint, limited range.
+        return 0.04 + t * 0.10
     }
 
     private var glassScrimOpacity: Double {
         switch glassStyle {
         case .clear:
-            return 0.02 + glassNormalizedOpacity * 0.06
+            return 0.015 + glassNormalizedOpacity * 0.04
         case .regular:
-            return 0.04 + glassNormalizedOpacity * 0.14
+            return 0.025 + glassNormalizedOpacity * 0.07
         case .tinted:
-            return 0.03 + glassNormalizedOpacity * 0.10
+            return usesAccentTint
+                ? 0.02 + glassNormalizedOpacity * 0.05
+                : 0.02 + glassNormalizedOpacity * 0.06
         }
     }
 
@@ -70,7 +81,6 @@ struct GridOverlayView: View {
         return (effectiveOverlayOpacity - gridOverlayMinimumOpacity) / span
     }
 
-    /// Outer radius stays concentric with cell radius when cells are large.
     private var outerCornerRadius: CGFloat {
         let configured = max(0, outerCornerRadiusSetting)
         return max(configured, cornerRadius + 6)
@@ -88,16 +98,23 @@ struct GridOverlayView: View {
 
     var body: some View {
         let outerShape = RoundedRectangle(cornerRadius: outerCornerRadius, style: .continuous)
+        let overlaySize = geometry.displayBounds.size
 
-        ZStack {
-            // Background glass (and optionally the selection glass) share one container
-            // so the system can morph material between them.
-            GlassEffectContainer(spacing: max(8, template.gap)) {
-                backgroundView(in: outerShape)
+        ZStack(alignment: .topLeading) {
+            if usesGlass {
+                GlassEffectContainer(spacing: max(8, template.gap)) {
+                    ZStack(alignment: .topLeading) {
+                        backgroundView(in: outerShape)
+                            .frame(width: overlaySize.width, height: overlaySize.height)
 
-                if usesGlass, let region = viewModel.selectedRegion {
-                    selectionGlass(for: region)
+                        if let region = viewModel.selectedRegion {
+                            selectionGlass(for: region)
+                        }
+                    }
+                    .frame(width: overlaySize.width, height: overlaySize.height, alignment: .topLeading)
                 }
+            } else {
+                backgroundView(in: outerShape)
             }
 
             gridContentView
@@ -107,31 +124,31 @@ struct GridOverlayView: View {
             }
         }
         .frame(
-            width: geometry.displayBounds.width,
-            height: geometry.displayBounds.height
+            width: overlaySize.width,
+            height: overlaySize.height
         )
         .clipShape(outerShape)
         .overlay {
             ZStack {
                 outerShape
-                    .strokeBorder(Color.white.opacity(usesGlass ? 0.14 : 0.22), lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(usesGlass ? 0.18 : 0.22), lineWidth: 1)
 
                 outerShape
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(usesGlass ? 0.32 : 0.18),
+                                Color.white.opacity(usesGlass ? 0.42 : 0.18),
                                 Color.white.opacity(0.0)
                             ],
                             startPoint: .top,
-                            endPoint: UnitPoint(x: 0.5, y: 0.35)
+                            endPoint: UnitPoint(x: 0.5, y: 0.40)
                         ),
-                        lineWidth: 0.75
+                        lineWidth: 0.85
                     )
             }
         }
-        .shadow(color: .black.opacity(0.10), radius: 4, y: 1)
-        .shadow(color: .black.opacity(0.16), radius: 22, y: 10)
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+        .shadow(color: .black.opacity(0.18), radius: 28, y: 12)
     }
 
     // MARK: - Background
@@ -154,20 +171,29 @@ struct GridOverlayView: View {
         case .clear:
             .clear
         case .regular:
-            .regular.tint(.black.opacity(glassTintStrength * 0.85))
+            // Neutral frost - lets desktop texture show through.
+            .regular.tint(Color.white.opacity(0.05 + glassTintStrength * 0.35))
         case .tinted:
-            .regular.tint(effectiveAccent.opacity(glassTintStrength * 0.7))
+            if usesAccentTint {
+                .regular.tint(effectiveAccent.opacity(glassTintStrength * 0.55))
+            } else {
+                .regular.tint(Color.white.opacity(0.05 + glassTintStrength * 0.30))
+            }
         }
     }
 
     private var backgroundScrim: Color {
         switch glassStyle {
         case .clear:
-            Color.black.opacity(glassScrimOpacity * 0.5)
+            Color.black.opacity(glassScrimOpacity * 0.4)
         case .regular:
-            Color.black.opacity(glassScrimOpacity)
+            Color.black.opacity(glassScrimOpacity * 0.55)
         case .tinted:
-            effectiveAccent.opacity(glassScrimOpacity * 0.45)
+            if usesAccentTint {
+                effectiveAccent.opacity(glassScrimOpacity * 0.25)
+            } else {
+                Color.black.opacity(glassScrimOpacity * 0.5)
+            }
         }
     }
 
@@ -203,8 +229,8 @@ struct GridOverlayView: View {
                 style: .continuous
             )
             let borderWidth = max(0.5, lineThickness)
-            let fillOpacity = usesGlass ? 0.05 : 0.08
-            let strokeOpacity = usesGlass ? 0.18 : 0.22
+            let fillOpacity = usesGlass ? 0.04 : 0.08
+            let strokeOpacity = usesGlass ? 0.20 : 0.22
 
             ZStack(alignment: .topLeading) {
                 ForEach(0 ..< rows, id: \.self) { row in
@@ -241,7 +267,7 @@ struct GridOverlayView: View {
                 count: rows,
                 gap: gap
             )
-            let stroke = Color.white.opacity(usesGlass ? 0.18 : 0.22)
+            let stroke = Color.white.opacity(usesGlass ? 0.20 : 0.22)
             let thickness = max(0.5, lineThickness)
 
             ZStack {
@@ -266,77 +292,122 @@ struct GridOverlayView: View {
 
     // MARK: - Selection
 
-    /// Soft glass body for the selection, living inside GlassEffectContainer for morphing.
+    /// Soft glass body for the selection. Accent modes use a whisper of tint only.
     @ViewBuilder
     private func selectionGlass(for region: GridRegion) -> some View {
         let localRect = geometry.localRect(for: region)
         let radius = min(cornerRadius, min(localRect.width, localRect.height) / 2)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let tint: Color = {
+            if usesAccentTint {
+                return effectiveAccent.opacity(0.08 + glowAmount * 0.06)
+            }
+            return Color.white.opacity(0.08 + glowAmount * 0.05)
+        }()
 
         Color.clear
             .frame(width: localRect.width, height: localRect.height)
-            .glassEffect(
-                .regular.tint(effectiveAccent.opacity(0.22 + glowAmount * 0.12)),
-                in: shape
-            )
-            .position(x: localRect.midX, y: localRect.midY)
+            .glassEffect(.regular.tint(tint), in: shape)
+            .offset(x: localRect.minX, y: localRect.minY)
             .animation(selectionAnimation, value: region)
+            .allowsHitTesting(false)
     }
 
-    /// Crisp fill / stroke / specular drawn above the glass layer.
+    /// Edge + specular only when glass is on - no solid accent slab.
     @ViewBuilder
     private func highlightChrome(for region: GridRegion) -> some View {
         let localRect = geometry.localRect(for: region)
         let radius = min(cornerRadius, min(localRect.width, localRect.height) / 2)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let fillOpacity = usesGlass ? 0.16 : 0.34
-        let strokeWidth = max(1.5, lineThickness + 0.5)
-        let glowOpacity = 0.12 + glowAmount * 0.28
+        let strokeWidth = max(1.2, lineThickness + 0.35)
+        let glowOpacity = usesAccentTint
+            ? (0.06 + glowAmount * 0.18)
+            : (0.04 + glowAmount * 0.10)
+        let specularStrength = usesGlass ? 0.40 : 0.28
+        let strokeColor: Color = usesAccentTint ? effectiveAccent : Color.white
 
-        shape
-            .fill(
-                LinearGradient(
-                    colors: [
-                        effectiveAccent.opacity(fillOpacity + 0.06),
-                        effectiveAccent.opacity(fillOpacity)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .overlay {
+        ZStack {
+            if usesGlass {
+                // Very light inner wash - never a solid block.
                 shape
-                    .strokeBorder(
+                    .fill(
                         LinearGradient(
                             colors: [
-                                effectiveAccent.opacity(0.98),
-                                effectiveAccent.opacity(0.55)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: strokeWidth
-                    )
-            }
-            .overlay {
-                shape
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.35),
-                                Color.white.opacity(0.0)
+                                strokeColor.opacity(usesAccentTint ? 0.05 : 0.06),
+                                strokeColor.opacity(0.015)
                             ],
                             startPoint: .top,
-                            endPoint: UnitPoint(x: 0.5, y: 0.4)
-                        ),
-                        lineWidth: 0.75
+                            endPoint: .bottom
+                        )
+                    )
+            } else {
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                strokeColor.opacity(0.28),
+                                strokeColor.opacity(0.18)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
             }
-            .shadow(color: effectiveAccent.opacity(glowOpacity * 0.7), radius: 6, y: 2)
-            .shadow(color: effectiveAccent.opacity(glowOpacity), radius: 14 + glowAmount * 8, y: 6)
-            .frame(width: localRect.width, height: localRect.height)
-            .position(x: localRect.midX, y: localRect.midY)
-            .animation(selectionAnimation, value: region)
+
+            shape
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(specularStrength * 0.14),
+                            Color.clear
+                        ],
+                        center: .init(x: 0.5, y: 0.18),
+                        startRadius: 0,
+                        endRadius: max(localRect.width, localRect.height) * 0.55
+                    )
+                )
+                .blendMode(.plusLighter)
+
+            shape
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            strokeColor.opacity(usesAccentTint ? 0.70 : 0.55),
+                            strokeColor.opacity(usesAccentTint ? 0.38 : 0.28),
+                            Color.white.opacity(0.20)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: strokeWidth
+                )
+
+            shape
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(specularStrength),
+                            Color.white.opacity(specularStrength * 0.22),
+                            Color.white.opacity(0.0)
+                        ],
+                        startPoint: .top,
+                        endPoint: UnitPoint(x: 0.5, y: 0.48)
+                    ),
+                    lineWidth: 0.9
+                )
+
+            if usesGlass {
+                shape
+                    .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
+                    .padding(1)
+            }
+        }
+        .shadow(color: strokeColor.opacity(glowOpacity * 0.45), radius: 4, y: 1)
+        .shadow(color: strokeColor.opacity(glowOpacity * 0.55), radius: 10 + glowAmount * 4, y: 4)
+        .frame(width: localRect.width, height: localRect.height, alignment: .topLeading)
+        .offset(x: localRect.minX, y: localRect.minY)
+        .animation(selectionAnimation, value: region)
+        .allowsHitTesting(false)
     }
 
     // MARK: - Helpers

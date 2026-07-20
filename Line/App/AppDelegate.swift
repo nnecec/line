@@ -204,6 +204,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func configureInitialPresentation() {
+        ApplicationPresentationController.shared.ensureReachablePresentation()
+
         let decision = InitialPresentationDecision.resolve(
             launchedAsLoginItem: launchedAsLoginItem,
             isAccessibilityGranted: AccessibilityManager.shared.isGranted
@@ -236,6 +238,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
         SettingsWindowHost.shared.show()
         return true
+    }
+
+    func applicationDockMenu(_: NSApplication) -> NSMenu? {
+        let menu = NSMenu()
+
+        let settingsItem = NSMenuItem(
+            title: String(localized: "Settings…", comment: "Dock menu item that opens Line settings"),
+            action: #selector(openSettingsFromDock(_:)),
+            keyEquivalent: ""
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
+        let permissionsItem = NSMenuItem(
+            title: String(
+                localized: "Permissions…",
+                comment: "Dock menu item that opens the Permissions settings tab"
+            ),
+            action: #selector(openPermissionsFromDock(_:)),
+            keyEquivalent: ""
+        )
+        permissionsItem.target = self
+        menu.addItem(permissionsItem)
+
+        menu.addItem(.separator())
+
+        let checkUpdatesItem = NSMenuItem(
+            title: String(
+                localized: "Check for Updates…",
+                comment: "Dock menu item that checks for updates"
+            ),
+            action: #selector(checkForUpdatesFromDock(_:)),
+            keyEquivalent: ""
+        )
+        checkUpdatesItem.target = self
+        checkUpdatesItem.isEnabled = SparkleUpdater.shared.canCheckForUpdates
+        menu.addItem(checkUpdatesItem)
+
+        return menu
+    }
+
+    @MainActor @objc private func openSettingsFromDock(_: Any?) {
+        SettingsWindowHost.shared.show()
+    }
+
+    @MainActor @objc private func openPermissionsFromDock(_: Any?) {
+        SettingsWindowHost.shared.show(tab: .permissions)
+    }
+
+    @MainActor @objc private func checkForUpdatesFromDock(_: Any?) {
+        SparkleUpdater.shared.checkForUpdates()
     }
 
     func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {

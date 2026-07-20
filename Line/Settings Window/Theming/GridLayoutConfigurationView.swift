@@ -1,32 +1,18 @@
 //
-//  GridConfigurationView.swift
+//  GridLayoutConfigurationView.swift
 //  Line
 //
-//  Created by nnecec on 2024-12-30.
-//  Grid layout settings view.
+//  Grid layout template configuration (rows, columns, gap) and per-display overrides.
+//  Visual styling lives in PreviewConfigurationView.
 //
 
 import AppKit
 import Defaults
 import SwiftUI
 
-private let gridOverlayMinimumOpacity = 0.16
-
 @available(macOS 15.0, *)
-struct GridConfigurationView: View {
-    @ObservedObject private var accentColorController: AccentColorController = .shared
-
+struct GridLayoutConfigurationView: View {
     @Default(.defaultGridTemplate) private var defaultTemplate
-    @Default(.gridFollowsAppAccentColor) private var followsAppAccent
-    @Default(.gridOverlayAccentColor) private var accentColor
-    @Default(.gridOverlayOpacity) private var overlayOpacity
-    @Default(.gridLineThickness) private var lineThickness
-    @Default(.gridCellCornerRadius) private var cornerRadius
-    @Default(.gridOverlayBlurEnabled) private var glassEnabled
-    @Default(.gridGlassStyle) private var glassStyle
-    @Default(.gridOverlayDrawStyle) private var drawStyle
-    @Default(.gridSelectionGlow) private var selectionGlow
-    @Default(.gridOverlayOuterCornerRadius) private var outerCornerRadius
 
     @State private var connectedScreens: [NSScreen] = []
     @State private var showClearMemoryConfirmation = false
@@ -35,7 +21,6 @@ struct GridConfigurationView: View {
         Form {
             defaultTemplateSection
             screenTemplatesSection
-            visualStyleSection
             memorySection
         }
         .settingsFormPanel(maxWidth: 560)
@@ -48,22 +33,17 @@ struct GridConfigurationView: View {
         Section {
             GridTemplateEditor(template: $defaultTemplate)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(templateSummary(defaultTemplate))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-
-                CompactGridPreview(
-                    template: defaultTemplate,
-                    accentColor: effectiveAccentColor
-                )
-                .frame(height: 100)
-            }
+            Text(templateSummary(defaultTemplate))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
         } header: {
             Text("Global Default Template", comment: "Settings section header for the default grid template")
         } footer: {
-            Text("When a display does not have a custom template, the hover grid overlay uses this default layout.", comment: "Settings footer explaining the default grid template")
+            Text(
+                "When a display does not have a custom template, the hover grid overlay uses this default layout. Visual styling is configured in Preview.",
+                comment: "Settings footer explaining the default grid template"
+            )
         }
     }
 
@@ -75,14 +55,14 @@ struct GridConfigurationView: View {
                 ContentUnavailableView(
                     "No Displays Detected",
                     systemImage: "display",
-                    description: Text("Connect an external display to override the default grid for each display.", comment: "Empty state description for per-display grid templates")
+                    description: Text(
+                        "Connect an external display to override the default grid for each display.",
+                        comment: "Empty state description for per-display grid templates"
+                    )
                 )
             } else {
                 ForEach(connectedScreens, id: \.gridIdentifier) { screen in
-                    ScreenTemplateRow(
-                        screen: screen,
-                        accentColor: effectiveAccentColor
-                    )
+                    ScreenTemplateRow(screen: screen)
                 }
             }
 
@@ -92,104 +72,10 @@ struct GridConfigurationView: View {
         } header: {
             Text("Connected Displays", comment: "Settings section header for connected displays")
         } footer: {
-            Text("Display settings only override the layout template. Color, opacity, and line style still use the shared hover overlay settings below.", comment: "Settings footer explaining per-display grid overrides")
-        }
-    }
-
-    // MARK: - Visual Style
-
-    private var visualStyleSection: some View {
-        Section {
-            Picker(selection: $drawStyle) {
-                ForEach(GridOverlayDrawStyle.allCases) { style in
-                    Text(style.title).tag(style)
-                }
-            } label: {
-                SettingsRowLabel(
-                    "Grid Style",
-                    detail: drawStyle.detail,
-                    systemImage: "square.grid.3x3"
-                )
-            }
-
-            Toggle(isOn: $followsAppAccent) {
-                SettingsRowLabel(
-                    "Follow App Accent Color",
-                    detail: "Use Line's current accent color from Theming so grid highlights match previews.",
-                    systemImage: "paintpalette"
-                )
-            }
-
-            if !followsAppAccent {
-                ColorPicker("Grid accent color", selection: $accentColor)
-            }
-
-            SettingsSlider.percent(
-                title: "Opacity",
-                value: overlayOpacityBinding,
-                range: gridOverlayMinimumOpacity...1
+            Text(
+                "Display settings only override the layout template. Visual styling (colors, glass effects, borders) is configured in Preview.",
+                comment: "Settings footer explaining per-display grid overrides"
             )
-
-            SettingsSlider.pixels(
-                title: drawStyle == .cells ? "Cell Border Thickness" : "Line Thickness",
-                value: $lineThickness.doubleBinding,
-                range: 0.5...3,
-                step: 0.5
-            )
-
-            SettingsSlider.pixels(
-                title: "Corner Radius",
-                value: $cornerRadius.doubleBinding,
-                range: 0...20,
-                step: 1
-            )
-
-            SettingsSlider.pixels(
-                title: "Outer Corner Radius",
-                value: $outerCornerRadius.doubleBinding,
-                range: 0...28,
-                step: 1
-            )
-
-            SettingsSlider.percent(
-                title: "Selection Glow",
-                value: $selectionGlow,
-                range: 0...1
-            )
-
-            Toggle(isOn: $glassEnabled) {
-                SettingsRowLabel(
-                    "Enable Liquid Glass",
-                    detail: "Use the system glass material for the overlay background. Grid cells stay sharp above the blur layer.",
-                    systemImage: "sparkles.rectangle.stack"
-                )
-            }
-
-            if glassEnabled {
-                Picker(selection: $glassStyle) {
-                    ForEach(LiquidGlassStyle.allCases) { style in
-                        Text(style.title).tag(style)
-                    }
-                } label: {
-                    SettingsRowLabel(
-                        "Glass Style",
-                        detail: glassStyle.detail,
-                        systemImage: "rectangle.on.rectangle.angled"
-                    )
-                }
-            }
-
-            CompactGridPreview(
-                template: defaultTemplate,
-                accentColor: effectiveAccentColor,
-                showStyleChrome: true
-            )
-            .frame(height: 110)
-            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-        } header: {
-            Text("Mouse Hover Grid Style", comment: "Settings section header for hover grid styling")
-        } footer: {
-            Text("These settings control the cell grid, selection highlight, and overlay material shown while arranging windows.", comment: "Settings footer explaining hover grid style controls")
         }
     }
 
@@ -208,28 +94,22 @@ struct GridConfigurationView: View {
                     GridConfigurationManager.shared.clearAllMemory()
                 }
             } message: {
-                Text("This clears grid size memory for every app on every display. This action cannot be undone.", comment: "Confirmation message for clearing all grid size memory")
+                Text(
+                    "This clears grid size memory for every app on every display. This action cannot be undone.",
+                    comment: "Confirmation message for clearing all grid size memory"
+                )
             }
         } header: {
             Text("Memory Management", comment: "Settings section header for grid memory controls")
         } footer: {
-            Text("Grid size memory only affects the default selection size when different apps enter grid mode again.", comment: "Settings footer explaining grid size memory")
+            Text(
+                "Grid size memory only affects the default selection size when different apps enter grid mode again.",
+                comment: "Settings footer explaining grid size memory"
+            )
         }
     }
 
     // MARK: - Helpers
-
-    private var effectiveAccentColor: Color {
-        followsAppAccent ? accentColorController.color1 : accentColor
-    }
-
-    private var overlayOpacityBinding: Binding<Double> {
-        Binding {
-            max(gridOverlayMinimumOpacity, overlayOpacity)
-        } set: { newValue in
-            overlayOpacity = max(gridOverlayMinimumOpacity, newValue)
-        }
-    }
 
     private func refreshConnectedScreens() {
         connectedScreens = NSScreen.screens
@@ -254,7 +134,6 @@ struct GridConfigurationView: View {
 @available(macOS 15.0, *)
 private struct ScreenTemplateRow: View {
     let screen: NSScreen
-    let accentColor: Color
 
     @Default(.defaultGridTemplate) private var defaultTemplate
 
@@ -279,27 +158,28 @@ private struct ScreenTemplateRow: View {
 
             if useCustom {
                 GridTemplateEditor(template: customTemplateBinding)
+
+                Text(templateSummary(customTemplate))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
             } else {
                 Label("Inherit Global Default Template", systemImage: "arrow.triangle.2.circlepath")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            CompactGridPreview(
-                template: effectiveTemplate,
-                accentColor: accentColor,
-                aspectRatio: screenAspectRatio
-            )
-            .frame(height: 80)
         }
-        .padding(12)
+        .padding(14)
         .background(
-            Color(nsColor: .controlBackgroundColor),
-            in: .rect(cornerRadius: 12, style: .continuous)
+            Color(nsColor: .controlBackgroundColor).opacity(0.72),
+            in: .rect(cornerRadius: 14, style: .continuous)
         )
-        .shadow(color: .black.opacity(0.06), radius: 1, y: 0)
-        .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
-        .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.75)
+        }
+        .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
+        .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
         .onAppear(perform: synchronizeState)
         .onChange(of: defaultTemplate) { _, newDefault in
             if !useCustom {
@@ -352,15 +232,6 @@ private struct ScreenTemplateRow: View {
         }
     }
 
-    private var effectiveTemplate: GridTemplate {
-        useCustom ? customTemplate : defaultTemplate
-    }
-
-    private var screenAspectRatio: CGFloat {
-        guard screen.frame.height > 0 else { return 16.0 / 10.0 }
-        return max(1, min(2.4, screen.frame.width / screen.frame.height))
-    }
-
     private var screenDisplayName: String {
         let name = screen.localizedName
         if !name.isEmpty {
@@ -378,6 +249,19 @@ private struct ScreenTemplateRow: View {
 
     private var screenDetail: String {
         "\(Int(screen.frame.width)) x \(Int(screen.frame.height)) pt, ID \(screen.gridIdentifier.prefix(8))"
+    }
+
+    private func templateSummary(_ template: GridTemplate) -> String {
+        let format = String(
+            localized: "%lld columns x %lld rows, %lld px gap",
+            comment: "Summary of a grid template. The values are columns, rows, and gap in pixels."
+        )
+        return String.localizedStringWithFormat(
+            format,
+            template.columns,
+            template.rows,
+            Int(template.gap.rounded())
+        )
     }
 
     private func synchronizeState() {

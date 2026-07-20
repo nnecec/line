@@ -5,6 +5,7 @@
 //  Created by nnecec on 2023-01-23.
 //
 
+import AppKit
 import Defaults
 import SwiftUI
 
@@ -29,6 +30,12 @@ struct LineApp: App {
                 comment: "Format: Version [version, e.g. 1.3.0] ([build number, e.g. 1500])"
             )
             .font(.system(size: 11, weight: .semibold))
+
+            Button {
+                showSettings(tab: .about)
+            } label: {
+                Text("About \(Bundle.main.appName)", comment: "Menu item that opens the About settings tab")
+            }
 
             Button {
                 sparkleUpdater.checkForUpdates()
@@ -56,29 +63,103 @@ struct LineApp: App {
                 }
             }
 
-            Button("Settings…") {
+            Divider()
+
+            Button {
                 showSettings()
+            } label: {
+                Text("Settings…", comment: "Menu item that opens Line settings")
             }
+            .keyboardShortcut(",", modifiers: .command)
 
             Divider()
 
-            Button("Quit \(Bundle.main.appName)") {
+            Button {
                 NSApp.terminate(nil)
+            } label: {
+                Text("Quit \(Bundle.main.appName)", comment: "Menu item that quits the app")
             }
             .keyboardShortcut("q", modifiers: .command)
         }
         .menuBarExtraStyle(.menu)
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button {
+                    showSettings(tab: .about)
+                } label: {
+                    Text("About \(Bundle.main.appName)", comment: "App menu About item")
+                }
+            }
+
+            CommandGroup(after: .appInfo) {
+                Button {
+                    sparkleUpdater.checkForUpdates()
+                } label: {
+                    Text(
+                        "Check for Updates…",
+                        comment: "App menu item that checks for updates"
+                    )
+                }
+                .disabled(!sparkleUpdater.canCheckForUpdates)
+            }
+
             CommandGroup(replacing: .appSettings) {
-                Button("Settings…") {
+                Button {
                     showSettings()
+                } label: {
+                    Text("Settings…", comment: "App menu Settings item")
                 }
                 .keyboardShortcut(",", modifiers: .command)
+            }
+
+            CommandGroup(replacing: .help) {
+                Button {
+                    openURL(ProjectLinks.repositoryURL)
+                } label: {
+                    Text(
+                        "\(Bundle.main.appName) on GitHub",
+                        comment: "Help menu item that opens the project repository"
+                    )
+                }
+
+                Button {
+                    openURL(ProjectLinks.issuesURL)
+                } label: {
+                    Text(
+                        "Report an Issue…",
+                        comment: "Help menu item that opens the GitHub issues page"
+                    )
+                }
+
+                Button {
+                    openURL(ProjectLinks.urlSchemeDocsURL)
+                } label: {
+                    Text(
+                        "URL Scheme Documentation",
+                        comment: "Help menu item that opens URL scheme docs"
+                    )
+                }
+
+                Divider()
+
+                Button {
+                    showSettings(tab: .permissions)
+                } label: {
+                    Text(
+                        "Permissions…",
+                        comment: "Help menu item that opens the Permissions settings tab"
+                    )
+                }
             }
         }
     }
 
     private func showSettings(tab: SettingsTab? = nil) {
         SettingsWindowHost.shared.show(tab: tab)
+    }
+
+    private func openURL(_ url: URL?) {
+        guard let url else { return }
+        NSWorkspace.shared.open(url)
     }
 }

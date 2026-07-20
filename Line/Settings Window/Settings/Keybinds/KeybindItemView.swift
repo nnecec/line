@@ -202,13 +202,13 @@ struct KeybindItemView: View {
 
                 if let info = action.direction.infoText {
                     Text(action.getActionName())
-                        .fontWeight(.regular)
+                        .fontWeight(.medium)
                         .lineLimit(1)
                         .padding(.trailing, 4)
                         .help(Text(info))
                 } else {
                     Text(action.getActionName())
-                        .fontWeight(.regular)
+                        .fontWeight(.medium)
                         .lineLimit(1)
                 }
             }
@@ -260,32 +260,59 @@ struct KeybindKeyCapStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(isHighlighted ? Color.accentColor.opacity(0.16) : Color.secondary.opacity(0.10))
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(
+                        isHighlighted
+                            ? Color.accentColor.opacity(0.14)
+                            : Color.secondary.opacity(0.08)
+                    )
             }
             .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(Color.secondary.opacity(isHighlighted ? 0.35 : 0.20), lineWidth: 1)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        isHighlighted
+                            ? Color.accentColor.opacity(0.32)
+                            : Color.secondary.opacity(0.16),
+                        lineWidth: 1
+                    )
             }
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
 struct KeybindButtonSurfaceStyle: ViewModifier {
     @State private var isHovering = false
+    @State private var isPressed = false
 
     func body(content: Content) -> some View {
         content
             .background {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isHovering ? Color.secondary.opacity(0.10) : Color.clear)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(
+                        isPressed
+                            ? Color.secondary.opacity(0.14)
+                            : isHovering
+                                ? Color.secondary.opacity(0.10)
+                                : Color.clear
+                    )
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.secondary.opacity(isHovering ? 0.25 : 0), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(
+                        Color.secondary.opacity(isHovering || isPressed ? 0.22 : 0),
+                        lineWidth: 1
+                    )
             }
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .scaleEffect(isPressed ? 0.98 : 1)
+            .animation(.snappy(duration: 0.16), value: isHovering)
+            .animation(.snappy(duration: 0.12), value: isPressed)
             .onHover { isHovering = $0 }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in isPressed = true }
+                    .onEnded { _ in isPressed = false }
+            )
     }
 }
 

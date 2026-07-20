@@ -68,9 +68,17 @@ struct TriggerKeycorder: View {
             startObservingKeys()
         } label: {
             if selectionKey.isEmpty {
-                Text(isActive ? "Set a trigger key…" : "None")
-                    .frame(height: 36)
-                    .padding(.horizontal, 12)
+                HStack(spacing: 6) {
+                    Image(systemName: isActive ? "ellipsis" : "keyboard")
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
+                        .symbolEffect(.pulse, isActive: isActive)
+
+                    Text(isActive ? "Set a trigger key…" : "None")
+                        .foregroundStyle(isActive ? Color.primary : Color.secondary)
+                }
+                .frame(height: 36)
+                .padding(.horizontal, 12)
             } else {
                 HStack(spacing: 12) {
                     ForEach(sortedKeys, id: \.self) { key in
@@ -91,8 +99,11 @@ struct TriggerKeycorder: View {
         .animation(Animation.default, value: shouldShake)
         .popover(isPresented: $tooManyKeysPopup, arrowEdge: .bottom) {
             Text("You can only use up to \(keyLimit) keys in your trigger key.")
+                .font(.caption)
                 .multilineTextAlignment(.center)
-                .padding(8)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: 240)
         }
         .onHover { hovering in
             isHovering = hovering
@@ -122,6 +133,7 @@ struct TriggerKeycorder: View {
             startObservingKeys()
         } label: {
             Text("Change")
+                .fontWeight(.medium)
                 .frame(height: 36)
                 .padding(.horizontal, 12)
         }

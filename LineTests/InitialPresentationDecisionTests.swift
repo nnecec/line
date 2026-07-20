@@ -6,6 +6,7 @@
 //
 
 @testable import Line
+import Defaults
 import XCTest
 
 final class InitialPresentationDecisionTests: XCTestCase {
@@ -114,5 +115,43 @@ final class AppLaunchCoordinationPolicyTests: XCTestCase {
         XCTAssertFalse(
             AppLaunchCoordinationPolicy.shouldCoordinateDuplicateInstances(isRunningTests: true)
         )
+    }
+}
+
+@MainActor
+final class ApplicationPresentationReachabilityTests: XCTestCase {
+    private var previousHideMenuBarIcon = false
+    private var previousShowDockIcon = false
+
+    override func setUp() {
+        super.setUp()
+        previousHideMenuBarIcon = Defaults[.hideMenuBarIcon]
+        previousShowDockIcon = Defaults[.showDockIcon]
+    }
+
+    override func tearDown() {
+        Defaults[.hideMenuBarIcon] = previousHideMenuBarIcon
+        Defaults[.showDockIcon] = previousShowDockIcon
+        super.tearDown()
+    }
+
+    func testEnsureReachablePresentationRestoresMenuBarIconWhenDockIsHidden() {
+        Defaults[.showDockIcon] = false
+        Defaults[.hideMenuBarIcon] = true
+
+        ApplicationPresentationController.shared.ensureReachablePresentation()
+
+        XCTAssertFalse(Defaults[.hideMenuBarIcon])
+        XCTAssertFalse(Defaults[.showDockIcon])
+    }
+
+    func testEnsureReachablePresentationKeepsHiddenMenuBarIconWhenDockIsVisible() {
+        Defaults[.showDockIcon] = true
+        Defaults[.hideMenuBarIcon] = true
+
+        ApplicationPresentationController.shared.ensureReachablePresentation()
+
+        XCTAssertTrue(Defaults[.hideMenuBarIcon])
+        XCTAssertTrue(Defaults[.showDockIcon])
     }
 }

@@ -10,9 +10,9 @@ The repository-root export used in documentation and GitHub previews:
 
 Runtime app icons and menu bar assets live in the Xcode project, not in this folder:
 
-- `Line/Resources/AppIcon-*.icon/` — selectable in-app icons
+- `Line/Resources/AppIcon-Custom.icon/` — primary app icon
 - `Line/Assets.xcassets/menubarIcon.imageset/` — menu bar template
-- `Line/Assets.xcassets/App Icons/` — catalog entries used by the app
+- `Line/Assets.xcassets/App Icons/AppIcon-Custom.appiconset/` — catalog entry used by the app
 
 ## Editing
 

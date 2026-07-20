@@ -17,8 +17,6 @@
 	<string>Line needs accessibility permissions to manage and resize windows on your behalf.</string>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
-	<key>NSDockTilePlugIn</key>
-	<string>LineDockTile.plugin</string>
 	<key>SUFeedURL</key>
 	<string>$(SPARKLE_FEED_URL)</string>
 	<key>SUPublicEDKey</key>

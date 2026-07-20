@@ -15,7 +15,7 @@ final class SettingsState: ObservableObject {
     @Published private(set) var previewedParentAction: BoundWindowAction? = nil
     @Published private(set) var previewedAction = BoundWindowAction(action: .special(.noSelection), keybind: [])
 
-    @Published var currentTab: SettingsTab = .grid
+    @Published var currentTab: SettingsTab = .preview
 
     init() {
         if let firstAction = Defaults[.keybinds].first {

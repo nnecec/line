@@ -22,11 +22,7 @@ struct PreviewView: View {
     @Default(.previewBackgroundEnableBlur) private var previewBackgroundEnableBlur
     @Default(.previewBackgroundAccentOpacity) private var previewBackgroundAccentOpacity
     @Default(.previewGlassStyle) private var glassStyle
-
-    /// Matches the settings slider upper bound so the control never appears stuck.
-    private static let maxBorderThickness: CGFloat = 2.5
-    private static let minimumCornerRadius: CGFloat = 4
-    private static let hairlineThickness: CGFloat = 0.75
+    @Default(.accentColorMode) private var accentColorMode
 
     init(viewModel: PreviewViewModel) {
         self.viewModel = viewModel
@@ -36,12 +32,14 @@ struct PreviewView: View {
         previewBackgroundEnableBlur && !reduceTransparency
     }
 
+    private var usesAccentTint: Bool {
+        accentColorMode.usesAccentTint
+    }
+
     private var cornerRadii: RectangleCornerRadii {
-        // Prefer the window's own radii. Keep a small floor after padding inset so
-        // thick borders don't collapse into sharp squares on rounded windows.
         if let inset = viewModel.overrideCornerRadii?.inset(
             by: effectivePadding,
-            minRadius: Self.minimumCornerRadius
+            minRadius: PreviewChrome.minimumCornerRadius
         ),
             inset != .zero {
             return inset
@@ -60,30 +58,22 @@ struct PreviewView: View {
     }
 
     private var glassTintOpacity: CGFloat {
-        min(0.22, max(0, previewBackgroundAccentOpacity))
+        min(0.10, max(0, previewBackgroundAccentOpacity))
     }
 
     private var effectiveBorderThickness: CGFloat {
-        switch borderStyle {
-        case .none:
-            0
-        case .hairline:
-            Self.hairlineThickness
-        case .accent, .gradient:
-            min(Self.maxBorderThickness, max(0, previewBorderThickness))
-        }
+        PreviewChrome.borderThickness(style: borderStyle, configured: previewBorderThickness)
     }
 
     private var borderInsetPadding: CGFloat {
         effectivePadding + effectiveBorderThickness / 2
     }
 
-    /// Soft enter scale; disabled entirely when Reduce Motion is on.
     private var enterScale: CGFloat {
         if reduceMotion {
             return 1
         }
-        return viewModel.isShown ? 1 : 0.98
+        return viewModel.isShown ? 1 : 0.985
     }
 
     var body: some View {
@@ -103,144 +93,24 @@ struct PreviewView: View {
     private func windowView() -> some View {
         let shape = UnevenRoundedRectangle(cornerRadii: cornerRadii)
 
-        return ZStack {
-            previewSurface
-
-            // Soft material edge only when the user did not pick an explicit border.
-            if borderStyle == .none, usesGlass {
-                shape
-                    .strokeBorder(Color.primary.opacity(0.05), lineWidth: 0.5)
-            } else if borderStyle == .none {
-                shape
-                    .strokeBorder(.quinary.opacity(0.6), lineWidth: 0.5)
-            }
-
-            // Top specular rim — the detail that sells liquid glass.
-            if usesGlass {
-                shape
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(glassStyle == .clear ? 0.28 : 0.38),
-                                Color.white.opacity(0.0)
-                            ],
-                            startPoint: .top,
-                            endPoint: UnitPoint(x: 0.5, y: 0.4)
-                        ),
-                        lineWidth: 0.8
-                    )
-            }
-
-            if effectiveBorderThickness > 0 {
-                shape
-                    .strokeBorder(
-                        borderStrokeStyle,
-                        lineWidth: effectiveBorderThickness
-                    )
-            }
-        }
+        return DestinationPreviewChrome(
+            shape: shape,
+            usesGlass: usesGlass,
+            glassStyle: glassStyle,
+            borderStyle: borderStyle,
+            borderThickness: effectiveBorderThickness,
+            accent: accentColorController.color1,
+            secondaryAccent: accentColorController.color2,
+            tintOpacity: glassTintOpacity,
+            usesAccentTint: usesAccentTint,
+            isShown: viewModel.isShown
+        )
         .padding(borderInsetPadding)
-        .shadow(
-            color: .black.opacity(viewModel.isShown ? 0.08 : 0),
-            radius: 3,
-            y: 1
-        )
-        .shadow(
-            color: .black.opacity(viewModel.isShown ? 0.16 : 0),
-            radius: 20,
-            y: 10
-        )
         .animation(luminareAnimation, value: [accentColorController.color1, accentColorController.color2])
         .animation(luminareAnimation, value: previewBackgroundAccentOpacity)
         .animation(luminareAnimation, value: viewModel.isShown)
         .animation(luminareAnimation, value: glassStyle)
         .animation(luminareAnimation, value: borderStyle)
-    }
-
-    @ViewBuilder
-    private var previewSurface: some View {
-        let shape = UnevenRoundedRectangle(cornerRadii: cornerRadii)
-
-        if usesGlass {
-            Color.clear
-                .glassEffect(previewGlassEffect, in: .rect(cornerRadii: cornerRadii))
-                .overlay {
-                    shape.fill(previewBodyFill)
-                }
-        } else {
-            shape
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.92))
-        }
-    }
-
-    private var previewGlassEffect: Glass {
-        switch glassStyle {
-        case .clear:
-            .clear
-        case .regular:
-            .regular.tint(Color.primary.opacity(0.04))
-        case .tinted:
-            .regular.tint(accentColorController.color1.opacity(glassTintOpacity))
-        }
-    }
-
-    private var previewBodyFill: some ShapeStyle {
-        switch glassStyle {
-        case .clear:
-            LinearGradient(
-                colors: [
-                    Color.primary.opacity(0.02),
-                    Color.primary.opacity(0.008)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .regular:
-            LinearGradient(
-                colors: [
-                    Color.primary.opacity(0.04),
-                    Color.primary.opacity(0.018)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .tinted:
-            LinearGradient(
-                colors: [
-                    accentColorController.color1.opacity(0.04),
-                    accentColorController.color2.opacity(0.02)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-    }
-
-    private var borderStrokeStyle: AnyShapeStyle {
-        switch borderStyle {
-        case .none:
-            AnyShapeStyle(Color.clear)
-        case .hairline:
-            AnyShapeStyle(
-                usesGlass
-                    ? Color.primary.opacity(0.14)
-                    : Color.primary.opacity(0.22)
-            )
-        case .accent:
-            AnyShapeStyle(
-                accentColorController.color1.opacity(usesGlass ? 0.78 : 0.85)
-            )
-        case .gradient:
-            AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        accentColorController.color1.opacity(usesGlass ? 0.78 : 0.72),
-                        accentColorController.color2.opacity(usesGlass ? 0.52 : 0.56)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-        }
+        .animation(luminareAnimation, value: accentColorMode)
     }
 }

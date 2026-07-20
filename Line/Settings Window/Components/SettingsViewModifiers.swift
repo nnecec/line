@@ -12,7 +12,7 @@ extension View {
     ///
     /// The Form fills the detail column so the scroll indicator sits on the panel's
     /// trailing edge (System Settings style). Horizontal inset comes from
-    /// `.formStyle(.grouped)` section chrome — do not add horizontal
+    /// `.formStyle(.grouped)` section chrome - do not add horizontal
     /// `contentMargins` or a narrow `maxWidth` on the Form itself, or the
     /// scrollbar tracks the content column instead of the panel edge.
     ///

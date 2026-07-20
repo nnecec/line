@@ -120,6 +120,17 @@ final class ProjectLinksTests: XCTestCase {
         XCTAssertEqual(ProjectLinks.repositoryURL?.absoluteString, "https://github.com/nnecec/Line")
     }
 
+    func testIssuesURLUsesCanonicalProjectLocation() {
+        XCTAssertEqual(ProjectLinks.issuesURL?.absoluteString, "https://github.com/nnecec/Line/issues")
+    }
+
+    func testURLSchemeDocsURLUsesCanonicalProjectLocation() {
+        XCTAssertEqual(
+            ProjectLinks.urlSchemeDocsURL?.absoluteString,
+            "https://github.com/nnecec/Line/blob/main/docs/URL_SCHEME.md"
+        )
+    }
+
     func testSparkleFeedUsesCanonicalRepositoryCase() {
         XCTAssertEqual(
             Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String,

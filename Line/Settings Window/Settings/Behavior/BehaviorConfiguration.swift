@@ -30,6 +30,29 @@ struct BehaviorConfigurationView: View {
 
     @State private var isPaddingConfigurationViewPresented = false
 
+    /// Hiding the menu bar icon is only allowed while a Dock icon remains as the recovery surface.
+    private var hideMenuBarIconBinding: Binding<Bool> {
+        Binding {
+            hideMenuBarIcon
+        } set: { newValue in
+            guard showDockIcon || !newValue else { return }
+            hideMenuBarIcon = newValue
+        }
+    }
+
+    /// Turning off the Dock icon re-enables the menu bar icon so the app cannot become unreachable.
+    private var showDockIconBinding: Binding<Bool> {
+        Binding {
+            showDockIcon
+        } set: { newValue in
+            showDockIcon = newValue
+            if !newValue {
+                hideMenuBarIcon = false
+            }
+            ApplicationPresentationController.shared.applyPreferredBackgroundPresentation()
+        }
+    }
+
     var body: some View {
         Form {
             generalSection
@@ -66,18 +89,23 @@ struct BehaviorConfigurationView: View {
                 )
             }
 
-            Toggle(isOn: $hideMenuBarIcon) {
+            Toggle(isOn: hideMenuBarIconBinding) {
                 SettingsRowLabel(
                     "Hide menu bar icon",
-                    detail: "Run quietly without showing Line in the menu bar.",
+                    detail: showDockIcon
+                        ? "Hide Line from the menu bar. Keep “Show in Dock” enabled so you can reopen Settings."
+                        : "Requires “Show in Dock” so Line remains reachable without a menu bar icon.",
                     systemImage: "menubar.rectangle"
                 )
             }
+            .disabled(!showDockIcon)
 
-            Toggle(isOn: $showDockIcon) {
+            Toggle(isOn: showDockIconBinding) {
                 SettingsRowLabel(
                     "Show in Dock",
-                    detail: "Switch Line from an accessory app to a regular Dock app.",
+                    detail: hideMenuBarIcon
+                        ? "Required while the menu bar icon is hidden so Settings stay reachable."
+                        : "Switch Line from an accessory app to a regular Dock app.",
                     systemImage: "dock.rectangle"
                 )
             }

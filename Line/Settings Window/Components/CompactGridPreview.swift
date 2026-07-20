@@ -3,7 +3,7 @@
 //  Line
 //
 //  Created by nnecec on 2026-07-08.
-//  Simplified, elegant grid layout preview for settings.
+//  Compact grid layout preview for settings, aligned with runtime GridOverlayView.
 //
 
 import Defaults
@@ -38,58 +38,23 @@ struct CompactGridPreview: View {
         self.showStyleChrome = showStyleChrome
     }
 
-    /// Outer bezel radius; inner surface uses concentric radius (outer − padding).
-    private static let bezelRadius: CGFloat = 11
-    private static let bezelPadding: CGFloat = 7
-    private static var surfaceRadius: CGFloat { bezelRadius - bezelPadding }
-
     var body: some View {
-        VStack(spacing: 5) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Self.bezelRadius, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: Self.bezelRadius, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.75)
-                    }
-                    .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
-
-                GridPreviewSurface(
-                    template: template,
-                    accentColor: accentColor,
-                    cornerRadius: Self.surfaceRadius,
-                    drawStyle: drawStyle,
-                    lineThickness: lineThickness,
-                    cellCornerRadius: cellCornerRadius,
-                    overlayOpacity: overlayOpacity,
-                    glassEnabled: glassEnabled,
-                    glassStyle: glassStyle,
-                    selectionGlow: selectionGlow,
-                    outerCornerRadius: outerCornerRadius,
-                    showStyleChrome: showStyleChrome
-                )
-                .padding(Self.bezelPadding)
-            }
-            .aspectRatio(monitorAspectRatio, contentMode: .fit)
-            .overlay(alignment: .top) {
-                // A small camera detail gives the bezel a familiar display silhouette.
-                Circle()
-                    .fill(.primary.opacity(0.22))
-                    .frame(width: 2.5, height: 2.5)
-                    .padding(.top, 3)
-            }
-
-            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                .fill(.primary.opacity(0.18))
-                .frame(width: 28, height: 3)
-                .overlay(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(.primary.opacity(0.14))
-                        .frame(width: 52, height: 2.5)
-                        .offset(y: 3)
-                }
+        SettingsMonitorBezel(aspectRatio: aspectRatio) {
+            GridPreviewSurface(
+                template: template,
+                accentColor: accentColor,
+                cornerRadius: SettingsMonitorBezelMetrics.contentCornerRadius,
+                drawStyle: drawStyle,
+                lineThickness: lineThickness,
+                cellCornerRadius: cellCornerRadius,
+                overlayOpacity: overlayOpacity,
+                glassEnabled: glassEnabled,
+                glassStyle: glassStyle,
+                selectionGlow: selectionGlow,
+                outerCornerRadius: outerCornerRadius,
+                showStyleChrome: showStyleChrome
+            )
         }
-        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Grid layout preview")
         .accessibilityValue(accessibilityValue)
@@ -99,10 +64,8 @@ struct CompactGridPreview: View {
         .animation(.snappy(duration: 0.2), value: lineThickness)
         .animation(.snappy(duration: 0.2), value: cellCornerRadius)
         .animation(.snappy(duration: 0.2), value: selectionGlow)
-    }
-
-    private var monitorAspectRatio: CGFloat {
-        max(1.25, min(2.4, aspectRatio))
+        .animation(.snappy(duration: 0.2), value: overlayOpacity)
+        .animation(.snappy(duration: 0.2), value: outerCornerRadius)
     }
 
     private var accessibilityValue: String {
@@ -122,6 +85,7 @@ struct CompactGridPreview: View {
 @available(macOS 15.0, *)
 private struct GridPreviewSurface: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Default(.accentColorMode) private var accentColorMode
 
     let template: GridTemplate
     let accentColor: Color
@@ -140,9 +104,16 @@ private struct GridPreviewSurface: View {
         showStyleChrome && glassEnabled && !reduceTransparency
     }
 
+    private var usesAccentTint: Bool {
+        accentColorMode.usesAccentTint
+    }
+
+    private var strokeColor: Color {
+        usesAccentTint ? accentColor : Color.white
+    }
+
     private var effectiveOuterRadius: CGFloat {
         if showStyleChrome {
-            // Scale the full-screen outer radius into this compact surface.
             return min(cornerRadius, max(3, outerCornerRadius * 0.35))
         }
         return cornerRadius
@@ -157,6 +128,10 @@ private struct GridPreviewSurface: View {
 
     private var glowAmount: Double {
         min(1, max(0, selectionGlow))
+    }
+
+    private var effectiveOverlayOpacity: Double {
+        min(1, max(0.16, overlayOpacity))
     }
 
     var body: some View {
@@ -203,7 +178,7 @@ private struct GridPreviewSurface: View {
         .clipShape(.rect(cornerRadius: effectiveOuterRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: effectiveOuterRadius, style: .continuous)
-                .strokeBorder(.white.opacity(usesGlass ? 0.18 : 0.16), lineWidth: 0.5)
+                .strokeBorder(.white.opacity(usesGlass ? 0.18 : 0.14), lineWidth: 0.5)
         }
         .overlay {
             if usesGlass {
@@ -211,13 +186,13 @@ private struct GridPreviewSurface: View {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.3),
+                                Color.white.opacity(0.40),
                                 Color.white.opacity(0.0)
                             ],
                             startPoint: .top,
-                            endPoint: UnitPoint(x: 0.5, y: 0.4)
+                            endPoint: UnitPoint(x: 0.5, y: 0.40)
                         ),
-                        lineWidth: 0.6
+                        lineWidth: 0.7
                     )
             }
         }
@@ -230,35 +205,49 @@ private struct GridPreviewSurface: View {
         if usesGlass {
             Color.clear
                 .frame(width: size.width, height: size.height)
-                .glassEffect(previewGlassEffect, in: shape)
+                .glassEffect(backgroundGlassEffect, in: shape)
                 .overlay {
                     shape.fill(backgroundScrim)
                 }
         } else {
             shape
-                .fill(Color.black.opacity(showStyleChrome ? max(0.55, overlayOpacity) : 0.9))
+                .fill(Color.black.opacity(showStyleChrome ? max(0.45, effectiveOverlayOpacity) : 0.9))
         }
     }
 
-    private var previewGlassEffect: Glass {
+    private var backgroundGlassEffect: Glass {
+        let span = 1 - 0.16
+        let t = span > 0 ? (effectiveOverlayOpacity - 0.16) / span : 0
+        let tintStrength = 0.04 + t * 0.10
+
         switch glassStyle {
         case .clear:
-            .clear
+            return .clear
         case .regular:
-            .regular.tint(.black.opacity(0.12))
+            return .regular.tint(Color.white.opacity(0.05 + tintStrength * 0.35))
         case .tinted:
-            .regular.tint(accentColor.opacity(0.14))
+            if usesAccentTint {
+                return .regular.tint(accentColor.opacity(tintStrength * 0.55))
+            }
+            return .regular.tint(Color.white.opacity(0.05 + tintStrength * 0.30))
         }
     }
 
     private var backgroundScrim: Color {
+        let span = 1 - 0.16
+        let t = span > 0 ? (effectiveOverlayOpacity - 0.16) / span : 0
+        let base = 0.015 + t * 0.06
+
         switch glassStyle {
         case .clear:
-            Color.black.opacity(0.08)
+            return Color.black.opacity(base * 0.4)
         case .regular:
-            Color.black.opacity(0.16)
+            return Color.black.opacity(base * 0.55)
         case .tinted:
-            accentColor.opacity(0.10)
+            if usesAccentTint {
+                return accentColor.opacity(base * 0.25)
+            }
+            return Color.black.opacity(base * 0.5)
         }
     }
 
@@ -268,9 +257,22 @@ private struct GridPreviewSurface: View {
         cellHeight: CGFloat,
         gap: CGFloat
     ) -> some View {
+        let fillOpacity = usesGlass ? 0.04 : 0.08
+        let strokeOpacity = usesGlass ? 0.20 : 0.22
+        let border = max(0.5, min(1.5, lineThickness * 0.75))
+
         ForEach(0 ..< template.rows, id: \.self) { row in
             ForEach(0 ..< template.columns, id: \.self) { column in
-                gridCell(width: cellWidth, height: cellHeight)
+                let radius = min(effectiveCellRadius, min(cellWidth, cellHeight) / 3)
+                let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+
+                shape
+                    .fill(Color.white.opacity(fillOpacity))
+                    .overlay {
+                        shape
+                            .strokeBorder(Color.white.opacity(strokeOpacity), lineWidth: border)
+                    }
+                    .frame(width: cellWidth, height: cellHeight)
                     .offset(
                         x: CGFloat(column) * (cellWidth + gap),
                         y: CGFloat(row) * (cellHeight + gap)
@@ -286,7 +288,7 @@ private struct GridPreviewSurface: View {
         cellHeight: CGFloat,
         gap: CGFloat
     ) -> some View {
-        let stroke = Color.white.opacity(0.22)
+        let stroke = Color.white.opacity(usesGlass ? 0.20 : 0.22)
         let thickness = max(0.5, min(2, lineThickness * 0.75))
 
         ForEach(0 ..< template.columns + 1, id: \.self) { col in
@@ -306,20 +308,6 @@ private struct GridPreviewSurface: View {
         }
     }
 
-    private func gridCell(width: CGFloat, height: CGFloat) -> some View {
-        let radius = min(effectiveCellRadius, min(width, height) / 3)
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let border = max(0.5, min(1.5, lineThickness * 0.75))
-
-        return shape
-            .fill(accentColor.opacity(0.08))
-            .overlay {
-                shape
-                    .strokeBorder(accentColor.opacity(0.42), lineWidth: border)
-            }
-            .frame(width: width, height: height)
-    }
-
     @ViewBuilder
     private func hoverHighlight(
         cellWidth: CGFloat,
@@ -337,35 +325,93 @@ private struct GridPreviewSurface: View {
             min(width, height) / 4
         )
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let fillOpacity = 0.20 + glowAmount * 0.10
-        let glowOpacity = 0.12 + glowAmount * 0.28
+        let glowOpacity = usesAccentTint
+            ? (0.06 + glowAmount * 0.18)
+            : (0.04 + glowAmount * 0.10)
+        let specularStrength = usesGlass ? 0.40 : 0.28
 
-        shape
-            .fill(accentColor.opacity(fillOpacity))
-            .overlay {
+        ZStack {
+            if usesGlass {
                 shape
-                    .strokeBorder(accentColor.opacity(0.9), lineWidth: max(0.75, min(1.5, lineThickness)))
-            }
-            .overlay {
-                shape
-                    .strokeBorder(
+                    .fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.28),
-                                Color.white.opacity(0.0)
+                                strokeColor.opacity(usesAccentTint ? 0.05 : 0.06),
+                                strokeColor.opacity(0.015)
                             ],
                             startPoint: .top,
-                            endPoint: UnitPoint(x: 0.5, y: 0.45)
-                        ),
-                        lineWidth: 0.6
+                            endPoint: .bottom
+                        )
+                    )
+            } else {
+                shape
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                strokeColor.opacity(0.28),
+                                strokeColor.opacity(0.18)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
             }
-            .shadow(color: accentColor.opacity(glowOpacity * 0.6), radius: 4 + glowAmount * 4, y: 2)
-            .frame(width: width, height: height)
-            .offset(
-                x: CGFloat(startColumn) * (cellWidth + gap),
-                y: CGFloat(startRow) * (cellHeight + gap)
-            )
+
+            shape
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color.white.opacity(specularStrength * 0.14),
+                            Color.clear
+                        ],
+                        center: .init(x: 0.5, y: 0.16),
+                        startRadius: 0,
+                        endRadius: max(width, height) * 0.55
+                    )
+                )
+                .blendMode(.plusLighter)
+
+            shape
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            strokeColor.opacity(usesAccentTint ? 0.70 : 0.55),
+                            strokeColor.opacity(usesAccentTint ? 0.38 : 0.28),
+                            Color.white.opacity(0.20)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: max(0.75, min(1.5, lineThickness))
+                )
+
+            shape
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(specularStrength),
+                            Color.white.opacity(specularStrength * 0.22),
+                            Color.white.opacity(0)
+                        ],
+                        startPoint: .top,
+                        endPoint: UnitPoint(x: 0.5, y: 0.45)
+                    ),
+                    lineWidth: 0.7
+                )
+
+            if usesGlass {
+                shape
+                    .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
+                    .padding(1)
+            }
+        }
+        .shadow(color: strokeColor.opacity(glowOpacity * 0.45), radius: 3, y: 1)
+        .shadow(color: strokeColor.opacity(glowOpacity * 0.55), radius: 6 + glowAmount * 3, y: 3)
+        .frame(width: width, height: height)
+        .offset(
+            x: CGFloat(startColumn) * (cellWidth + gap),
+            y: CGFloat(startRow) * (cellHeight + gap)
+        )
     }
 
     private func scaledGap(for size: CGSize) -> CGFloat {

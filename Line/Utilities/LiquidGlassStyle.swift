@@ -29,9 +29,9 @@ enum LiquidGlassStyle: String, CaseIterable, Identifiable, Defaults.Serializable
         case .clear:
             "Maximum transparency with a light system glass edge."
         case .regular:
-            "Balanced blur and body so the overlay stays readable on busy desktops."
+            "Balanced frost so the desktop shows through clearly."
         case .tinted:
-            "Tint the glass with the current accent color."
+            "A subtle accent whisper on glass when an accent mode is selected."
         }
     }
 }
@@ -81,7 +81,7 @@ enum PreviewBorderStyle: String, CaseIterable, Identifiable, Defaults.Serializab
     var detail: LocalizedStringKey {
         switch self {
         case .none:
-            "No border — rely on glass edge and shadow alone."
+            "No border - rely on glass edge and shadow alone."
         case .hairline:
             "A subtle system edge without accent color."
         case .accent:

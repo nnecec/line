@@ -86,7 +86,7 @@ struct KeybindsConfigurationView: View {
             if keybinds.isEmpty {
                 Section {
                     SettingsEmptyState(
-                        systemImage: "exclamationmark.triangle.fill",
+                        systemImage: "keyboard.badge.ellipsis",
                         title: "Keybind list is empty",
                         message: "This can make every keybind show a red warning icon. Restore the default configuration below.",
                         actionTitle: "Restore Default Keybinds",
@@ -228,7 +228,7 @@ struct KeybindsConfigurationView: View {
             List(selection: $model.selectedKeybindIDs) {
                 if keybinds.isEmpty {
                     SettingsEmptyState(
-                        systemImage: "keyboard",
+                        systemImage: "plus.rectangle.on.rectangle",
                         title: "No keybinds",
                         message: "Press Add to add a keybind"
                     )
@@ -242,10 +242,17 @@ struct KeybindsConfigurationView: View {
                         )
                         .environmentObject(model)
                         .tag(keybind.wrappedValue.id)
+                        .contextMenu {
+                            Button("Remove Keybind", role: .destructive) {
+                                removeKeybind(id: keybind.wrappedValue.id)
+                            }
+                        }
                     }
+                    .onMove(perform: moveKeybinds)
                 }
             }
             .frame(minHeight: 180)
+            .onDeleteCommand(perform: removeSelectedKeybinds)
             .onAppear(perform: updatePreviewForSelection)
             .onReceive(model.$selectedKeybindIDs) { _ in
                 updatePreviewForSelection()
@@ -256,7 +263,10 @@ struct KeybindsConfigurationView: View {
         } header: {
             Text("Keybinds", comment: "Section header shown in settings")
         } footer: {
-            Text("Select one shortcut to preview its action in the settings window.")
+            Text(
+                "Select one shortcut to preview its action. Drag to reorder. Press Delete to remove the selection.",
+                comment: "Footer explaining keybind list interactions"
+            )
         }
     }
 
@@ -264,6 +274,16 @@ struct KeybindsConfigurationView: View {
         keybinds.removeAll { model.selectedKeybindIDs.contains($0.id) }
         model.selectedKeybindIDs.removeAll()
         updatePreviewForSelection()
+    }
+
+    private func removeKeybind(id: BoundWindowAction.ID) {
+        keybinds.removeAll { $0.id == id }
+        model.selectedKeybindIDs.remove(id)
+        updatePreviewForSelection()
+    }
+
+    private func moveKeybinds(from source: IndexSet, to destination: Int) {
+        keybinds.move(fromOffsets: source, toOffset: destination)
     }
 
     private func updatePreviewForSelection() {

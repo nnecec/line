@@ -26,15 +26,16 @@ struct ExcludedAppsConfigurationView: View {
 
                 SettingsListToolbar(
                     onAdd: showAppChooser,
-                    addHelp: "Add an application",
+                    addHelp: "Add an application (⌘N)",
+                    addKeyboardShortcut: "n",
                     onRemove: removeSelectedApps,
-                    removeHelp: "Remove selected applications",
+                    removeHelp: "Remove selected applications (⌫)",
                     canRemove: !selectedApps.isEmpty
                 )
 
                 if excludedApps.isEmpty {
                     SettingsEmptyState(
-                        systemImage: "app.dashed",
+                        systemImage: "app.badge",
                         title: "No excluded applications",
                         message: "Press Add to add an application."
                     )
@@ -44,9 +45,21 @@ struct ExcludedAppsConfigurationView: View {
                             ExcludedListAppView(url: url)
                                 .equatable()
                                 .tag(url)
+                                .contextMenu {
+                                    Button {
+                                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                                    } label: {
+                                        Text("Reveal in Finder", comment: "Context menu item for excluded apps")
+                                    }
+
+                                    Button("Remove", role: .destructive) {
+                                        removeApp(url)
+                                    }
+                                }
                         }
                     }
                     .frame(minHeight: 220)
+                    .onDeleteCommand(perform: removeSelectedApps)
                 }
             } header: {
                 Text("Excluded Applications", comment: "Section header shown in settings")
@@ -60,6 +73,11 @@ struct ExcludedAppsConfigurationView: View {
     private func removeSelectedApps() {
         excludedApps.removeAll { selectedApps.contains($0) }
         selectedApps.removeAll()
+    }
+
+    private func removeApp(_ url: URL) {
+        excludedApps.removeAll { $0 == url }
+        selectedApps.remove(url)
     }
 
     private func showAppChooser() {

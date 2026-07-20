@@ -42,6 +42,8 @@ final class SettingsWindowController: NSWindowController {
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
         window.minSize = NSSize(width: 720, height: 520)
+        // Keep zoom usable without forcing a fullscreen-primary document window.
+        window.collectionBehavior.insert(.fullScreenAuxiliary)
         window.setFrameAutosaveName("LineSettingsWindowV2")
         window.center()
 
@@ -49,6 +51,7 @@ final class SettingsWindowController: NSWindowController {
         window.contentView = NSHostingView(rootView: rootView)
 
         window.isReleasedWhenClosed = false
+        window.delegate = self
     }
 
     @available(*, unavailable)
@@ -74,5 +77,16 @@ final class SettingsWindowController: NSWindowController {
         super.showWindow(sender)
         window?.makeKeyAndOrderFront(sender)
         NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+// MARK: - NSWindowDelegate
+
+extension SettingsWindowController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === window else { return }
+        // Ensure activation policy returns to the preferred background mode even if
+        // SwiftUI onDisappear does not run for the hosted content.
+        SettingsWindowHost.shared.settingsWindowDidClose()
     }
 }

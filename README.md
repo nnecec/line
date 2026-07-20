@@ -14,7 +14,7 @@ Line targets macOS 26 and requires Accessibility permission to move and resize w
 - Keyboard and middle-click triggers
 - Grid-based placement on multiple displays
 - Window cycling, padding, snapping, and edge stashing
-- Configurable appearance and app icons
+- Configurable appearance and theming
 - Local automation through the `line://` URL scheme
 - In-app updates through Sparkle (after the appcast PR for a release is merged)
 

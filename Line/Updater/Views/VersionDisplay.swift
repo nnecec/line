@@ -33,8 +33,12 @@ struct VersionDisplay {
             return .unknown
         }
 
-        let devBuildEmoji = "🧪"
-        let shouldTreatAsPrerelease = isPrerelease || version.contains(devBuildEmoji)
+        // Strip legacy marker characters that may still appear in CFBundleShortVersionString.
+        let baseVersion = version
+            .replacingOccurrences(of: "🧪", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let shouldTreatAsPrerelease = isPrerelease
 
         let buildString = if let build {
             "(\(build))"
@@ -42,20 +46,16 @@ struct VersionDisplay {
             ""
         }
 
-        let baseVersion = version
-            .replacing(devBuildEmoji, with: "")
-            .trimmingCharacters(in: .whitespaces)
-
         let shortDisplay: String = if shouldTreatAsPrerelease {
-            "🧪 \(baseVersion) \(buildString)"
+            "\(baseVersion) \(buildString)".trimmingCharacters(in: .whitespaces)
         } else {
             baseVersion
         }
 
-        let fullDisplay = if shouldTreatAsPrerelease {
-            "🧪 \(baseVersion) \(buildString)"
+        let fullDisplay: String = if shouldTreatAsPrerelease {
+            "\(baseVersion) \(buildString)".trimmingCharacters(in: .whitespaces)
         } else {
-            "\(baseVersion) \(buildString)" // Always show build number
+            "\(baseVersion) \(buildString)".trimmingCharacters(in: .whitespaces)
         }
 
         return VersionDisplay(
