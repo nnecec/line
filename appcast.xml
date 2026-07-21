@@ -1,8 +1,17 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<?xml version='1.0' encoding='UTF-8'?>
+<rss version='2.0' xmlns:sparkle='http://www.andymatuschak.org/xml-namespaces/sparkle' xmlns:dc='http://purl.org/dc/elements/1.1/'>
   <channel>
     <title>Line</title>
     <description>Latest Line releases.</description>
     <language>en</language>
+    <item>
+      <title>Version 0.0.3</title>
+      <pubDate>Tue, 21 Jul 2026 08:32:02 -0000</pubDate>
+      <sparkle:version>54</sparkle:version>
+      <sparkle:shortVersionString>0.0.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>See the GitHub release notes for details.</p>]]></description>
+      <enclosure url='https://github.com/nnecec/line/releases/download/v0.0.3/Line-0.0.3.zip' type='application/octet-stream' sparkle:edSignature='SE+F6B8DKd7d8jYKSX27PYoJnZAf0mF49yhug96kW7k6kyq8ZMMl1YJ2wztDVOG8PPhBf/n+qFyO+c3lQ35fAg==' length='7878597'/>
+    </item>
   </channel>
 </rss>
