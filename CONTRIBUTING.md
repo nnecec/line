@@ -1,6 +1,8 @@
 # Contributing to Line
 
-Line is a macOS window manager written in Swift and SwiftUI. The project targets macOS 26 and uses some dynamically loaded private SkyLight APIs. Changes should preserve a usable fallback when a private symbol is unavailable.
+Line is a **native macOS** window manager (Swift / SwiftUI) with **first-class grid** layout, **multi-display** support, and a focus on **performance**. The project targets macOS 26 and uses some dynamically loaded private SkyLight APIs. Changes should preserve a usable fallback when a private symbol is unavailable.
+
+Brand and public messaging: [docs/BRAND.md](docs/BRAND.md) (English default; Chinese tagline **一线到位。**).
 
 ## Before you start
 

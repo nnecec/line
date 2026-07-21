@@ -5406,6 +5406,23 @@
         }
       }
     },
+    "Snap to the line." : {
+      "comment" : "Product tagline shown under the app name on the About settings tab",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snap to the line."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一线到位。"
+          }
+        }
+      }
+    },
     "Stage Manager" : {
       "comment" : "Section header shown in settings",
       "localizations" : {

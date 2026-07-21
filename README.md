@@ -4,19 +4,27 @@
   <img src="logo.png" alt="Line logo" width="128" height="128">
 </p>
 
-Line is a keyboard, mouse, and grid-driven window manager for macOS. It is a personal fork of [MrKai77/Loop](https://github.com/MrKai77/Loop), based on upstream commit [9661bcb](https://github.com/MrKai77/Loop/tree/9661bcbba0ba6dae38838d712998f76ebd57cc66).
+<p align="center"><strong>English</strong> · <a href="README.zh-Hans.md">简体中文</a></p>
 
-Line targets macOS 26 and requires Accessibility permission to move and resize windows.
+Line is a **native macOS** window manager with **first-class grid** layout, **multi-display** support, and a focus on **high performance**. Open source. It is a personal fork of [MrKai77/Loop](https://github.com/MrKai77/Loop), based on upstream commit [9661bcb](https://github.com/MrKai77/Loop/tree/9661bcbba0ba6dae38838d712998f76ebd57cc66).
+
+**Snap to the line.**
+
+[![Release](https://img.shields.io/github/v/release/nnecec/Line)](https://github.com/nnecec/Line/releases)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![macOS 26](https://img.shields.io/badge/macOS-26-black)](https://github.com/nnecec/Line)
+
+Targets macOS 26.
 
 ## Features
 
-- Standard and custom window actions
-- Keyboard and middle-click triggers
-- Grid-based placement on multiple displays
-- Window cycling, padding, snapping, and edge stashing
+- **First-class grid** placement
+- **Multi-display** layouts and targeting
+- High-performance, native AppKit / SwiftUI implementation
+- Standard and custom window actions, cycling, padding, snapping, and edge stashing
 - Configurable appearance and theming
 - Local automation through the `line://` URL scheme
-- In-app updates through Sparkle (after the appcast PR for a release is merged)
+- Open source; in-app updates through Sparkle (after the appcast PR for a release is merged)
 
 ## Install
 
@@ -83,6 +91,9 @@ mint run swiftformat --lint . --reporter github-actions-log
 - [URL scheme](docs/URL_SCHEME.md)
 - [Release process](docs/RELEASES.md)
 - [Privacy](docs/PRIVACY.md)
+- [Brand system](docs/BRAND.md)
+- [Media kit / copy bank](assets/brand/MEDIA_KIT.md)
+- [Channel checklist](assets/brand/CHANNEL_CHECKLIST.md)
 - [Logo assets](logo/LOGO.md)
 
 ## Contributing and support

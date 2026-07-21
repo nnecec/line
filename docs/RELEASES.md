@@ -2,6 +2,10 @@
 
 Line publishes **installable GitHub Release assets** from Actions **without** an Apple Developer Program membership ($99). Packages are signed with a free **Apple Development** certificate so Accessibility permission can stick, but they are **not** Developer ID signed and **not** notarized. In-app updates still use **Sparkle** and a signed `appcast.xml` feed.
 
+## Release notes
+
+Use the English-default body in [RELEASE_NOTES_TEMPLATE.md](RELEASE_NOTES_TEMPLATE.md). Keep install honesty (Development signature, not notarized, Accessibility) in every public release.
+
 ## Why Development signing (not unsigned)
 
 macOS Accessibility (TCC) keys off the app’s **code signature / designated requirement**, not Bundle ID alone. Unsigned / ad hoc builds change identity every rebuild, so System Settings may show Accessibility enabled while `AXIsProcessTrusted()` stays false.

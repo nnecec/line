@@ -92,6 +92,13 @@ struct AboutConfigurationView: View {
                     Text(productDisplayName)
                         .font(.title3.weight(.semibold))
 
+                    Text(
+                        "Snap to the line.",
+                        comment: "Product tagline shown under the app name on the About settings tab"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                     Text("Version \(Text(VersionDisplay.current.fullDisplay))")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)

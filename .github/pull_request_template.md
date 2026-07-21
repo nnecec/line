@@ -2,6 +2,12 @@
 
 Describe the user-visible change and why it is needed.
 
+## Brand / docs (if applicable)
+
+- [ ] User-facing copy follows [docs/BRAND.md](../docs/BRAND.md) (EN default; ZH via localization or `*.zh-Hans.md`)
+- [ ] Screenshots redact window titles, paths, and personal data
+- [ ] Install or signing claims match [docs/RELEASES.md](../docs/RELEASES.md)
+
 ## Verification
 
 - [ ] `make test-unit` (or the equivalent `xcodebuild test` with `-skip-testing:LineTests/EndToEndIntegrationTests`)
