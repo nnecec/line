@@ -152,7 +152,10 @@ extension WindowAction.StandardWindowAction: WindowActionCalculator {
 
         let currentFrame = properties.frame
         let bounds = request.paddedBounds
-        let visibleWindowFrames = request.visibleWindowFrames ?? WindowUtility.windowList().map(\.frame)
+        // Prefer lightweight CG list: fill-available only needs frames, not full AX Window objects.
+        // CG bounds and AX frames share the same coordinate space (see Window.fromWindowInfo matching).
+        let visibleWindowFrames = request.visibleWindowFrames
+            ?? WindowUtility.lightweightWindowList().map(\.frame)
 
         let obstacleFrames = visibleWindowFrames.compactMap { frame -> CGRect? in
             guard !frame.intersects(currentFrame) else {
