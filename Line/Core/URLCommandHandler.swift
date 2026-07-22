@@ -155,8 +155,9 @@ final class URLCommandHandler {
 
     enum Scheme {
         static let canonical = "line"
-        static let legacy = "loop"
-        static let supported: Set<String> = [canonical, legacy]
+        /// Only the registered `line://` scheme is accepted (Info.plist + docs).
+        /// Legacy `loop://` is intentionally rejected to avoid conflict with Loop.
+        static let supported: Set<String> = [canonical]
     }
 
     /// Policy for temporary list-output files written by URL commands.

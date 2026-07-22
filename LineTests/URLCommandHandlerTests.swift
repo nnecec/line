@@ -13,10 +13,10 @@ final class URLCommandHandlerTests: XCTestCase {
         XCTAssertTrue(URLCommandHandler.supports(url))
     }
 
-    func testLegacyLoopSchemeIsStillAccepted() throws {
+    func testLegacyLoopSchemeIsRejected() throws {
         let url = try XCTUnwrap(URL(string: "loop://direction/right"))
 
-        XCTAssertTrue(URLCommandHandler.supports(url))
+        XCTAssertFalse(URLCommandHandler.supports(url))
     }
 
     func testOutputFilePolicyCleanupDelayIsAtMostFiveSeconds() {
