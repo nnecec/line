@@ -159,6 +159,14 @@ final class URLCommandHandler {
         static let supported: Set<String> = [canonical, legacy]
     }
 
+    /// Policy for temporary list-output files written by URL commands.
+    enum OutputFilePolicy {
+        /// Delay before deleting the temp file after opening it (seconds).
+        static let cleanupDelaySeconds: TimeInterval = 5
+        /// Owner-read/write only POSIX permissions.
+        static let posixPermissions: Int = 0o600
+    }
+
     static func supports(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased() else { return false }
         return Scheme.supported.contains(scheme)
@@ -185,6 +193,9 @@ final class URLCommandHandler {
 
     /// Buffer for collecting output before writing
     private var outputBuffer: [String] = []
+
+    /// Temp list-output files awaiting delayed cleanup.
+    private var pendingOutputFiles: [URL] = []
 
     // MARK: - Output Handling
 
@@ -252,7 +263,7 @@ final class URLCommandHandler {
     /// - Note: Due to limitations with terminal output formatting and the complexity of the list output,
     ///         we use a temporary file to display the formatted list. This allows for proper spacing,
     ///         sections, and formatting that would be difficult to achieve with direct terminal output.
-    ///         The file is automatically opened and then deleted after 60 seconds to keep the system clean.
+    ///         The file is owner-only (`0o600`) and deleted after a short delay.
     private func flushOutput() {
         guard shouldCollectOutput,
               !outputBuffer.isEmpty else {
@@ -267,19 +278,17 @@ final class URLCommandHandler {
 
         do {
             try outputBuffer.joined(separator: "\n").write(to: tempFile, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: OutputFilePolicy.posixPermissions],
+                ofItemAtPath: tempFile.path
+            )
+            pendingOutputFiles.append(tempFile)
             NSWorkspace.shared.open(tempFile)
 
-            // Schedule file deletion after a delay
-            // We use a longer delay (60s) to ensure the user has time to read the content
-            Task {
-                try? await Task.sleep(for: .seconds(60))
-
-                do {
-                    try FileManager.default.removeItem(at: tempFile)
-                    log.info("Cleaned up temporary URL command output file")
-                } catch {
-                    log.error("Failed to clean up temporary file: \(ApplicationLogPrivacy.errorDescription(error))")
-                }
+            // Short delay so the viewer can open the file before deletion.
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(OutputFilePolicy.cleanupDelaySeconds))
+                self?.removePendingOutputFile(tempFile)
             }
         } catch {
             log.error("Failed to write output: \(ApplicationLogPrivacy.errorDescription(error))")
@@ -288,6 +297,27 @@ final class URLCommandHandler {
         }
 
         outputBuffer.removeAll()
+    }
+
+    /// Removes a pending temp output file and drops it from the tracking list.
+    private func removePendingOutputFile(_ file: URL) {
+        pendingOutputFiles.removeAll { $0 == file }
+        do {
+            try FileManager.default.removeItem(at: file)
+            log.info("Cleaned up temporary URL command output file")
+        } catch {
+            // Already deleted or never fully written — non-fatal.
+            log.error("Failed to clean up temporary file: \(ApplicationLogPrivacy.errorDescription(error))")
+        }
+    }
+
+    /// Best-effort cleanup of any remaining temp list-output files (e.g. app termination).
+    func cleanupPendingOutputFiles() {
+        let files = pendingOutputFiles
+        pendingOutputFiles.removeAll()
+        for file in files {
+            try? FileManager.default.removeItem(at: file)
+        }
     }
 
     // MARK: - Public Methods

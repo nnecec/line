@@ -19,6 +19,15 @@ final class URLCommandHandlerTests: XCTestCase {
         XCTAssertTrue(URLCommandHandler.supports(url))
     }
 
+    func testOutputFilePolicyCleanupDelayIsAtMostFiveSeconds() {
+        XCTAssertLessThanOrEqual(URLCommandHandler.OutputFilePolicy.cleanupDelaySeconds, 5)
+        XCTAssertGreaterThan(URLCommandHandler.OutputFilePolicy.cleanupDelaySeconds, 0)
+    }
+
+    func testOutputFilePolicyUsesOwnerOnlyPermissions() {
+        XCTAssertEqual(URLCommandHandler.OutputFilePolicy.posixPermissions, 0o600)
+    }
+
     func testUnsupportedSchemeIsRejected() throws {
         let url = try XCTUnwrap(URL(string: "https://direction/right"))
 
