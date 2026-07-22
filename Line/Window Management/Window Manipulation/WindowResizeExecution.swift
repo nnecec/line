@@ -74,15 +74,20 @@ enum WindowResizeExecution {
         )
     }
 
+    /// Prepare a resize using already-resolved window properties (no AX / async work).
+    /// Prefer this for high-frequency paths such as grid hover previews.
     static func prepareResolved(
         action: BoundWindowAction,
         parentAction: BoundWindowAction? = nil,
+        window: Window? = nil,
         screen: NSScreen,
         bounds: CGRect,
         padding: PaddingConfiguration,
         initialMousePosition: CGPoint = .zero,
         windowProperties: WindowProperties?,
-        record: WindowRecord?
+        record: WindowRecord?,
+        resolvedWindowProperties: Window.ResolvedProperties? = nil,
+        resolvedRecord: WindowRecords.ResolvedRecord? = nil
     ) -> PreparedResize {
         prepareResolved(
             action: action,
@@ -91,12 +96,12 @@ enum WindowResizeExecution {
             bounds: bounds,
             padding: padding,
             initialMousePosition: initialMousePosition,
-            window: nil,
+            window: window,
             resolvedState: ResolvedState(
                 windowProperties: windowProperties,
                 record: record,
-                resolvedWindowProperties: nil,
-                resolvedRecord: nil
+                resolvedWindowProperties: resolvedWindowProperties,
+                resolvedRecord: resolvedRecord
             )
         )
     }
