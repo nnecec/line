@@ -30,6 +30,7 @@
 		5A1000072FD1000000A10001 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000082FD1000000A10001 /* LICENSE */; };
 		5A1000092FD1000000A10009 /* AccentColorControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */; };
 		5A10000B2FD2000000A1000B /* StashSessionFramePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000C2FD2000000A1000B /* StashSessionFramePolicyTests.swift */; };
+		5A10000D2FD3000000A1000D /* StashPersistencePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000E2FD3000000A1000D /* StashPersistencePolicyTests.swift */; };
 		F06D768A2DFF7A77007EEDA9 /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F06D76892DFF7A77007EEDA9 /* SkyLight.framework */; };
 /* End PBXBuildFile section */
 
@@ -64,6 +65,7 @@
 		5A1000082FD1000000A10001 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorControllerTests.swift; sourceTree = "<group>"; };
 		5A10000C2FD2000000A1000B /* StashSessionFramePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashSessionFramePolicyTests.swift; sourceTree = "<group>"; };
+		5A10000E2FD3000000A1000D /* StashPersistencePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashPersistencePolicyTests.swift; sourceTree = "<group>"; };
 		A848130C2BD1A8D100B02E93 /* .github */ = {isa = PBXFileReference; lastKnownFileType = folder; path = .github; sourceTree = "<group>"; };
 		A86AFD7529888B29008F4892 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		A883642E298B7288005D6C19 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
@@ -130,6 +132,7 @@
 				5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */,
 				5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */,
 				5A10000C2FD2000000A1000B /* StashSessionFramePolicyTests.swift */,
+				5A10000E2FD3000000A1000D /* StashPersistencePolicyTests.swift */,
 			);
 			path = LineTests;
 			sourceTree = "<group>";
@@ -302,6 +305,7 @@
 				5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */,
 				5A1000092FD1000000A10009 /* AccentColorControllerTests.swift in Sources */,
 				5A10000B2FD2000000A1000B /* StashSessionFramePolicyTests.swift in Sources */,
+				5A10000D2FD3000000A1000D /* StashPersistencePolicyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

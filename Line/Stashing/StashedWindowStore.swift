@@ -69,9 +69,19 @@ final class StashedWindowsStore {
         }
 
         stashed[cgWindowID] = window
-
-        Defaults[.stashManagerStashedWindows] = stashed.compactMapValues(\.action.action.stashPersistenceValue)
+        // Successfully managed windows rewrite Defaults; failed-to-restore
+        // entries stay in memory only so dead IDs are not persisted forever.
+        persistStashDefaults()
         log.info("Stashed windows updated (count: \(stashed.count))")
+    }
+
+    /// Writes currently stashed windows to Defaults.
+    /// Failed-to-restore IDs are intentionally kept in memory only so restart
+    /// does not rehydrate permanently dead CGWindowIDs.
+    private func persistStashDefaults() {
+        Defaults[.stashManagerStashedWindows] = StashPersistencePolicy.defaultsPayload(
+            stashedPersistenceValues: stashed.compactMapValues(\.action.action.stashPersistenceValue)
+        )
     }
 
     static func stashActionsMatch(requested: BoundWindowAction, stashed: BoundWindowAction) -> Bool {
@@ -105,8 +115,12 @@ final class StashedWindowsStore {
             restoredStashedWindows[windowId] = stashedWindow
         }
 
+        stashed = restoredStashedWindows
+        // Prune Defaults to successfully restored entries only; keep failures
+        // in memory for same-session space-change retries.
+        persistStashDefaults()
+
         if !restoredStashedWindows.isEmpty {
-            stashed = restoredStashedWindows
             log.info("\(restoredStashedWindows.count) stashed window restored.")
             delegate?.onStashedWindowsRestored()
         }
@@ -146,6 +160,7 @@ final class StashedWindowsStore {
         }
 
         if restored > 0 {
+            persistStashDefaults()
             delegate?.onStashedWindowsRestored()
         }
 
