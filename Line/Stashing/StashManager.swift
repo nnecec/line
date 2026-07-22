@@ -81,6 +81,42 @@ enum StashOverlapPolicy {
     }
 }
 
+/// Pure helpers for stash mouse hit-testing and z-order ranking without Accessibility.
+enum StashZOrderPolicy {
+    /// Default expansion applied to stash/reveal frames when deciding if the cursor is "near" enough
+    /// to warrant a CG window list lookup (matches `shouldHide` tolerance).
+    static let proximityTolerance: CGFloat = 15
+
+    /// Whether `location` is within `tolerance` of any stashed or revealed frame.
+    /// Used to skip CG listing when the cursor is far from every stash region.
+    static func isMouseNearAnyStash(
+        location: CGPoint,
+        stashedFrames: some Sequence<CGRect>,
+        revealedFrames: some Sequence<CGRect>,
+        tolerance: CGFloat = proximityTolerance
+    ) -> Bool {
+        for frame in stashedFrames {
+            if frame.insetBy(dx: -tolerance, dy: -tolerance).contains(location) {
+                return true
+            }
+        }
+        for frame in revealedFrames {
+            if frame.insetBy(dx: -tolerance, dy: -tolerance).contains(location) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Preserve CG front-to-back order while projecting onto stashed entries.
+    static func stashedInZOrder<Value>(
+        zOrderedWindowIDs: some Sequence<CGWindowID>,
+        stashed: [CGWindowID: Value]
+    ) -> [Value] {
+        zOrderedWindowIDs.compactMap { stashed[$0] }
+    }
+}
+
 /// Manages the behavior of windows that can be temporarily hidden (stashed) and revealed on screen edges.
 ///
 /// `StashManager` orchestrates a system for "stashing" windows by moving them to the edge of a screen,
@@ -571,6 +607,15 @@ private extension StashManager {
     /// Handles mouse movement events to reveal or hide stashed windows.
     private func processMouseMovement() async {
         let mouseLocation = NSEvent.mouseLocation.flipY(screen: NSScreen.screens[0])
+
+        // Skip CG listing when cursor is far from every stash/reveal region (store frames only).
+        let nearAnyStash = StashZOrderPolicy.isMouseNearAnyStash(
+            location: mouseLocation,
+            stashedFrames: store.stashed.values.map(\.stashedFrame),
+            revealedFrames: store.stashed.values.map(\.revealedFrame)
+        )
+        guard nearAnyStash else { return }
+
         let windows = getZSortedStashedWindows()
 
         for window in windows {
@@ -626,16 +671,18 @@ private extension StashManager {
     /// This sorting is essential because if multiple stashed windows overlap and the cursor
     /// is over their shared area, we should only reveal the topmost window.
     private func getZSortedStashedWindows() -> [StashedWindowInfo] {
-        // Leverage the fact that WindowEngine returns windows sorted by z-index.
-        // Map WindowEngine.windowList to store.stashed to retrieve the stashed windows in z-index order.
-        WindowUtility.windowList().compactMap { store.stashed[$0.cgWindowID] }
+        // CG on-screen list is front-to-back; use lightweight (no AX) IDs only for ranking.
+        StashZOrderPolicy.stashedInZOrder(
+            zOrderedWindowIDs: WindowUtility.lightweightWindowList().map(\.cgWindowID),
+            stashed: store.stashed
+        )
     }
 
     /// Determines whether a revealed window should be hidden based on the mouse location.
     /// Adds a tolerance to the revealed frame to avoid hiding the window during minor cursor movement and on resize.
     private func shouldHide(window: StashedWindowInfo, for location: CGPoint) async -> Bool {
         // Hide the window if the cursor is neither over the revealedFrame nor the stashedFrame.
-        let tolerance: CGFloat = 15
+        let tolerance = StashZOrderPolicy.proximityTolerance
         let revealedFrame = window.revealedFrame.insetBy(dx: -tolerance, dy: -tolerance)
         let stashedFrame = window.stashedFrame
         return !revealedFrame.contains(location) && !stashedFrame.contains(location)
