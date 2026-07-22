@@ -61,13 +61,18 @@ final class GridModeCoordinator {
             return .failed
         }
 
-        // Check for stashed window frame
-        let _ = if let window {
-            await StashManager.shared.getRevealedFrameForStashedWindow(
-                id: window.cgWindowID
-            ) ?? window.frame
+        // Prefer the revealed stash frame for layout math when the window is stashed.
+        let windowProperties: WindowProperties?
+        if let window {
+            let layoutFrame = StashSessionFramePolicy.frameForLayout(
+                revealedFrame: await StashManager.shared.getRevealedFrameForStashedWindow(
+                    id: window.cgWindowID
+                ),
+                currentFrame: window.frame
+            )
+            windowProperties = WindowProperties(frame: layoutFrame, isResizable: window.isResizable)
         } else {
-            CGRect.zero
+            windowProperties = nil
         }
 
         // Create ResizeContext adapter from Window Resize Execution.
@@ -75,7 +80,8 @@ final class GridModeCoordinator {
             action: BoundWindowAction(action: .special(.noSelection), keybind: []),
             window: window,
             screen: screen,
-            initialMousePosition: initialMousePosition
+            initialMousePosition: initialMousePosition,
+            windowProperties: windowProperties
         )
         resizeContext = ResizeContext(preparedResize: preparedResize)
 
