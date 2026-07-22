@@ -22,6 +22,11 @@ enum SkyLightToolBelt {
             return false
         }
 
+        guard let GetProcessForPID = PrivateSymbolLoader.GetProcessForPID else {
+            log.error("Failed to load GetProcessForPID in \(#function)")
+            return false
+        }
+
         var psn = ProcessSerialNumber()
         let status = GetProcessForPID(pid, &psn)
 
@@ -58,6 +63,11 @@ enum SkyLightToolBelt {
     static func makeKeyWindow(windowID: CGWindowID, pid: pid_t) -> Bool {
         guard let SLPSPostEventRecordTo = SkyLightSymbolLoader.SLPSPostEventRecordTo else {
             log.error("Failed to load SkyLight symbols in \(#function)")
+            return false
+        }
+
+        guard let GetProcessForPID = PrivateSymbolLoader.GetProcessForPID else {
+            log.error("Failed to load GetProcessForPID in \(#function)")
             return false
         }
 

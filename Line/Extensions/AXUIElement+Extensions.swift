@@ -138,6 +138,11 @@ extension AXUIElement {
     }
 
     func getWindowID() throws -> CGWindowID {
+        guard let AXUIElementGetWindow = PrivateSymbolLoader.AXUIElementGetWindow else {
+            // Symbol missing on this OS build — fail like other AX errors so callers degrade.
+            throw AXError.failure
+        }
+
         var id: CGWindowID = 0
         let error = AXUIElementGetWindow(self, &id)
 
