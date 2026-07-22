@@ -14,6 +14,9 @@ import Scribe
 @Loggable
 @MainActor
 final class GridMouseObserver {
+    /// Trailing debounce interval for expensive window-preview updates (~60 Hz).
+    static let previewThrottleInterval: Duration = .milliseconds(16)
+
     private var mouseMovedMonitor: ActiveEventMonitor?
     private var leftMouseDownMonitor: ActiveEventMonitor?
     private var leftMouseDraggedMonitor: ActiveEventMonitor?
@@ -22,6 +25,9 @@ final class GridMouseObserver {
     private weak var viewModel: GridOverlayViewModel?
     private let submitCallback: (GridOverlayViewModel.GridOverlayAction) -> ()
     private let previewCallback: (GridRegion?) -> ()
+
+    /// Debounced task for hover preview updates (AX-free but still non-trivial work).
+    private var previewTask: Task<Void, Never>?
 
     init(
         submitCallback: @escaping (GridOverlayViewModel.GridOverlayAction) -> (),
@@ -36,7 +42,7 @@ final class GridMouseObserver {
         stop()
         self.viewModel = viewModel
 
-        // Mouse moved (hover)
+        // Mouse moved (hover) — viewModel update is cheap; preview is throttled.
         mouseMovedMonitor = ActiveEventMonitor(
             "GridMouseMoved",
             events: [.mouseMoved]
@@ -45,13 +51,13 @@ final class GridMouseObserver {
             let location = NSEvent.mouseLocation
             Task { @MainActor in
                 viewModel.handleMouseMoved(at: location)
-                self.previewCallback(viewModel.selectedRegion)
+                self.schedulePreview(for: viewModel.selectedRegion)
             }
             return .forward
         }
         mouseMovedMonitor?.start()
 
-        // Left mouse down
+        // Left mouse down — immediate preview so click starts with correct frame.
         leftMouseDownMonitor = ActiveEventMonitor(
             "GridLeftMouseDown",
             events: [.leftMouseDown]
@@ -60,13 +66,13 @@ final class GridMouseObserver {
             let location = NSEvent.mouseLocation
             Task { @MainActor in
                 viewModel.handleMouseDown(at: location)
-                self.previewCallback(viewModel.selectedRegion)
+                self.flushPreview(for: viewModel.selectedRegion)
             }
             return .forward
         }
         leftMouseDownMonitor?.start()
 
-        // Left mouse dragged
+        // Left mouse dragged — throttle like move (high frequency).
         leftMouseDraggedMonitor = ActiveEventMonitor(
             "GridLeftMouseDragged",
             events: [.leftMouseDragged]
@@ -75,13 +81,13 @@ final class GridMouseObserver {
             let location = NSEvent.mouseLocation
             Task { @MainActor in
                 viewModel.handleMouseDragged(at: location)
-                self.previewCallback(viewModel.selectedRegion)
+                self.schedulePreview(for: viewModel.selectedRegion)
             }
             return .forward
         }
         leftMouseDraggedMonitor?.start()
 
-        // Left mouse up (commit or cancel)
+        // Left mouse up (commit or cancel) — flush pending preview then submit.
         leftMouseUpMonitor = ActiveEventMonitor(
             "GridLeftMouseUp",
             events: [.leftMouseUp]
@@ -90,7 +96,7 @@ final class GridMouseObserver {
             let location = NSEvent.mouseLocation
             Task { @MainActor in
                 let action = viewModel.handleMouseUp(at: location)
-                self.previewCallback(viewModel.selectedRegion)
+                self.flushPreview(for: viewModel.selectedRegion)
                 if let action = action {
                     self.submitCallback(action)
                 }
@@ -104,6 +110,9 @@ final class GridMouseObserver {
 
     /// Stop monitoring mouse events.
     func stop() {
+        previewTask?.cancel()
+        previewTask = nil
+
         mouseMovedMonitor?.stop()
         leftMouseDownMonitor?.stop()
         leftMouseDraggedMonitor?.stop()
@@ -127,5 +136,24 @@ final class GridMouseObserver {
     /// Handle cancel (Escape, timeout, force close).
     func handleCancel() {
         viewModel?.handleCancel()
+    }
+
+    // MARK: - Preview Throttling
+
+    /// Debounce expensive preview updates (Task cancel pattern, ~16 ms).
+    private func schedulePreview(for region: GridRegion?) {
+        previewTask?.cancel()
+        previewTask = Task { @MainActor in
+            try? await Task.sleep(for: Self.previewThrottleInterval)
+            guard !Task.isCancelled else { return }
+            previewCallback(region)
+        }
+    }
+
+    /// Cancel any pending debounced preview and fire immediately.
+    private func flushPreview(for region: GridRegion?) {
+        previewTask?.cancel()
+        previewTask = nil
+        previewCallback(region)
     }
 }

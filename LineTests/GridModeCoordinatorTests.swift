@@ -32,6 +32,15 @@ final class GridModeCoordinatorTests: XCTestCase {
         XCTAssertFalse(coordinator.isActive)
     }
 
+    // MARK: - Preview Throttle Policy
+
+    func testPreviewThrottleIntervalIsWithinTargetRange() {
+        // Plan 008: hover previews debounced to ~16–32 ms.
+        let interval = GridMouseObserver.previewThrottleInterval
+        XCTAssertGreaterThanOrEqual(interval, .milliseconds(16))
+        XCTAssertLessThanOrEqual(interval, .milliseconds(32))
+    }
+
     // MARK: - State Tests
 
     func testIsActiveReturnsFalseInitially() {

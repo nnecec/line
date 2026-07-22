@@ -189,14 +189,17 @@ final class GridGeometryTests: XCTestCase {
             template: template
         )
 
-        // 在边界外的点，但使用 clamped 方法
-        let outsidePoint = CGPoint(x: -100, y: 500)
+        // Left of bounds, mid-height (macOS bottom-left origin): clamps to left edge, bottom half → row 1.
+        let outsideMid = CGPoint(x: -100, y: 500)
+        let midCell = geometry.clampedCell(atGlobalPoint: outsideMid)
+        XCTAssertEqual(midCell.row, 1)
+        XCTAssertEqual(midCell.column, 0)
 
-        let cell = geometry.clampedCell(atGlobalPoint: outsidePoint)
-
-        // 应该被钳制到左上角
-        XCTAssertEqual(cell.row, 0)
-        XCTAssertEqual(cell.column, 0)
+        // Far above maxY: clamp hits exclusive max edge and falls back to top-left.
+        let outsideTop = CGPoint(x: -100, y: 2000)
+        let topCell = geometry.clampedCell(atGlobalPoint: outsideTop)
+        XCTAssertEqual(topCell.row, 0)
+        XCTAssertEqual(topCell.column, 0)
     }
 
     // MARK: - Grid Configuration Edge Cases
