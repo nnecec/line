@@ -1,6 +1,6 @@
 # URL scheme
 
-Line registers `line://` for local window automation. It does not register the upstream `loop://` scheme because that could conflict with an installed copy of Loop.
+Line registers `line://` for local window automation. It does not register the upstream `loop://` scheme because that could conflict with an installed copy of Loop. The URL handler also rejects `loop://` requests.
 
 Any local process that can open a URL can request these commands. There is no caller authentication or confirmation prompt. Do not expose the scheme as a network service or use untrusted input to construct a Line URL.
 

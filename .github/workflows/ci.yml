@@ -40,6 +40,19 @@ jobs:
           fi
           xcodebuild -version
 
+      # Cache key includes Package.resolved (dependency pin graph) and project.pbxproj
+      # (package refs / build settings). Bump the v1 suffix if caches go green-but-stale.
+      - name: Cache SPM and DerivedData
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            ~/Library/Caches/org.swift.swiftpm
+            Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
+          key: ${{ runner.os }}-xcode-v1-${{ hashFiles('Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'Line.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-v1-
+
       - name: Resolve package dependencies
         run: xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line
 
@@ -106,6 +119,18 @@ jobs:
             sudo xcode-select -s "/Applications/Xcode_26.6.app"
           fi
           xcodebuild -version
+
+      # Same SPM/DerivedData key as unit-tests so both jobs can share warm caches.
+      - name: Cache SPM and DerivedData
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            ~/Library/Caches/org.swift.swiftpm
+            Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
+          key: ${{ runner.os }}-xcode-v1-${{ hashFiles('Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'Line.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-v1-
 
       - name: Resolve package dependencies
         run: xcodebuild -resolvePackageDependencies -project Line.xcodeproj -scheme Line

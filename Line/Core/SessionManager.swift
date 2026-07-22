@@ -75,20 +75,26 @@ final class SessionManager {
     ) async {
         log.info("Opening session with window action")
 
-        // Check for stashed window frame
-        _ = if let window {
-            await StashManager.shared.getRevealedFrameForStashedWindow(
-                id: window.cgWindowID
-            ) ?? window.frame
+        // Prefer the revealed stash frame for layout math when the window is stashed.
+        let windowProperties: WindowProperties?
+        if let window {
+            let layoutFrame = StashSessionFramePolicy.frameForLayout(
+                revealedFrame: await StashManager.shared.getRevealedFrameForStashedWindow(
+                    id: window.cgWindowID
+                ),
+                currentFrame: window.frame
+            )
+            windowProperties = WindowProperties(frame: layoutFrame, isResizable: window.isResizable)
         } else {
-            CGRect.zero
+            windowProperties = nil
         }
 
         // Create ResizeContext adapter from Window Resize Execution.
         let preparedResize = await WindowResizeExecution.prepare(
             action: BoundWindowAction(action: .special(.noSelection), keybind: []),
             window: window,
-            initialMousePosition: initialMousePosition
+            initialMousePosition: initialMousePosition,
+            windowProperties: windowProperties
         )
         resizeContext = ResizeContext(preparedResize: preparedResize)
 

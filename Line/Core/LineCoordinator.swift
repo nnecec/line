@@ -302,12 +302,7 @@ extension LineCoordinator {
             return
         }
 
-        let initialWindowFrame = await {
-            // In case of a stashed window, use the revealed frame instead to prevent issue with frame calculation later.
-            await StashManager.shared.getRevealedFrameForStashedWindow(
-                id: window.cgWindowID
-            ) ?? window.frame
-        }()
+        // Stash revealed-frame override is resolved inside SessionManager.open.
         if shouldAbortOpening() {
             await cancelPartiallyOpenedLine()
             return

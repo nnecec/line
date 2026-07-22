@@ -61,21 +61,27 @@ final class GridModeCoordinator {
             return .failed
         }
 
-        // Check for stashed window frame
-        let _ = if let window {
-            await StashManager.shared.getRevealedFrameForStashedWindow(
-                id: window.cgWindowID
-            ) ?? window.frame
+        // Prefer the revealed stash frame for layout math when the window is stashed.
+        let windowProperties: WindowProperties?
+        if let window {
+            let layoutFrame = StashSessionFramePolicy.frameForLayout(
+                revealedFrame: await StashManager.shared.getRevealedFrameForStashedWindow(
+                    id: window.cgWindowID
+                ),
+                currentFrame: window.frame
+            )
+            windowProperties = WindowProperties(frame: layoutFrame, isResizable: window.isResizable)
         } else {
-            CGRect.zero
+            windowProperties = nil
         }
 
-        // Create ResizeContext adapter from Window Resize Execution.
+        // Resolve window state once at open; hover previews reuse the snapshot.
         let preparedResize = await WindowResizeExecution.prepare(
             action: BoundWindowAction(action: .special(.noSelection), keybind: []),
             window: window,
             screen: screen,
-            initialMousePosition: initialMousePosition
+            initialMousePosition: initialMousePosition,
+            windowProperties: windowProperties
         )
         resizeContext = ResizeContext(preparedResize: preparedResize)
 
@@ -98,13 +104,15 @@ final class GridModeCoordinator {
             displayBounds: displayBounds
         )
 
-        // Store grid context
+        // Store grid context with snapshotted window properties for hover previews.
         gridContext = GridContext(
             window: window,
             screen: screen,
             geometry: geometry,
             template: template,
-            bundleId: bundleId
+            bundleId: bundleId,
+            windowProperties: preparedResize.request.windowProperties,
+            record: preparedResize.request.record
         )
 
         // Open grid overlay
@@ -123,9 +131,7 @@ final class GridModeCoordinator {
                 }
             },
             previewCallback: { [weak self] region in
-                Task { @MainActor in
-                    await self?.updateGridPreview(for: region)
-                }
+                self?.updateGridPreview(for: region)
             }
         )
         gridMouseObserver = mouseObserver
@@ -165,21 +171,16 @@ final class GridModeCoordinator {
     // MARK: - Private Implementation
 
     /// Update the full-screen window preview for the currently hovered grid region.
-    private func updateGridPreview(for region: GridRegion?) async {
+    ///
+    /// Uses snapshotted window properties from grid open — no AX `resolveState` per hover.
+    /// Commit path still goes through full `WindowResizeExecution.prepare`.
+    private func updateGridPreview(for region: GridRegion?) {
         guard let context = gridContext, let region else {
             indicatorService.closeAll()
             return
         }
 
-        let action = context.geometry.customAction(for: region)
-        let preparedResize = await WindowResizeExecution.prepare(
-            action: BoundWindowAction(action: action, keybind: []),
-            window: context.window,
-            screen: context.screen,
-            bounds: context.geometry.workingBounds,
-            padding: .zero,
-            initialMousePosition: .zero
-        )
+        let preparedResize = context.preparePreview(for: region)
         indicatorService.openAndUpdate(context: ResizeContext(preparedResize: preparedResize))
     }
 

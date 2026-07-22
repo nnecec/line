@@ -52,7 +52,8 @@ enum WindowResizeExecution {
         bounds: CGRect? = nil,
         padding: PaddingConfiguration? = nil,
         initialMousePosition: CGPoint = .zero,
-        settings: SettingsSnapshot? = nil
+        settings: SettingsSnapshot? = nil,
+        windowProperties: WindowProperties? = nil
     ) async -> PreparedResize {
         let resolvedScreen = screen
             ?? window.flatMap { ScreenUtility.screenContaining($0) }
@@ -60,7 +61,7 @@ enum WindowResizeExecution {
             ?? NSScreen.screens[0]
         let resolvedBounds = bounds ?? resolvedScreen.cgSafeScreenFrame
         let resolvedPadding = padding ?? settings?.padding ?? SettingsSnapshot.live(for: resolvedScreen).padding
-        let resolvedState = await resolveState(for: window)
+        let resolvedState = await resolveState(for: window, windowPropertiesOverride: windowProperties)
 
         return prepareResolved(
             action: action,
@@ -74,15 +75,20 @@ enum WindowResizeExecution {
         )
     }
 
+    /// Prepare a resize using already-resolved window properties (no AX / async work).
+    /// Prefer this for high-frequency paths such as grid hover previews.
     static func prepareResolved(
         action: BoundWindowAction,
         parentAction: BoundWindowAction? = nil,
+        window: Window? = nil,
         screen: NSScreen,
         bounds: CGRect,
         padding: PaddingConfiguration,
         initialMousePosition: CGPoint = .zero,
         windowProperties: WindowProperties?,
-        record: WindowRecord?
+        record: WindowRecord?,
+        resolvedWindowProperties: Window.ResolvedProperties? = nil,
+        resolvedRecord: WindowRecords.ResolvedRecord? = nil
     ) -> PreparedResize {
         prepareResolved(
             action: action,
@@ -91,12 +97,12 @@ enum WindowResizeExecution {
             bounds: bounds,
             padding: padding,
             initialMousePosition: initialMousePosition,
-            window: nil,
+            window: window,
             resolvedState: ResolvedState(
                 windowProperties: windowProperties,
                 record: record,
-                resolvedWindowProperties: nil,
-                resolvedRecord: nil
+                resolvedWindowProperties: resolvedWindowProperties,
+                resolvedRecord: resolvedRecord
             )
         )
     }
@@ -134,14 +140,27 @@ enum WindowResizeExecution {
         )
     }
 
-    private static func resolveState(for window: Window?) async -> ResolvedState {
+    private static func resolveState(
+        for window: Window?,
+        windowPropertiesOverride: WindowProperties? = nil
+    ) async -> ResolvedState {
         guard let window else {
+            if let windowPropertiesOverride {
+                return ResolvedState(
+                    windowProperties: windowPropertiesOverride,
+                    record: nil,
+                    resolvedWindowProperties: nil,
+                    resolvedRecord: nil
+                )
+            }
             return .empty
         }
 
         let resolvedWindowProperties = Window.ResolvedProperties(from: window)
         let resolvedRecord = await WindowRecords.ResolvedRecord(for: window)
-        let windowProperties = WindowProperties(
+        // When an override is provided (e.g. stash revealed frame), preserve its
+        // frame for layout math instead of re-reading the live AX frame.
+        let windowProperties = windowPropertiesOverride ?? WindowProperties(
             frame: resolvedWindowProperties.frame,
             isResizable: resolvedWindowProperties.isResizable
         )

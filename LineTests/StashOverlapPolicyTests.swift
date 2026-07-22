@@ -98,3 +98,73 @@ final class StashOverlapPolicyTests: XCTestCase {
         )
     }
 }
+
+// MARK: - StashZOrderPolicy
+
+final class StashZOrderPolicyTests: XCTestCase {
+    func testStashedInZOrderPreservesFrontToBackAndDropsMissing() {
+        let stashed: [CGWindowID: String] = [
+            10: "back",
+            30: "front",
+            20: "mid"
+        ]
+        // Simulated CG list order: front → back (30, 99, 20, 10)
+        let zOrdered: [CGWindowID] = [30, 99, 20, 10]
+
+        let ordered = StashZOrderPolicy.stashedInZOrder(
+            zOrderedWindowIDs: zOrdered,
+            stashed: stashed
+        )
+
+        XCTAssertEqual(ordered, ["front", "mid", "back"])
+    }
+
+    func testStashedInZOrderEmptyWhenNoOverlap() {
+        let ordered = StashZOrderPolicy.stashedInZOrder(
+            zOrderedWindowIDs: [1, 2, 3] as [CGWindowID],
+            stashed: [CGWindowID: String]()
+        )
+        XCTAssertTrue(ordered.isEmpty)
+    }
+
+    func testIsMouseNearAnyStashHitsStashedFrameWithTolerance() {
+        let stashed = CGRect(x: 0, y: 0, width: 20, height: 200)
+        // 10pt outside the stashed rect horizontally → inside default 15pt tolerance
+        let location = CGPoint(x: 25, y: 100)
+
+        XCTAssertTrue(
+            StashZOrderPolicy.isMouseNearAnyStash(
+                location: location,
+                stashedFrames: [stashed],
+                revealedFrames: []
+            )
+        )
+    }
+
+    func testIsMouseNearAnyStashHitsRevealedFrameWithTolerance() {
+        let revealed = CGRect(x: 100, y: 100, width: 400, height: 300)
+        let location = CGPoint(x: 90, y: 250) // 10pt left of revealed
+
+        XCTAssertTrue(
+            StashZOrderPolicy.isMouseNearAnyStash(
+                location: location,
+                stashedFrames: [],
+                revealedFrames: [revealed]
+            )
+        )
+    }
+
+    func testIsMouseNearAnyStashReturnsFalseWhenFar() {
+        let stashed = CGRect(x: 0, y: 0, width: 20, height: 200)
+        let revealed = CGRect(x: 0, y: 0, width: 400, height: 300)
+        let location = CGPoint(x: 800, y: 600)
+
+        XCTAssertFalse(
+            StashZOrderPolicy.isMouseNearAnyStash(
+                location: location,
+                stashedFrames: [stashed],
+                revealedFrames: [revealed]
+            )
+        )
+    }
+}
