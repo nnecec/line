@@ -42,6 +42,119 @@ enum WindowResizeExecution {
         let sidesToAdjust: Edge.Set?
         let resolvedWindowProperties: Window.ResolvedProperties?
         let resolvedRecord: WindowRecords.ResolvedRecord?
+
+        var window: Window? { request.window }
+        var screen: NSScreen { request.screen }
+        var bounds: CGRect { request.bounds }
+        var padding: PaddingConfiguration { request.padding }
+        var paddedBounds: CGRect { request.paddedBounds }
+        var windowProperties: WindowProperties? { request.windowProperties }
+        var record: WindowRecord? { request.record }
+    }
+
+    /// Session-scoped layout frame: prefer a stash revealed frame when present.
+    nonisolated static func layoutFrame(revealedFrame: CGRect?, currentFrame: CGRect) -> CGRect {
+        revealedFrame ?? currentFrame
+    }
+
+    /// Open a Window Action Session or grid interaction: resolve window state once and
+    /// capture a session-scoped layout frame (including stash revealed frame when present).
+    static func bootstrap(
+        window: Window?,
+        screen: NSScreen? = nil,
+        initialMousePosition: CGPoint = .zero,
+        action: BoundWindowAction = BoundWindowAction(action: .special(.noSelection), keybind: []),
+        parentAction: BoundWindowAction? = nil,
+        revealedFrameForStashedWindow: ((CGWindowID) async -> CGRect?)? = nil
+    ) async -> PreparedResize {
+        var windowProperties: WindowProperties?
+        if let window {
+            let revealedFrame: CGRect?
+            if let revealedFrameForStashedWindow {
+                revealedFrame = await revealedFrameForStashedWindow(window.cgWindowID)
+            } else {
+                revealedFrame = await StashManager.shared.getRevealedFrameForStashedWindow(
+                    id: window.cgWindowID
+                )
+            }
+            let frame = layoutFrame(revealedFrame: revealedFrame, currentFrame: window.frame)
+            windowProperties = WindowProperties(frame: frame, isResizable: window.isResizable)
+        }
+
+        return await prepare(
+            action: action,
+            parentAction: parentAction,
+            window: window,
+            screen: screen,
+            initialMousePosition: initialMousePosition,
+            windowProperties: windowProperties
+        )
+    }
+
+    /// Mid-session action or screen change: reuse bootstrap layout snapshot (no AX re-read).
+    static func transition(
+        from current: PreparedResize,
+        toAction: BoundWindowAction,
+        parentAction: BoundWindowAction? = nil,
+        window: Window? = nil,
+        screen: NSScreen? = nil,
+        bounds: CGRect? = nil,
+        padding: PaddingConfiguration? = nil
+    ) -> PreparedResize {
+        let resolvedScreen = screen ?? current.screen
+        let resolvedBounds: CGRect
+        if let bounds {
+            resolvedBounds = bounds
+        } else if screen != nil {
+            resolvedBounds = resolvedScreen.cgSafeScreenFrame
+        } else {
+            resolvedBounds = current.bounds
+        }
+
+        let resolvedPadding: PaddingConfiguration
+        if let padding {
+            resolvedPadding = padding
+        } else if screen != nil {
+            resolvedPadding = SettingsSnapshot.live(for: resolvedScreen).padding
+        } else {
+            resolvedPadding = current.padding
+        }
+
+        return prepareResolved(
+            action: toAction,
+            parentAction: parentAction,
+            window: window ?? current.window,
+            screen: resolvedScreen,
+            bounds: resolvedBounds,
+            padding: resolvedPadding,
+            initialMousePosition: current.initialMousePosition,
+            windowProperties: current.windowProperties,
+            record: current.record,
+            resolvedWindowProperties: current.resolvedWindowProperties,
+            resolvedRecord: current.resolvedRecord
+        )
+    }
+
+    /// Immediate apply: re-resolve live window state while inheriting the session layout override.
+    static func prepareImmediate(
+        from session: PreparedResize,
+        action: BoundWindowAction? = nil,
+        parentAction: BoundWindowAction? = nil,
+        window: Window? = nil,
+        screen: NSScreen? = nil,
+        bounds: CGRect? = nil,
+        padding: PaddingConfiguration? = nil
+    ) async -> PreparedResize {
+        await prepare(
+            action: action ?? session.action,
+            parentAction: parentAction ?? session.parentAction,
+            window: window ?? session.window,
+            screen: screen ?? session.screen,
+            bounds: bounds ?? session.bounds,
+            padding: padding ?? session.padding,
+            initialMousePosition: session.initialMousePosition,
+            windowProperties: session.windowProperties
+        )
     }
 
     static func prepare(
@@ -76,7 +189,7 @@ enum WindowResizeExecution {
     }
 
     /// Prepare a resize using already-resolved window properties (no AX / async work).
-    /// Prefer this for high-frequency paths such as grid hover previews.
+    /// Prefer this for high-frequency paths such as grid hover previews and session transitions.
     static func prepareResolved(
         action: BoundWindowAction,
         parentAction: BoundWindowAction? = nil,

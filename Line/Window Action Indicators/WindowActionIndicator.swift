@@ -8,6 +8,6 @@
 import Foundation
 
 protocol WindowActionIndicator {
-    func open(context: ResizeContext)
+    func open(preparedResize: WindowResizeExecution.PreparedResize)
     func close()
 }

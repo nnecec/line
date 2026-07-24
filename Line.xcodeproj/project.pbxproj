@@ -35,6 +35,7 @@
 		5A10000D2FD3000000A1000D /* StashPersistencePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000E2FD3000000A1000D /* StashPersistencePolicyTests.swift */; };
 		5A10000B2FE7000000A1000B /* LightweightWindowInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10000C2FE7000000A1000C /* LightweightWindowInfoTests.swift */; };
 		F06D768A2DFF7A77007EEDA9 /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F06D76892DFF7A77007EEDA9 /* SkyLight.framework */; };
+		5A10001B2FD3000000A1001B /* WindowResizeExecutionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2FD3000000A1001A /* WindowResizeExecutionSessionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,6 +79,7 @@
 		A8E59C35297F5E9A0064D4BA /* Line.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Line.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8E6D1FC2A4155DC005751D4 /* .gitignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		F06D76892DFF7A77007EEDA9 /* SkyLight.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SkyLight.framework; path = ../../../../System/Library/PrivateFrameworks/SkyLight.framework; sourceTree = "<group>"; };
+		5A10001A2FD3000000A1001A /* WindowResizeExecutionSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowResizeExecutionSessionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -140,6 +142,7 @@
 				5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */,
 				5A10000A2FD1000000A10009 /* AccentColorControllerTests.swift */,
 				5A10000C2FD2000000A1000B /* StashSessionFramePolicyTests.swift */,
+				5A10001A2FD3000000A1001A /* WindowResizeExecutionSessionTests.swift */,
 				5A10000E2FD3000000A1000D /* StashPersistencePolicyTests.swift */,
 				5A10000C2FE7000000A1000C /* LightweightWindowInfoTests.swift */,
 			);
@@ -316,6 +319,7 @@
 				5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */,
 				5A1000092FD1000000A10009 /* AccentColorControllerTests.swift in Sources */,
 				5A10000B2FD2000000A1000B /* StashSessionFramePolicyTests.swift in Sources */,
+				5A10001B2FD3000000A1001B /* WindowResizeExecutionSessionTests.swift in Sources */,
 				5A10000D2FD3000000A1000D /* StashPersistencePolicyTests.swift in Sources */,
 				5A10000B2FE7000000A1000B /* LightweightWindowInfoTests.swift in Sources */,
 			);

@@ -31,8 +31,15 @@ _Avoid_: Settings window host, window state
 
 **Window Action Session**:
 The active interaction after Line opens in which the user selects, cycles, previews, and commits a window action.
-_Avoid_: Action coordinator, resize session, trigger session
+The session holds the current prepared resize as its layout truth for the interaction.
+_Avoid_: Action coordinator, resize session, trigger session, ResizeContext
 
 **Window Resize Execution**:
-The window-management operation that turns a selected window action, target window, display, and current window state into the frame and state needed to apply the resize.
-_Avoid_: ResizeContext, frame calculation, resize request
+The operation that turns a selected window action, target window, display, and window state into the frame and state needed to apply the resize.
+It owns session bootstrap (including a session-scoped layout frame snapshot when the window is stashed), mid-session transitions that reuse that snapshot without re-reading live window state, and commit (apply the current preparation, or re-prepare for immediate apply while inheriting the session layout snapshot).
+_Avoid_: ResizeContext, frame calculation alone, resize request alone
+
+**Prepared Resize**:
+The immutable result of Window Resize Execution for one action on one window and display: the inputs and target frame ready to preview or apply.
+During a Window Action Session (and grid mode), this is the layout truth; changing action or screen produces a new Prepared Resize rather than mutating the previous one.
+_Avoid_: ResizeContext, mutable resize state, live window frame (when a session layout snapshot applies)

@@ -89,22 +89,15 @@ final class SessionManagerTests: XCTestCase {
         XCTAssertFalse(sessionManager.isActive)
     }
 
-    // MARK: - ResizeContext Tests
+    // MARK: - Prepared Resize Tests
 
-    func testResizeContextInitializedWithDefaultValues() {
-        // Given: session is not active
-        let context = sessionManager.resizeContext
-
-        // Then: should have default values
-        XCTAssertNil(context.window)
-        XCTAssertEqual(context.action.direction, .noSelection)
+    func testPreparedResizeIsNilWhenSessionInactive() {
+        XCTAssertNil(sessionManager.preparedResize)
     }
 
-    func testResizeContextUpdatedAfterOpen() async {
-        // Given: session is not active
+    func testPreparedResizeUpdatedAfterOpen() async {
         let action = BoundWindowAction(action: .standard(.maximize), keybind: [])
 
-        // When: open session
         await sessionManager.open(
             window: nil,
             initialMousePosition: CGPoint(x: 100, y: 100),
@@ -112,9 +105,7 @@ final class SessionManagerTests: XCTestCase {
             isReverseCycleRequested: { false }
         )
 
-        // Then: context should be updated
-        let context = sessionManager.resizeContext
-        XCTAssertEqual(context.action.direction, .maximize)
+        XCTAssertEqual(sessionManager.preparedResize?.action.direction, .maximize)
     }
 
     // MARK: - Parent Cycle Action Tests
@@ -180,7 +171,7 @@ final class SessionManagerTests: XCTestCase {
 
         // Then: context should be updated
         XCTAssertTrue(sessionManager.isActive)
-        XCTAssertEqual(sessionManager.resizeContext.action.direction, .center)
+        XCTAssertEqual(sessionManager.preparedResize?.action.direction, .center)
     }
 
     func testChangeActionReturnsImmediateApplyInstructionWhenPreviewDisabled() async {
@@ -199,7 +190,7 @@ final class SessionManagerTests: XCTestCase {
             isReverseCycleRequested: { false }
         )
 
-        XCTAssertEqual(sessionManager.resizeContext.action.direction, .maximize)
+        XCTAssertEqual(sessionManager.preparedResize?.action.direction, .maximize)
         XCTAssertTrue(result?.shouldUpdateIndicators == true)
         XCTAssertTrue(result?.shouldApplyImmediately == true)
     }
@@ -242,7 +233,7 @@ final class SessionManagerTests: XCTestCase {
         // Then: session should be closed
         XCTAssertFalse(sessionManager.isActive)
         XCTAssertNotNil(result.actionToApplyOnRelease)
-        XCTAssertTrue(result.actionToApplyOnRelease === sessionManager.resizeContext)
+        XCTAssertEqual(result.actionToApplyOnRelease?.action.direction, .maximize)
     }
 
     func testCloseWithPreviewDisabledReturnsNoApplyInstruction() async {

@@ -16,7 +16,7 @@ import SwiftUI
 /// 3. User commits selection or cancels
 /// 4. Apply window action and close
 ///
-/// This coordinator is independent of WindowActionSession and uses its own ResizeContext.
+/// This coordinator is independent of WindowActionSession and uses its own Prepared Resize.
 @Loggable
 @MainActor
 final class GridModeCoordinator {
@@ -29,7 +29,8 @@ final class GridModeCoordinator {
     private let gridOverlayController = GridOverlayController()
     private var gridMouseObserver: GridMouseObserver?
     private var gridContext: GridContext?
-    private var resizeContext: ResizeContext = .init()
+    /// Latest hover Prepared Resize; commit applies this snapshot (release-style).
+    private var hoverPreparedResize: WindowResizeExecution.PreparedResize?
 
     private(set) var isActive: Bool = false
 
@@ -61,29 +62,12 @@ final class GridModeCoordinator {
             return .failed
         }
 
-        // Prefer the revealed stash frame for layout math when the window is stashed.
-        let windowProperties: WindowProperties?
-        if let window {
-            let layoutFrame = StashSessionFramePolicy.frameForLayout(
-                revealedFrame: await StashManager.shared.getRevealedFrameForStashedWindow(
-                    id: window.cgWindowID
-                ),
-                currentFrame: window.frame
-            )
-            windowProperties = WindowProperties(frame: layoutFrame, isResizable: window.isResizable)
-        } else {
-            windowProperties = nil
-        }
-
-        // Resolve window state once at open; hover previews reuse the snapshot.
-        let preparedResize = await WindowResizeExecution.prepare(
-            action: BoundWindowAction(action: .special(.noSelection), keybind: []),
+        let preparedResize = await WindowResizeExecution.bootstrap(
             window: window,
             screen: screen,
-            initialMousePosition: initialMousePosition,
-            windowProperties: windowProperties
+            initialMousePosition: initialMousePosition
         )
-        resizeContext = ResizeContext(preparedResize: preparedResize)
+        hoverPreparedResize = nil
 
         // Get grid template and remembered size
         let configManager = GridConfigurationManager.shared
@@ -95,11 +79,11 @@ final class GridModeCoordinator {
         let displayBounds = GridGeometry.thumbnailBounds(
             centeredAt: initialMousePosition,
             screenFrame: screen.frame,
-            workingBounds: resizeContext.paddedBounds
+            workingBounds: preparedResize.paddedBounds
         )
         let geometry = GridGeometry(
             screenFrame: screen.frame,
-            workingBounds: resizeContext.paddedBounds,
+            workingBounds: preparedResize.paddedBounds,
             template: template,
             displayBounds: displayBounds
         )
@@ -111,8 +95,8 @@ final class GridModeCoordinator {
             geometry: geometry,
             template: template,
             bundleId: bundleId,
-            windowProperties: preparedResize.request.windowProperties,
-            record: preparedResize.request.record
+            windowProperties: preparedResize.windowProperties,
+            record: preparedResize.record
         )
 
         // Open grid overlay
@@ -164,6 +148,7 @@ final class GridModeCoordinator {
         gridMouseObserver?.stop()
         gridMouseObserver = nil
         gridContext = nil
+        hoverPreparedResize = nil
 
         isActive = false
     }
@@ -173,15 +158,17 @@ final class GridModeCoordinator {
     /// Update the full-screen window preview for the currently hovered grid region.
     ///
     /// Uses snapshotted window properties from grid open — no AX `resolveState` per hover.
-    /// Commit path still goes through full `WindowResizeExecution.prepare`.
+    /// Commit applies the current hover Prepared Resize (same as session release commit).
     private func updateGridPreview(for region: GridRegion?) {
         guard let context = gridContext, let region else {
+            hoverPreparedResize = nil
             indicatorService.closeAll()
             return
         }
 
         let preparedResize = context.preparePreview(for: region)
-        indicatorService.openAndUpdate(context: ResizeContext(preparedResize: preparedResize))
+        hoverPreparedResize = preparedResize
+        indicatorService.openAndUpdate(preparedResize: preparedResize)
     }
 
     /// Handle grid overlay action (commit or cancel).
@@ -214,36 +201,25 @@ final class GridModeCoordinator {
         }
     }
 
-    /// Commit the grid layout and apply to window.
+    /// Commit the grid layout and apply to window using the current Prepared Resize.
     private func commitGridLayout(
         region: GridRegion,
         shouldSaveMemory: Bool,
         memorySize: GridSize?,
         context: GridContext
     ) async {
+        // Prefer the hover snapshot so preview and commit match; rebuild only if missing.
+        let preparedResize = hoverPreparedResize ?? context.preparePreview(for: region)
+
         // Close overlay immediately
         close(reason: .committed)
 
-        guard let window = context.window else {
+        guard context.window != nil else {
             log.warn("No target window for grid layout")
             return
         }
 
-        // Generate custom action
-        let action = context.geometry.customAction(for: region)
-
-        // Create execution context with working bounds and zero padding.
-        // Grid gap is already included in the action's percentage coordinates.
-        let preparedResize = await WindowResizeExecution.prepare(
-            action: BoundWindowAction(action: action, keybind: []),
-            window: window,
-            screen: context.screen,
-            bounds: context.geometry.workingBounds,
-            padding: .zero,
-            initialMousePosition: .zero
-        )
-
-        // Apply action
+        // Apply action — release-style commit of current Prepared Resize
         do {
             let result = try await WindowActionEngine.shared.apply(preparedResize: preparedResize)
             if result.success {

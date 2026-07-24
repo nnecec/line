@@ -16,7 +16,8 @@ import SwiftUI
 /// and returns a result indicating success and any state changes.
 ///
 /// **Note:** Screen change actions (`nextScreen`, `previousScreen`, etc.) are NOT handled here.
-/// They are resolved by `LineCoordinator` which updates `resizeContext.screen` before calling `apply()`.
+/// They are resolved in the Window Action Session, which transitions Prepared Resize to the target screen
+/// before calling `apply(preparedResize:)`.
 @Loggable
 final class WindowActionEngine {
     static let shared = WindowActionEngine()

@@ -11,14 +11,15 @@ import SwiftUI
 
 @MainActor
 struct SessionCloseResult {
-    let actionToApplyOnRelease: ResizeContext?
+    /// Prepared resize to apply on release when preview-only path was used.
+    let actionToApplyOnRelease: WindowResizeExecution.PreparedResize?
 }
 
 /// Manages Window Action Session lifecycle and interactions.
 ///
 /// A session represents the period when Line is actively showing a window action:
 /// - User triggers Line (keyboard shortcut or middle-click)
-/// - Session opens with ResizeContext and WindowActionSession
+/// - Session opens with a Prepared Resize bootstrap and WindowActionSession
 /// - User can change actions, screens, or interact with mouse
 /// - Session closes when user releases trigger or explicitly cancels
 ///
@@ -33,8 +34,10 @@ final class SessionManager {
 
     // MARK: - Internal State
 
-    private(set) var resizeContext: ResizeContext = .init()
     private var windowActionSession: WindowActionSession?
+    /// True after an immediate apply (or focus apply) landed during this session,
+    /// so close must not double-apply the same intent.
+    private var didApplyDuringSession = false
 
     private let hasParentCycleActionMirror = OSAllocatedUnfairLock<Bool>(initialState: false)
     nonisolated var hasParentCycleActionAtomic: Bool {
@@ -47,6 +50,11 @@ final class SessionManager {
 
     var hasParentCycleAction: Bool {
         hasParentCycleActionAtomic
+    }
+
+    /// Current session layout truth, if a session is open.
+    var preparedResize: WindowResizeExecution.PreparedResize? {
+        windowActionSession?.preparedResize
     }
 
     // MARK: - Initialization
@@ -75,70 +83,56 @@ final class SessionManager {
     ) async {
         log.info("Opening session with window action")
 
-        // Prefer the revealed stash frame for layout math when the window is stashed.
-        let windowProperties: WindowProperties?
-        if let window {
-            let layoutFrame = StashSessionFramePolicy.frameForLayout(
-                revealedFrame: await StashManager.shared.getRevealedFrameForStashedWindow(
-                    id: window.cgWindowID
-                ),
-                currentFrame: window.frame
-            )
-            windowProperties = WindowProperties(frame: layoutFrame, isResizable: window.isResizable)
-        } else {
-            windowProperties = nil
-        }
+        didApplyDuringSession = false
 
-        // Create ResizeContext adapter from Window Resize Execution.
-        let preparedResize = await WindowResizeExecution.prepare(
-            action: BoundWindowAction(action: .special(.noSelection), keybind: []),
+        let preparedResize = await WindowResizeExecution.bootstrap(
             window: window,
-            initialMousePosition: initialMousePosition,
-            windowProperties: windowProperties
+            initialMousePosition: initialMousePosition
         )
-        resizeContext = ResizeContext(preparedResize: preparedResize)
 
         windowActionSession = WindowActionSession(
-            context: resizeContext,
+            preparedResize: preparedResize,
             interception: StashWindowActionInterception()
         )
 
-        // Open indicator and preview
-        indicatorService.openAndUpdate(context: resizeContext)
+        indicatorService.openAndUpdate(preparedResize: preparedResize)
 
-        // Apply starting action
         await changeAction(startingAction, disableHapticFeedback: true, isReverseCycleRequested: isReverseCycleRequested)
     }
 
     /// Close the current session.
     /// - Parameter forceClose: If true, cancel without applying action
     func close(forceClose: Bool) -> SessionCloseResult {
-        guard windowActionSession != nil else {
+        guard let session = windowActionSession else {
             return SessionCloseResult(actionToApplyOnRelease: nil)
         }
         log.info("Closing session (forceClose: \(forceClose))")
 
+        let current = session.preparedResize
         indicatorService.closeAll()
         windowActionSession = nil
         hasParentCycleActionMirror.withLock { $0 = false }
 
         let shouldApplyOnRelease = !forceClose
             && Defaults[.previewVisibility]
-            && !resizeContext.action.willFocusWindow
+            && !didApplyDuringSession
+            && !current.action.willFocusWindow
+        didApplyDuringSession = false
+
         return SessionCloseResult(
-            actionToApplyOnRelease: shouldApplyOnRelease ? resizeContext : nil
+            actionToApplyOnRelease: shouldApplyOnRelease ? current : nil
         )
     }
 
     func applyCloseResult(_ result: SessionCloseResult) async {
-        guard let resizeContext = result.actionToApplyOnRelease else {
+        guard let prepared = result.actionToApplyOnRelease else {
             return
         }
 
         log.info("Applying window action on session close")
         do {
-            let result = try await WindowActionEngine.shared.apply(context: resizeContext)
-            log.info("Window action applied: success=\(result.success)")
+            let applyResult = try await WindowActionEngine.shared.apply(preparedResize: prepared)
+            log.info("Window action applied: success=\(applyResult.success)")
         } catch {
             log.error("Failed to apply window action: \(ApplicationLogPrivacy.errorDescription(error))")
         }
@@ -167,7 +161,6 @@ final class SessionManager {
             )
         )
 
-        resizeContext = windowActionSession.context
         let hasParentCycleAction = windowActionSession.hasParentCycleAction
         hasParentCycleActionMirror.withLock { $0 = hasParentCycleAction }
 
@@ -175,95 +168,43 @@ final class SessionManager {
             return result
         }
 
-        // SessionManager owns indicator and apply side effects. Timeout, haptic,
-        // and continuation instructions stay available to the coordinator via
-        // the returned result so those policies can remain outside this type.
         if result.shouldUpdateIndicators {
-            indicatorService.openAndUpdate(context: resizeContext)
+            indicatorService.openAndUpdate(preparedResize: windowActionSession.preparedResize)
         }
 
         if result.shouldApplyImmediately || result.shouldApplyFocusAction {
-            await applyCurrentAction()
+            await applyImmediate()
         }
 
         return result
     }
 
-    private func applyCurrentAction() async {
+    /// Immediate apply: live re-prepare inheriting session layout snapshot, then replace session truth.
+    private func applyImmediate() async {
+        guard let session = windowActionSession else { return }
         log.info("Applying window action during session change")
 
+        let sessionSnapshot = session.preparedResize
         do {
-            let preparedResize = await WindowResizeExecution.prepare(
-                action: resizeContext.action,
-                parentAction: resizeContext.parentAction,
-                window: resizeContext.window,
-                screen: resizeContext.screen,
-                bounds: resizeContext.bounds,
-                padding: resizeContext.padding,
-                initialMousePosition: resizeContext.initialMousePosition
-            )
-            let executionContext = ResizeContext(preparedResize: preparedResize)
-            let result = try await WindowActionEngine.shared.apply(context: executionContext)
-            resizeContext = executionContext
-            windowActionSession?.replaceContext(executionContext)
-            log.info("Window action applied: success=\(result.success)")
+            let prepared = await WindowResizeExecution.prepareImmediate(from: sessionSnapshot)
+            let applyResult = try await WindowActionEngine.shared.apply(preparedResize: prepared)
+            log.info("Window action applied: success=\(applyResult.success)")
 
-            if let newTargetWindow = result.newTargetWindow {
-                let updatedContext = ResizeContext(
-                    window: newTargetWindow,
-                    screen: resizeContext.screen,
-                    bounds: resizeContext.bounds,
-                    padding: resizeContext.padding,
-                    action: resizeContext.action,
-                    initialMousePosition: resizeContext.initialMousePosition
-                )
-                resizeContext = updatedContext
-                windowActionSession?.replaceContext(updatedContext)
+            if applyResult.success {
+                didApplyDuringSession = true
             }
-        } catch {
-            log.error("Failed to apply session action: \(ApplicationLogPrivacy.errorDescription(error))")
-        }
-    }
 
-    /// Change to a different screen within the current session.
-    func changeScreen(to newScreen: NSScreen) async {
-        guard windowActionSession != nil else {
-            return
-        }
-
-        log.info("Changing session screen")
-
-        // Create new context with the new screen
-        let preparedResize = await WindowResizeExecution.prepare(
-            action: resizeContext.action,
-            parentAction: resizeContext.parentAction,
-            window: resizeContext.window,
-            screen: newScreen,
-            bounds: newScreen.visibleFrame,
-            padding: resizeContext.padding,
-            initialMousePosition: resizeContext.initialMousePosition
-        )
-        let newContext = ResizeContext(preparedResize: preparedResize)
-
-        // Apply the action to the new screen's context
-        do {
-            let result = try await WindowActionEngine.shared.apply(context: newContext)
-            if result.success {
-                log.info("Window action applied to new screen")
-
-                // Update context if new target window returned
-                if let newTargetWindow = result.newTargetWindow {
-                    let updatedContext = ResizeContext(
-                        window: newTargetWindow,
-                        screen: newContext.screen,
-                        bounds: newContext.bounds,
-                        padding: newContext.padding,
-                        action: newContext.action,
-                        initialMousePosition: newContext.initialMousePosition
-                    )
-                    resizeContext = updatedContext
-                    windowActionSession?.replaceContext(updatedContext)
-                }
+            if let newTargetWindow = applyResult.newTargetWindow {
+                let rebootstrap = await WindowResizeExecution.bootstrap(
+                    window: newTargetWindow,
+                    screen: prepared.screen,
+                    initialMousePosition: sessionSnapshot.initialMousePosition,
+                    action: sessionSnapshot.action,
+                    parentAction: sessionSnapshot.parentAction
+                )
+                session.replacePreparedResize(rebootstrap)
+            } else {
+                session.replacePreparedResize(prepared)
             }
         } catch {
             log.error("Failed to apply session action: \(ApplicationLogPrivacy.errorDescription(error))")

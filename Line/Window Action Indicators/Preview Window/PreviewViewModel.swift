@@ -29,27 +29,26 @@ final class PreviewViewModel: ObservableObject {
         }
     }
 
-    func updateContext(with context: ResizeContext, isScreenSwitch: Bool) {
-        if #available(macOS 26.0, *), let window = context.window {
+    func update(with prepared: WindowResizeExecution.PreparedResize, isScreenSwitch: Bool) {
+        if #available(macOS 26.0, *), let window = prepared.window {
             overrideCornerRadii = Self.getCornerRadius(for: window)
         } else {
             overrideCornerRadii = nil
         }
 
         let isCurrentlyHidden = !isShown
-        isGridLayoutPreview = context.action.isGridLayoutAction
+        isGridLayoutPreview = prepared.action.isGridLayoutAction
 
-        let (targetFrame, _) = context.getTargetFrame()
-        var paddedFrame = targetFrame
+        var paddedFrame = prepared.targetFrame.raw
 
-        if let bounds = context.screen?.displayBounds {
-            paddedFrame.origin.x -= bounds.minX
-            paddedFrame.origin.y -= bounds.minY
-        }
+        let screen = prepared.screen
+        let bounds = screen.displayBounds
+        paddedFrame.origin.x -= bounds.minX
+        paddedFrame.origin.y -= bounds.minY
 
         // In settings preview, actions that manipulate existing window frames (larger/smaller,
         // grow/shrink, move) cannot be previewed without a real window.
-        let shouldBecomeVisible = if isSettingsPreview, context.action.willManipulateExistingWindowFrame {
+        let shouldBecomeVisible = if isSettingsPreview, prepared.action.willManipulateExistingWindowFrame {
             false
         } else {
             paddedFrame.size.area > 0
@@ -69,7 +68,7 @@ final class PreviewViewModel: ObservableObject {
                 let startingFrame = computeStartingFrame(
                     for: Defaults[.previewStartingPosition],
                     targetFrame: paddedFrame,
-                    context: context
+                    screen: screen
                 )
 
                 // Set starting position without animation
@@ -98,21 +97,22 @@ final class PreviewViewModel: ObservableObject {
         log.debug("Current previewed frame: \(computedFrame)")
     }
 
+    /// Bridge for settings previews that still build a ResizeContext.
+    func updateContext(with context: ResizeContext, isScreenSwitch: Bool) {
+        update(with: WindowResizeExecution.PreparedResize(context: context), isScreenSwitch: isScreenSwitch)
+    }
+
     private func computeStartingFrame(
         for position: PreviewStartingPosition,
         targetFrame: CGRect,
-        context: ResizeContext
+        screen: NSScreen
     ) -> CGRect {
         switch position {
         case .screenCenter:
             // Animate from zero at center of screen
-            guard var centerPosition = context.screen?.frame.center else {
-                return targetFrame
-            }
-            if let screenFrame = context.screen?.frame {
-                centerPosition.x -= screenFrame.minX
-                centerPosition.y -= screenFrame.minY
-            }
+            var centerPosition = screen.frame.center
+            centerPosition.x -= screen.frame.minX
+            centerPosition.y -= screen.frame.minY
             return CGRect(origin: centerPosition, size: .zero)
 
         case .actionCenter:

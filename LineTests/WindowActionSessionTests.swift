@@ -39,7 +39,7 @@ final class WindowActionSessionTests: XCTestCase {
         let first = WindowAction.standard(.proportional(.leftHalf))
         let second = WindowAction.standard(.proportional(.rightHalf))
         let cycle = BoundWindowAction(action: .cycle([first, second]), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: .noSelection))
+        let session = WindowActionSession.testSession()
 
         let result = await session.changeAction(
             cycle,
@@ -47,8 +47,8 @@ final class WindowActionSessionTests: XCTestCase {
         )
 
         XCTAssertFalse(result.isIgnored)
-        XCTAssertEqual(session.context.action.action, first)
-        XCTAssertEqual(session.context.parentAction?.action, cycle.action)
+        XCTAssertEqual(session.action.action, first)
+        XCTAssertEqual(session.parentAction?.action, cycle.action)
         XCTAssertTrue(result.shouldUpdateIndicators)
     }
 
@@ -59,7 +59,7 @@ final class WindowActionSessionTests: XCTestCase {
         let second = WindowAction.standard(.proportional(.rightHalf))
         let current = BoundWindowAction(action: first, keybind: [])
         let cycle = BoundWindowAction(action: .cycle([first, second]), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: current))
+        let session = WindowActionSession.testSession(action: current)
 
         let result = await session.changeAction(
             cycle,
@@ -69,14 +69,14 @@ final class WindowActionSessionTests: XCTestCase {
         XCTAssertFalse(result.isIgnored)
         XCTAssertTrue(result.shouldRestartTimeout)
         XCTAssertFalse(result.shouldUpdateIndicators)
-        XCTAssertEqual(session.context.action.action, first)
+        XCTAssertEqual(session.action.action, first)
     }
 
     func testEmptyCycleDoesNotCrashWhenRestartIsEnabled() async {
         Defaults[.cycleModeRestartEnabled] = true
 
         let cycle = BoundWindowAction(action: .cycle([]), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: .noSelection))
+        let session = WindowActionSession.testSession()
 
         let result = await session.changeAction(
             cycle,
@@ -84,8 +84,8 @@ final class WindowActionSessionTests: XCTestCase {
         )
 
         XCTAssertTrue(result.isIgnored)
-        XCTAssertEqual(session.context.action.action, WindowAction.special(.noSelection))
-        XCTAssertNil(session.context.parentAction)
+        XCTAssertEqual(session.action.action, WindowAction.special(.noSelection))
+        XCTAssertNil(session.parentAction)
         XCTAssertFalse(result.shouldUpdateIndicators)
     }
 
@@ -93,7 +93,7 @@ final class WindowActionSessionTests: XCTestCase {
         Defaults[.cycleModeRestartEnabled] = false
 
         let cycle = BoundWindowAction(action: .cycle([]), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: .noSelection))
+        let session = WindowActionSession.testSession()
 
         let result = await session.changeAction(
             cycle,
@@ -101,15 +101,15 @@ final class WindowActionSessionTests: XCTestCase {
         )
 
         XCTAssertTrue(result.isIgnored)
-        XCTAssertEqual(session.context.action.action, WindowAction.special(.noSelection))
-        XCTAssertNil(session.context.parentAction)
+        XCTAssertEqual(session.action.action, WindowAction.special(.noSelection))
+        XCTAssertNil(session.parentAction)
         XCTAssertFalse(result.shouldUpdateIndicators)
     }
 
     func testEmptyCycleHoverDoesNotAdvance() async {
         let current = BoundWindowAction(action: .standard(.proportional(.leftHalf)), keybind: [])
         let cycle = BoundWindowAction(action: .cycle([]), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: current))
+        let session = WindowActionSession.testSession(action: current)
 
         let result = await session.changeAction(
             cycle,
@@ -117,16 +117,15 @@ final class WindowActionSessionTests: XCTestCase {
         )
 
         XCTAssertTrue(result.isIgnored)
-        XCTAssertEqual(session.context.action.action, current.action)
-        XCTAssertNil(session.context.parentAction)
+        XCTAssertEqual(session.action.action, current.action)
+        XCTAssertNil(session.parentAction)
         XCTAssertFalse(result.shouldRestartTimeout)
         XCTAssertFalse(result.shouldUpdateIndicators)
     }
 
     func testInterceptedActionStopsRegularProgression() async {
         let requestedAction = BoundWindowAction(action: .standard(.maximize), keybind: [])
-        let session = WindowActionSession(
-            context: ResizeContext(action: .noSelection),
+        let session = WindowActionSession.testSession(
             interception: InterceptionStub(shouldIntercept: true)
         )
 
@@ -135,14 +134,14 @@ final class WindowActionSessionTests: XCTestCase {
         XCTAssertTrue(result.wasIntercepted)
         XCTAssertFalse(result.shouldRestartTimeout)
         XCTAssertFalse(result.shouldUpdateIndicators)
-        XCTAssertEqual(session.context.action.action, WindowAction.special(.noSelection))
+        XCTAssertEqual(session.action.action, WindowAction.special(.noSelection))
     }
 
     func testPreviewDisabledResizeActionAppliesImmediately() async {
         Defaults[.previewVisibility] = false
 
         let requestedAction = BoundWindowAction(action: .standard(.maximize), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: .noSelection))
+        let session = WindowActionSession.testSession()
 
         let result = await session.changeAction(
             requestedAction,
@@ -159,7 +158,7 @@ final class WindowActionSessionTests: XCTestCase {
         Defaults[.previewVisibility] = true
 
         let requestedAction = BoundWindowAction(action: .focus(.focusNextInStack), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: .noSelection))
+        let session = WindowActionSession.testSession()
 
         let result = await session.changeAction(
             requestedAction,
@@ -174,7 +173,7 @@ final class WindowActionSessionTests: XCTestCase {
 
     func testDisableHapticFeedbackSuppressesChangeResultHapticInstruction() async {
         let requestedAction = BoundWindowAction(action: .standard(.maximize), keybind: [])
-        let session = WindowActionSession(context: ResizeContext(action: .noSelection))
+        let session = WindowActionSession.testSession()
 
         let result = await session.changeAction(
             requestedAction,
@@ -193,7 +192,7 @@ final class WindowActionSessionTests: XCTestCase {
             action: .cycle([screenAction, .standard(.maximize)]),
             keybind: []
         )
-        let session = WindowActionSession(context: ResizeContext(action: .noSelection))
+        let session = WindowActionSession.testSession()
 
         let result = await session.changeAction(
             cycle,
@@ -202,6 +201,26 @@ final class WindowActionSessionTests: XCTestCase {
 
         XCTAssertFalse(result.isIgnored)
         XCTAssertEqual(result.continuation?.action.action, cycle.action)
+    }
+}
+
+
+private extension WindowActionSession {
+    static func testSession(
+        action: BoundWindowAction = BoundWindowAction(action: .special(.noSelection), keybind: []),
+        interception: (any WindowActionInterception)? = nil
+    ) -> WindowActionSession {
+        let screen = NSScreen.main ?? NSScreen.screens[0]
+        let prepared = WindowResizeExecution.prepareResolved(
+            action: action,
+            window: nil,
+            screen: screen,
+            bounds: screen.cgSafeScreenFrame,
+            padding: .zero,
+            windowProperties: nil,
+            record: nil
+        )
+        return WindowActionSession(preparedResize: prepared, interception: interception)
     }
 }
 

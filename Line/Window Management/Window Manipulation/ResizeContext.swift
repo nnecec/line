@@ -182,3 +182,36 @@ struct ComputedFrame {
         ComputedFrame(raw: .zero, padded: .zero)
     }
 }
+
+
+// MARK: - PreparedResize bridge (settings / drag still use ResizeContext)
+
+extension WindowResizeExecution.PreparedResize {
+    /// Build a Prepared Resize snapshot from a mutable ResizeContext (legacy / drag / settings).
+    @MainActor
+    init(context: ResizeContext) {
+        let (frame, sides) = context.getTargetFrame()
+        self.init(
+            action: context.action,
+            parentAction: context.parentAction,
+            initialMousePosition: context.initialMousePosition,
+            request: WindowResizeRequest(
+                window: context.window,
+                action: context.action.action,
+                screen: context.screen ?? NSScreen.main ?? NSScreen.screens[0],
+                bounds: context.bounds,
+                padding: context.padding,
+                windowProperties: context.resolvedWindowProperties.map {
+                    WindowProperties(frame: $0.frame, isResizable: $0.isResizable)
+                },
+                record: context.resolvedRecord.map {
+                    WindowRecord(initialFrame: $0.initialFrame, lastAction: $0.lastAction?.action)
+                }
+            ),
+            targetFrame: ComputedFrame(raw: frame, padded: frame),
+            sidesToAdjust: sides ?? context.sidesToAdjust,
+            resolvedWindowProperties: context.resolvedWindowProperties,
+            resolvedRecord: context.resolvedRecord
+        )
+    }
+}

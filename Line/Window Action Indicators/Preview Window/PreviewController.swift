@@ -16,11 +16,8 @@ final class PreviewController: WindowActionIndicator {
     private var controller: NSWindowController?
     private var closeTask: Task<(), Never>?
 
-    func open(context: ResizeContext) {
-        guard let screen = context.screen else {
-            log.debug("Screen not defined in context")
-            return
-        }
+    func open(preparedResize: WindowResizeExecution.PreparedResize) {
+        let screen = preparedResize.screen
 
         closeTask?.cancel()
         closeTask = nil
@@ -34,12 +31,12 @@ final class PreviewController: WindowActionIndicator {
                 didScreenSwitch = true
             }
             window.orderFrontRegardless()
-            viewModel.updateContext(with: context, isScreenSwitch: didScreenSwitch)
+            viewModel.update(with: preparedResize, isScreenSwitch: didScreenSwitch)
 
             return
         }
 
-        defer { viewModel.updateContext(with: context, isScreenSwitch: false) }
+        defer { viewModel.update(with: preparedResize, isScreenSwitch: false) }
 
         let panel = ActivePanel(
             contentRect: .zero,
@@ -64,6 +61,11 @@ final class PreviewController: WindowActionIndicator {
         panel.orderFrontRegardless()
 
         log.debug("Initialized controller")
+    }
+
+    /// Settings / drag bridge.
+    func open(context: ResizeContext) {
+        open(preparedResize: WindowResizeExecution.PreparedResize(context: context))
     }
 
     func close() {

@@ -106,12 +106,6 @@ final class LineCoordinator {
         )
     }
 
-    /// Context for the current resize operation, tracking frame and edge adjustment state.
-    /// Initialized when Line opens with a target window and screen.
-    var resizeContext: ResizeContext {
-        sessionManager.resizeContext
-    }
-
     private let windowActionCache = WindowActionCache()
     private let indicatorService = WindowActionIndicatorService()
 
@@ -129,7 +123,7 @@ final class LineCoordinator {
 
     private var accessibilityCheckerTask: Task<(), Never>?
 
-    /// Opening prepares resizeContext asynchronously. We track that setup separately
+    /// Opening bootstraps Prepared Resize asynchronously. We track that setup separately
     /// so rapid trigger events cannot act on the previous/default context.
     private var isLineOpening: Bool = false
     private var pendingOpeningAction: BoundWindowAction?

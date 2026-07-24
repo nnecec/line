@@ -11,15 +11,20 @@ import Defaults
 final class WindowActionIndicatorService {
     private let previewController = PreviewController()
 
-    func openAndUpdate(context: ResizeContext) {
-        if Defaults[.hideOnNoSelection], context.action.direction == .noSelection {
+    func openAndUpdate(preparedResize: WindowResizeExecution.PreparedResize) {
+        if Defaults[.hideOnNoSelection], preparedResize.action.direction == .noSelection {
             closeAll()
             return
         }
 
         if Defaults[.previewVisibility] {
-            previewController.open(context: context)
+            previewController.open(preparedResize: preparedResize)
         }
+    }
+
+    /// Bridge for callers that still hold a ResizeContext (settings previews, drag).
+    func openAndUpdate(context: ResizeContext) {
+        openAndUpdate(preparedResize: WindowResizeExecution.PreparedResize(context: context))
     }
 
     func closeAll() {
