@@ -269,69 +269,85 @@ extension StashManager: StashedWindowsStoreDelegate {
 
 extension StashManager {
     /// Handles `windowResized` notification for the specified window and action.
+    /// Decision logic lives in `StashAftermathDecision`; this method only gathers inputs and executes.
     func onWindowResized(action: BoundWindowAction, window: Window, screen: NSScreen) async {
-        if let edge = action.stashEdge {
-            // Treat all screens as a unified virtual space. `getScreenForEdge` determines the appropriate screen based on the edge:
-            // the leftmost screen for `.left` or the rightmost screen for `.right`. If the window's current screen differs from the target screen,
-            // the function recursively adjusts the window's position to ensure it is stashed on the correct screen.
-            if let screenForEdge = getScreenForEdge(currentScreen: screen, edge: edge), screen != screenForEdge {
-                log.info("Requested stash edge is unavailable on the current screen; redirecting to an eligible screen")
-                await onWindowResized(action: action, window: window, screen: screenForEdge)
-            } else {
-                let windowToStash = await StashedWindowInfo.create(
-                    window: window,
-                    screen: screen,
-                    action: action,
-                    peekSize: stashedWindowVisiblePadding
-                )
+        await applyAftermath(action: action, window: window, screen: screen)
+    }
 
-                await stash(windowToStash)
-            }
-        } else if case let .special(special) = action.action, special == .initialFrame {
-            // Handle unstash via initialFrame special action
-            // No need to reset the frame here: the frame has already been moved to the stash area
-            // by the code that sent the windowResized notification.
-            await unstash(window.cgWindowID, resetFrame: false, resetFrameAnimated: animate)
-        } else if case .special(.undo) = action.action {
-            guard let lastBoundAction = await WindowRecords.shared.getCurrentAction(for: window) else { return }
-            guard case let .special(sp) = lastBoundAction.action, sp != .undo else { return }
-
-            // Recursively call with the last action
-            await onWindowResized(action: lastBoundAction, window: window, screen: screen)
-        } else if case let .incremental(incr) = action.action {
-            // Grow, shrink, or adjustSize actions won’t work for predefined stash actions, since they have a custom size.
-            let isRelevantAction = switch incr {
-            case .growTop, .growBottom, .growLeft, .growRight, .growHorizontal, .growVertical,
-                 .shrinkTop, .shrinkBottom, .shrinkLeft, .shrinkRight, .shrinkHorizontal, .shrinkVertical,
-                 .larger, .smaller, .scaleUp, .scaleDown:
-                true
-            default:
-                false
-            }
-
-            if isRelevantAction {
-                // If the window’s frame is updated while it’s stashed and hidden, the update will cause the window to move back on-screen
-                // without adding its id to `store.revealed`. We need to add it back so the hide animation can be triggered.
-                if let stashedWindow = store.stashed[window.cgWindowID] {
-                    let currentScreen = ScreenUtility.screenContaining(window) ?? screen
-                    let updated = await stashedWindow.updatingFrames(screen: currentScreen, peekSize: stashedWindowVisiblePadding)
-                    store.setStashedWindow(cgWindowID: window.cgWindowID, to: updated)
-
-                    // If the window frame is fully on screen while the window ID is not in the `store.revealed` set, we add it.
-                    let isWindowFullyOnScreen = currentScreen.cgSafeScreenFrame.contains(window.frame)
-
-                    if isWindowFullyOnScreen, !store.isWindowRevealed(window.cgWindowID) {
-                        store.markWindowAsRevealed(window.cgWindowID)
-                    }
-                }
-            } else {
-                // Move actions
-                // Since StashManager recomputes the frame on every show/dismiss, if the user moves a stashed window,
-                // the next time the window is shown or hidden, its frame will be reset to its `Direction`.
-                // This could be an improvement to consider adding later.
-            }
+    private func applyAftermath(action: BoundWindowAction, window: Window, screen: NSScreen) async {
+        let preferredScreenDiffers: Bool
+        if let edge = action.stashEdge,
+           let screenForEdge = getScreenForEdge(currentScreen: screen, edge: edge),
+           screen != screenForEdge {
+            preferredScreenDiffers = true
         } else {
-            // The window will be moved by another command so it won't be stashed anymore:
+            preferredScreenDiffers = false
+        }
+
+        let currentScreen = ScreenUtility.screenContaining(window) ?? screen
+        let isWindowFullyOnScreen = currentScreen.cgSafeScreenFrame.contains(window.frame)
+
+        let lastActionForUndo: WindowAction?
+        if case .special(.undo) = action.action {
+            lastActionForUndo = await WindowRecords.shared.getCurrentAction(for: window)?.action
+        } else {
+            lastActionForUndo = nil
+        }
+
+        let outcome = StashAftermathDecision.decide(
+            .init(
+                action: action.action,
+                isManaged: isManaged(window.cgWindowID),
+                preferredScreenDiffersFromCurrent: preferredScreenDiffers,
+                isWindowFullyOnScreen: isWindowFullyOnScreen,
+                lastActionForUndo: lastActionForUndo
+            )
+        )
+
+        switch outcome {
+        case .stash:
+            let windowToStash = await StashedWindowInfo.create(
+                window: window,
+                screen: screen,
+                action: action,
+                peekSize: stashedWindowVisiblePadding
+            )
+            await stash(windowToStash)
+
+        case .redirectStashToPreferredScreen:
+            guard let edge = action.stashEdge,
+                  let screenForEdge = getScreenForEdge(currentScreen: screen, edge: edge) else {
+                return
+            }
+            log.info("Requested stash edge is unavailable on the current screen; redirecting to an eligible screen")
+            await applyAftermath(action: action, window: window, screen: screenForEdge)
+
+        case let .unstash(resetFrame):
+            // initialFrame: frame already moved by the resize that triggered this hook.
+            await unstash(window.cgWindowID, resetFrame: resetFrame, resetFrameAnimated: animate)
+
+        case let .reprocess(nextAction):
+            await applyAftermath(
+                action: BoundWindowAction(action: nextAction, keybind: action.keybind),
+                window: window,
+                screen: screen
+            )
+
+        case let .refreshManagedFrames(markRevealedIfFullyOnScreen):
+            guard let stashedWindow = store.stashed[window.cgWindowID] else { return }
+            let updated = await stashedWindow.updatingFrames(
+                screen: currentScreen,
+                peekSize: stashedWindowVisiblePadding
+            )
+            store.setStashedWindow(cgWindowID: window.cgWindowID, to: updated)
+            if markRevealedIfFullyOnScreen, !store.isWindowRevealed(window.cgWindowID) {
+                store.markWindowAsRevealed(window.cgWindowID)
+            }
+
+        case .ignore:
+            break
+
+        case .unmanage:
             unmanage(windowID: window.cgWindowID)
         }
     }

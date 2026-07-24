@@ -43,3 +43,8 @@ _Avoid_: ResizeContext, frame calculation alone, resize request alone
 The immutable result of Window Resize Execution for one action on one window and display: the inputs and target frame ready to preview or apply.
 During a Window Action Session (and grid mode), this is the layout truth; changing action or screen produces a new Prepared Resize rather than mutating the previous one.
 _Avoid_: ResizeContext, mutable resize state, live window frame (when a session layout snapshot applies)
+
+**Stash Aftermath**:
+The decision of what to do with stash management after a window action has already been applied (stash, unstash, refresh managed frames, unmanage, or ignore).
+_Avoid_: onWindowResized logic, post-resize stash hooks as product language
+
