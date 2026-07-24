@@ -237,44 +237,28 @@ struct Keycorder: View {
     }
 
     private func checkValidKeybindConditions() -> Bool {
-        if validCurrentKeybind == selectionKeybind {
+        switch KeybindBindingPolicy.validateRecording(
+            selection: selectionKeybind,
+            previousSelection: validCurrentKeybind,
+            bypassTriggerKey: bypassTriggerKey,
+            triggerKey: triggerKey,
+            existing: Defaults[.keybinds]
+        ) {
+        case .unchanged:
             return false
-        }
-
-        // Validate keybind requirements when in bypass mode
-        if bypassTriggerKey,
-           selectionKeybind.filter(\.isModifier).isEmpty {
+        case .missingModifierInBypass:
             errorMessage = "Please include at least one modifier key."
             shake()
             shouldError = true
             return false
-        }
-
-        let effectiveSelection = bypassTriggerKey
-            ? selectionKeybind
-            : triggerKey.union(selectionKeybind)
-
-        for keybind in Defaults[.keybinds] {
-            let effectiveExisting = keybind.bypassTriggerKey
-                ? keybind.keybind
-                : triggerKey.union(keybind.keybind)
-
-            guard effectiveSelection == effectiveExisting else { continue }
-
-            let displayName = keybind.displayName
-            if !displayName.isEmpty {
-                errorMessage = "That keybind is already being used by \(displayName)."
-            } else {
-                // Fallback to direction-based naming
-                errorMessage = "That keybind is already being used by \(keybind.direction.name.lowercased())."
-            }
-
+        case let .conflict(displayName):
+            errorMessage = "That keybind is already being used by \(displayName)."
             shake()
             shouldError = true
             return false
+        case .valid:
+            return true
         }
-
-        return true
     }
 
     private func shake() {

@@ -14,27 +14,6 @@ final class KeybindsConfigurationModel: ObservableObject {
     @Published var selectedKeybindIDs = Set<UUID>()
 }
 
-private enum KeybindConflictPolicy {
-    static func effectiveKeybind(for action: BoundWindowAction, triggerKey: Set<CGKeyCode>) -> Set<CGKeyCode> {
-        action.bypassTriggerKey ? action.keybind : triggerKey.union(action.keybind)
-    }
-
-    static func conflictingIDs(in actions: [BoundWindowAction], triggerKey: Set<CGKeyCode>) -> Set<BoundWindowAction.ID> {
-        var idsByKeybind = [Set<CGKeyCode>: [BoundWindowAction.ID]]()
-
-        for action in actions {
-            guard !action.keybind.isEmpty else { continue }
-            let effectiveKeybind = effectiveKeybind(for: action, triggerKey: triggerKey)
-            idsByKeybind[effectiveKeybind, default: []].append(action.id)
-        }
-
-        return idsByKeybind.values.reduce(into: Set<BoundWindowAction.ID>()) { conflicts, ids in
-            guard ids.count > 1 else { return }
-            conflicts.formUnion(ids)
-        }
-    }
-}
-
 struct KeybindsConfigurationView: View {
     @EnvironmentObject private var settingsState: SettingsState
     @StateObject private var model = KeybindsConfigurationModel()
@@ -77,7 +56,7 @@ struct KeybindsConfigurationView: View {
     }
 
     private var conflictingKeybindIDs: Set<BoundWindowAction.ID> {
-        KeybindConflictPolicy.conflictingIDs(in: keybinds, triggerKey: triggerKey)
+        KeybindBindingPolicy.conflictingIDs(in: keybinds, triggerKey: triggerKey)
     }
 
     var body: some View {

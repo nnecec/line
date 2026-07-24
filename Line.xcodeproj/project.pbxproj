@@ -37,6 +37,8 @@
 		F06D768A2DFF7A77007EEDA9 /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F06D76892DFF7A77007EEDA9 /* SkyLight.framework */; };
 		5A10001B2FD3000000A1001B /* WindowResizeExecutionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001A2FD3000000A1001A /* WindowResizeExecutionSessionTests.swift */; };
 		5A10002D2FD4000000A1002D /* StashAftermathDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002C2FD4000000A1002C /* StashAftermathDecisionTests.swift */; };
+		5A10003B2FD5000000A1003B /* KeybindTriggerDecisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003A2FD5000000A1003A /* KeybindTriggerDecisionTests.swift */; };
+		5A10003D2FD5000000A1003D /* KeybindBindingPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003C2FD5000000A1003C /* KeybindBindingPolicyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +84,8 @@
 		F06D76892DFF7A77007EEDA9 /* SkyLight.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SkyLight.framework; path = ../../../../System/Library/PrivateFrameworks/SkyLight.framework; sourceTree = "<group>"; };
 		5A10001A2FD3000000A1001A /* WindowResizeExecutionSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowResizeExecutionSessionTests.swift; sourceTree = "<group>"; };
 		5A10002C2FD4000000A1002C /* StashAftermathDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashAftermathDecisionTests.swift; sourceTree = "<group>"; };
+		5A10003A2FD5000000A1003A /* KeybindTriggerDecisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeybindTriggerDecisionTests.swift; sourceTree = "<group>"; };
+		5A10003C2FD5000000A1003C /* KeybindBindingPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeybindBindingPolicyTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -146,6 +150,8 @@
 				5A10000C2FD2000000A1000B /* StashSessionFramePolicyTests.swift */,
 				5A10001A2FD3000000A1001A /* WindowResizeExecutionSessionTests.swift */,
 				5A10002C2FD4000000A1002C /* StashAftermathDecisionTests.swift */,
+				5A10003C2FD5000000A1003C /* KeybindBindingPolicyTests.swift */,
+				5A10003A2FD5000000A1003A /* KeybindTriggerDecisionTests.swift */,
 				5A10000E2FD3000000A1000D /* StashPersistencePolicyTests.swift */,
 				5A10000C2FE7000000A1000C /* LightweightWindowInfoTests.swift */,
 			);
@@ -324,6 +330,8 @@
 				5A10000B2FD2000000A1000B /* StashSessionFramePolicyTests.swift in Sources */,
 				5A10001B2FD3000000A1001B /* WindowResizeExecutionSessionTests.swift in Sources */,
 				5A10002D2FD4000000A1002D /* StashAftermathDecisionTests.swift in Sources */,
+				5A10003D2FD5000000A1003D /* KeybindBindingPolicyTests.swift in Sources */,
+				5A10003B2FD5000000A1003B /* KeybindTriggerDecisionTests.swift in Sources */,
 				5A10000D2FD3000000A1000D /* StashPersistencePolicyTests.swift in Sources */,
 				5A10000B2FE7000000A1000B /* LightweightWindowInfoTests.swift in Sources */,
 			);

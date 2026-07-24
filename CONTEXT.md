@@ -52,3 +52,11 @@ _Avoid_: onWindowResized logic, post-resize stash hooks as product language
 An automation request delivered through the app's `line://` scheme that selects a window action and applies it without opening a Window Action Session.
 _Avoid_: deep link handler, URL service
 
+**Keybind Trigger Decision**:
+The pure mapping from a keyboard event snapshot and keybind tables to whether Line should open, close, consume, or forward the event.
+_Avoid_: performKeybind logic, keybind observer internals
+
+**Keybind Binding**:
+The effective chord that fires an action (trigger ∪ action keys, or a bypass chord) and the conflict rules shared by the settings list and keybind recorder.
+_Avoid_: keybind conflict policy private to one settings view
+

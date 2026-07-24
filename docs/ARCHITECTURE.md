@@ -9,6 +9,7 @@ Line is a menu bar macOS application built with SwiftUI and AppKit. It uses the 
 `LineCoordinator` is the top-level window-management coordinator. It delegates to:
 
 - `TriggerCoordinator` for keyboard and middle-click triggers
+  Keybind open/close/consume decisions live in `KeybindTriggerDecision`; settings conflict and recorder validation share `KeybindBindingPolicy`.
 - `GridModeCoordinator` for grid selection and overlays
 - `SessionManager` for the active window action session (including change-action side effects: indicators, apply, timeout restart, haptic, cycle continuation)
 

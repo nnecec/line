@@ -151,74 +151,46 @@ final class KeybindTrigger {
     }
 
     /// Determines if an event corresponds to a valid Line action.
-    /// - Parameters:
-    ///   - type: the type of this event.
-    ///   - isARepeat: whether this event is a repeat event.
-    ///   - flags: modifier flags associated with this event.
-    ///   - isLineOpen: whether Line is currently open.
-    /// - Returns: whether this event was processed by Line.
     private func performKeybind(type: CGEventType, isARepeat: Bool, flags: CGEventFlags, isLineOpen: Bool) -> PerformKeybindResult {
         let flagKeys = sideDependentTriggerKey ? flags.keyCodes : flags.keyCodes.baseModifiers
         let allPressedKeys: Set<CGKeyCode> = pressedKeys.union(flagKeys)
-
-        let containsTrigger = allPressedKeys.isSuperset(of: triggerKey)
         let actionKeys: Set<CGKeyCode> = Set(allPressedKeys.subtracting(triggerKey).map(\.baseModifier))
         let allPressedKeysBaseModifiers: Set<CGKeyCode> = Set(allPressedKeys.map(\.baseModifier))
 
-        if isLineOpen {
-            if pressedKeys.contains(.kVK_Escape) {
-                closeLine(forceClose: true)
-                return .consume
-            }
+        let decision = KeybindTriggerDecision.decide(
+            .init(
+                type: type,
+                isARepeat: isARepeat,
+                isLineOpen: isLineOpen,
+                pressedKeys: pressedKeys,
+                flagKeys: flagKeys,
+                triggerKey: triggerKey,
+                matchedAction: windowActionCache.actionsByKeybind[actionKeys],
+                matchedBypassAction: windowActionCache.bypassedActionsByKeybind[allPressedKeysBaseModifiers]
+            )
+        )
 
-            if type == .keyUp {
-                return .forward
-            }
-
-            if type != .keyDown, !containsTrigger {
-                closeLine(forceClose: false)
-                return .forward
-            }
-        }
-
-        if type != .keyUp { // keyDown for flagsChanged
-            if containsTrigger {
-                // Try an match directly with the action keys first, then fallback to just the key code.
-                // This prevents failures when the user is tapping the keys in rapid succession.
-                if let action = windowActionCache.actionsByKeybind[actionKeys] {
-                    if !isARepeat || action.action.canRepeat {
-                        openLine(startingAction: action, overrideExistingTriggerDelayTimerAction: true)
-                    }
-
-                    // Only consume the event if the last command actually opened Line.
-                    // The main reason Line *wouldn't* open after an `openLine` call would be because the user has enabled a trigger delay.
-                    return checkIfLineOpen() ? .consume : .opening
-                }
-
-                // Only trigger Line without an action if the only pressed keys perfectly matches the trigger key.
-                if allPressedKeys == triggerKey {
-                    openLine(
-                        startingAction: BoundWindowAction(action: .special(.noSelection), keybind: []),
-                        overrideExistingTriggerDelayTimerAction: !isARepeat
-                    )
-                    return .opening
-                }
-            } else if let bypassedAction = windowActionCache.bypassedActionsByKeybind[allPressedKeysBaseModifiers] {
-                if !isARepeat || bypassedAction.action.canRepeat {
-                    openLine(startingAction: bypassedAction, overrideExistingTriggerDelayTimerAction: true)
-                }
-
-                return checkIfLineOpen() ? .consume : .opening
-            } else {
-                if allPressedKeys.isEmpty {
-                    doubleClickTimer.handleKeyUp()
-                }
-                closeLine(forceClose: false)
+        for effect in decision.effects {
+            switch effect {
+            case let .close(force):
+                closeLine(forceClose: force)
+            case let .open(action, overrideDelay):
+                openLine(startingAction: action, overrideExistingTriggerDelayTimerAction: overrideDelay)
+            case .notifyDoubleClickKeyUp:
+                doubleClickTimer.handleKeyUp()
             }
         }
 
-        // If this wasn't a valid keybind, return false, which will then forward the key event to the frontmost app
-        return .forward
+        let finalized = KeybindTriggerDecision.finalizeResult(
+            decision.result,
+            isLineOpenAfterEffects: checkIfLineOpen()
+        )
+
+        switch finalized {
+        case .consume: return .consume
+        case .forward: return .forward
+        case .opening: return .opening
+        }
     }
 
     private func openLine(startingAction: BoundWindowAction, overrideExistingTriggerDelayTimerAction: Bool) {
