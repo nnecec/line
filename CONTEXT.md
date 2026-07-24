@@ -60,3 +60,7 @@ _Avoid_: performKeybind logic, keybind observer internals
 The effective chord that fires an action (trigger ∪ action keys, or a bypass chord) and the conflict rules shared by the settings list and keybind recorder.
 _Avoid_: keybind conflict policy private to one settings view
 
+**Drag Snap**:
+The decision of which window action to preview and apply while the user drags a window into a screen edge zone.
+_Avoid_: processSnapAction geometry, drag manager internals
+

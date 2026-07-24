@@ -215,17 +215,11 @@ final class WindowDragManager {
     }
 
     private func hasWindowMoved(_ windowFrame: CGRect, _ initialFrame: CGRect) -> Bool {
-        !initialFrame.topLeftPoint.approximatelyEqual(to: windowFrame.topLeftPoint) &&
-            !initialFrame.topRightPoint.approximatelyEqual(to: windowFrame.topRightPoint) &&
-            !initialFrame.bottomLeftPoint.approximatelyEqual(to: windowFrame.bottomLeftPoint) &&
-            !initialFrame.bottomRightPoint.approximatelyEqual(to: windowFrame.bottomRightPoint)
+        DragSnapPolicy.hasWindowMoved(windowFrame, initialFrame)
     }
 
     private func hasWindowResized(_ windowFrame: CGRect, _ initialFrame: CGRect) -> Bool {
-        !initialFrame.topLeftPoint.approximatelyEqual(to: windowFrame.topLeftPoint) ||
-            !initialFrame.topRightPoint.approximatelyEqual(to: windowFrame.topRightPoint) ||
-            !initialFrame.bottomLeftPoint.approximatelyEqual(to: windowFrame.bottomLeftPoint) ||
-            !initialFrame.bottomRightPoint.approximatelyEqual(to: windowFrame.bottomRightPoint)
+        DragSnapPolicy.hasWindowResized(windowFrame, initialFrame)
     }
 
     private func restoreInitialWindowSize(_ window: Window) async {
@@ -270,57 +264,57 @@ final class WindowDragManager {
         let screenFrame = screen.frame.flipY(screen: mainScreen)
 
         let inset = Defaults[.snapThreshold]
-        let topInset = max(screen.menubarHeight / 2, inset)
-        var ignoredFrame = screenFrame
-
-        ignoredFrame.origin.x += inset
-        ignoredFrame.size.width -= inset * 2
-        ignoredFrame.origin.y += topInset
-        ignoredFrame.size.height -= inset + topInset
+        let topInset = DragSnapPolicy.topInset(
+            menubarHeight: screen.menubarHeight,
+            edgeInset: inset
+        )
+        let ignored = DragSnapPolicy.ignoredFrame(
+            screenFrame: screenFrame,
+            edgeInset: inset,
+            topInset: topInset
+        )
 
         let oldDirection = resizeContext?.action.direction ?? .noAction
+        let outcome = DragSnapPolicy.decide(
+            mouseLocation: currentMousePosition,
+            screenFrame: screenFrame,
+            ignoredFrame: ignored,
+            currentDirection: oldDirection
+        )
 
-        if !ignoredFrame.contains(currentMousePosition) {
-            let newDirection = WindowDirection.getSnapDirection(
-                mouseLocation: currentMousePosition,
-                currentDirection: oldDirection,
-                screenFrame: screenFrame,
-                ignoredFrame: ignoredFrame
-            )
-
-            // Only update if direction actually changed
-            if newDirection != oldDirection {
-                // Refresh accent colors in case user has enabled the wallpaper processor
-                Task {
-                    await AccentColorController.shared.refresh()
-                }
-
-                log.info("Window snapping direction changed")
-
-                resizeContext?.setScreen(to: screen)
-                let action = BoundWindowAction(
-                    action: newDirection.toWindowAction(),
-                    keybind: []
-                )
-                resizeContext?.setAction(to: action, parent: nil)
-
-                if let context = resizeContext {
-                    previewController.open(context: context)
-                }
-
-                // Haptic feedback
-                if newDirection != .noAction, Defaults[.hapticFeedback] {
-                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-                }
+        switch outcome {
+        case let .updateDirection(newDirection):
+            Task {
+                await AccentColorController.shared.refresh()
             }
-        } else if !oldDirection.isNoOp {
-            // Only close if we were showing something
+
+            log.info("Window snapping direction changed")
+
+            resizeContext?.setScreen(to: screen)
+            let action = BoundWindowAction(
+                action: newDirection.toWindowAction(),
+                keybind: []
+            )
+            resizeContext?.setAction(to: action, parent: nil)
+
+            if let context = resizeContext {
+                previewController.open(context: context)
+            }
+
+            if newDirection != .noAction, Defaults[.hapticFeedback] {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+            }
+
+        case .clear:
             let action = BoundWindowAction(
                 action: .special(.noAction),
                 keybind: []
             )
             resizeContext?.setAction(to: action, parent: nil)
             previewController.close()
+
+        case .unchanged:
+            break
         }
     }
 }
