@@ -167,4 +167,107 @@ final class URLCommandHandlerTests: XCTestCase {
         handler.handle(url)
         XCTAssertTrue(true, "超限 URL 应该被拒绝")
     }
+
+    // MARK: - URLCommandParser
+
+    func testParserAcceptsDirectionCommand() throws {
+        let url = try XCTUnwrap(URL(string: "line://direction/left"))
+        guard case let .accept(parsed) = URLCommandParser.parse(url) else {
+            return XCTFail("expected accept")
+        }
+        XCTAssertEqual(parsed.command, .direction)
+        XCTAssertEqual(parsed.parameters, ["left"])
+    }
+
+    func testParserRejectsUnsupportedScheme() throws {
+        let url = try XCTUnwrap(URL(string: "loop://direction/left"))
+        XCTAssertEqual(URLCommandParser.parse(url), .reject(.unsupportedScheme))
+    }
+
+    func testParserRejectsUnknownCommand() throws {
+        let url = try XCTUnwrap(URL(string: "line://fly/away"))
+        XCTAssertEqual(URLCommandParser.parse(url), .reject(.unknownCommand))
+    }
+
+    func testParserRejectsURLTooLong() throws {
+        let path = String(repeating: "x", count: 1100)
+        let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
+        XCTAssertEqual(URLCommandParser.parse(url), .reject(.urlTooLong))
+    }
+
+    func testParserRejectsParameterTooLong() throws {
+        let param = String(repeating: "y", count: 300)
+        // Keep total URL under max length so only parameter limit fires
+        let url = try XCTUnwrap(URL(string: "line://keybind/\(param)"))
+        XCTAssertLessThan(url.absoluteString.count, URLCommandParser.maxURLLength)
+        XCTAssertEqual(URLCommandParser.parse(url), .reject(.parameterTooLong))
+    }
+
+    // MARK: - URLDirectionResolver
+
+    func testDirectionAliasesMapToHalves() {
+        XCTAssertEqual(URLDirectionResolver.direction(for: "left"), .leftHalf)
+        XCTAssertEqual(URLDirectionResolver.direction(for: "right"), .rightHalf)
+        XCTAssertEqual(URLDirectionResolver.direction(for: "top"), .topHalf)
+        XCTAssertEqual(URLDirectionResolver.direction(for: "bottom"), .bottomHalf)
+    }
+
+    func testDirectionExactRawValues() {
+        XCTAssertEqual(URLDirectionResolver.direction(for: "lefthalf"), .leftHalf)
+        XCTAssertEqual(URLDirectionResolver.direction(for: "maximize"), .maximize)
+    }
+
+    func testDirectionRejectsUnknown() {
+        XCTAssertNil(URLDirectionResolver.direction(for: "diagonal"))
+        XCTAssertNil(URLDirectionResolver.direction(for: nil))
+    }
+
+    func testPredefinedActionMatchesRawValueOnly() {
+        XCTAssertEqual(URLDirectionResolver.predefinedAction(for: "maximize"), .maximize)
+        XCTAssertNil(URLDirectionResolver.predefinedAction(for: "left")) // alias only on direction path
+    }
+
+    // MARK: - URLCommandCatalog
+
+    func testCatalogListKindParsing() {
+        XCTAssertEqual(URLCommandCatalog.listKind(from: "actions"), .actions)
+        XCTAssertEqual(URLCommandCatalog.listKind(from: "keybinds"), .keybinds)
+        XCTAssertEqual(URLCommandCatalog.listKind(from: nil), .all)
+        XCTAssertEqual(URLCommandCatalog.listKind(from: "unknown"), .all)
+    }
+
+    func testCatalogActionsIncludesPredefinedSections() {
+        let catalog = URLCommandCatalog.build(kind: .actions, namedKeybinds: [])
+        let joined = catalog.items.joined(separator: "\n")
+        XCTAssertTrue(joined.contains("Available Actions:"))
+        XCTAssertTrue(joined.contains("Halves:"))
+        XCTAssertTrue(joined.lowercased().contains("line://action/lefthalf"))
+    }
+
+    func testCatalogNamedCustomAndStashSections() {
+        let binds = [
+            URLCommandCatalog.NamedKeybind(name: "My Layout", isCustom: true, isStash: false),
+            URLCommandCatalog.NamedKeybind(name: "Edge Stash", isCustom: false, isStash: true)
+        ]
+        let catalog = URLCommandCatalog.build(kind: .actions, namedKeybinds: binds)
+        let joined = catalog.items.joined(separator: "\n")
+        XCTAssertTrue(joined.contains("Custom Actions:"))
+        XCTAssertTrue(joined.lowercased().contains("my layout"))
+        XCTAssertTrue(joined.contains("Stash Actions:"))
+    }
+
+    func testCatalogKeybindsListsNames() {
+        let binds = [URLCommandCatalog.NamedKeybind(name: "Focus Work", isCustom: false, isStash: false)]
+        let catalog = URLCommandCatalog.build(kind: .keybinds, namedKeybinds: binds)
+        XCTAssertEqual(catalog.items.first, "Available Keybinds:")
+        XCTAssertTrue(catalog.items.contains { $0.contains("Focus Work") })
+    }
+
+    func testPrintActionItemsOmitsCustomWhenDisabled() {
+        let binds = [URLCommandCatalog.NamedKeybind(name: "Secret", isCustom: true, isStash: false)]
+        let without = URLCommandCatalog.printActionItems(namedKeybinds: binds, includeCustomNames: false)
+        XCTAssertFalse(without.joined(separator: "\n").contains("Secret"))
+        let with = URLCommandCatalog.printActionItems(namedKeybinds: binds, includeCustomNames: true)
+        XCTAssertTrue(with.joined(separator: "\n").contains("Custom Actions:"))
+    }
 }

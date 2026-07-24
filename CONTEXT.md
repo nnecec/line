@@ -48,3 +48,7 @@ _Avoid_: ResizeContext, mutable resize state, live window frame (when a session 
 The decision of what to do with stash management after a window action has already been applied (stash, unstash, refresh managed frames, unmanage, or ignore).
 _Avoid_: onWindowResized logic, post-resize stash hooks as product language
 
+**URL Command**:
+An automation request delivered through the app's `line://` scheme that selects a window action and applies it without opening a Window Action Session.
+_Avoid_: deep link handler, URL service
+

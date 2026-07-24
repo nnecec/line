@@ -18,6 +18,8 @@ The coordinator owns orchestration state. Geometry and action rules belong in te
 
 `WindowAction` represents standard, custom, cycle, screen-switch, and stash behavior. `BoundWindowAction` connects an action to a configured trigger. Window Resize Execution bootstraps a Prepared Resize for a Window Action Session (or grid), transitions mid-session without re-reading live window state, and commits either the current snapshot (release / grid confirm) or a live re-prepare that inherits the session layout snapshot. `WindowEngine` applies the result through Accessibility APIs. Drag still uses a mutable `ResizeContext` adapter.
 
+URL scheme automation (`line://`) is handled by `URLCommandHandler`, which delegates parsing, direction aliases, target-window selection, and list catalog building to pure modules (`URLCommandParser`, `URLDirectionResolver`, `URLTargetWindowPolicy`, `URLCommandCatalog`).
+
 Grid overlays and window previews are auxiliary panels. They must not become the user's active work window or change focus unless the interaction requires it.
 
 ## Settings and persistence

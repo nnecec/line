@@ -331,38 +331,17 @@ final class URLCommandHandler {
         outputBuffer.removeAll()
         log.info("Received URL command: \(ApplicationLogPrivacy.urlDescription(url))")
 
-        guard url.scheme.map({ Self.Scheme.supported.contains($0.lowercased()) }) == true else {
+        switch URLCommandParser.parse(url) {
+        case let .accept(parsed):
+            processCommand(parsed.command, parsed.parameters)
+        case .reject(.unsupportedScheme), .reject(.unknownCommand):
             appendAvailableCommandHints()
             flushOutput()
-            return
+        case .reject(.urlTooLong):
+            log.error("URL command rejected: exceeds maximum length of \(URLCommandParser.maxURLLength) characters")
+        case .reject(.parameterTooLong):
+            log.error("URL command rejected: parameter exceeds maximum length of \(URLCommandParser.maxParameterLength) characters")
         }
-
-        // Validate URL length to prevent DoS
-        guard url.absoluteString.count < 1024 else {
-            log.error("URL command rejected: exceeds maximum length of 1024 characters")
-            return
-        }
-
-        let components = (url.host.map { [$0] } ?? []) + url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
-
-        guard let commandString = components.first,
-              let command = Command(rawValue: commandString.lowercased()) else {
-            appendAvailableCommandHints()
-            flushOutput()
-            return
-        }
-
-        let parameters = Array(components.dropFirst())
-
-        // Validate individual parameter lengths
-        for parameter in parameters {
-            guard parameter.count <= 256 else {
-                log.error("URL command rejected: parameter exceeds maximum length of 256 characters")
-                return
-            }
-        }
-
-        processCommand(command, parameters)
     }
 
     // MARK: - Command Processing
@@ -413,17 +392,7 @@ final class URLCommandHandler {
             return
         }
 
-        let direction: WindowDirection? = WindowDirection.allCases.first { $0.rawValue.lowercased() == directionStr } ?? {
-            switch directionStr {
-            case "left": return WindowDirection.leftHalf
-            case "right": return WindowDirection.rightHalf
-            case "top": return WindowDirection.topHalf
-            case "bottom": return WindowDirection.bottomHalf
-            default:
-                let withoutHalf = directionStr.replacingOccurrences(of: "half", with: "")
-                return WindowDirection.allCases.first { $0.rawValue.lowercased() == withoutHalf }
-            }
-        }()
+        let direction = URLDirectionResolver.direction(for: directionStr)
 
         if let direction {
             executeWindowAction(direction)
@@ -435,21 +404,12 @@ final class URLCommandHandler {
     /// Executes a window action for a given direction
     /// - Parameter direction: The direction to move/resize the window
     private func executeWindowAction(_ direction: WindowDirection) {
-        let allWindows = WindowUtility.windowList()
-
-        let visibleWindows = allWindows.filter { win in
-            guard let app = win.nsRunningApplication else {
-                return false
-            }
-
-            let isLine = app.bundleIdentifier == Bundle.main.bundleIdentifier
-            let isRegular = app.activationPolicy == .regular
-            let isVisible = !win.isApplicationHidden && !win.minimized
-
-            return !isLine && isRegular && isVisible
+        let lineBundleID = Bundle.main.bundleIdentifier
+        let visibleWindows = WindowUtility.windowList().filter {
+            URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
         }
 
-        guard let window = findTargetWindow(from: visibleWindows),
+        guard let window = resolveTargetWindow(candidates: visibleWindows),
               let screen = targetScreen(for: window) else {
             return
         }
@@ -467,7 +427,15 @@ final class URLCommandHandler {
             return
         }
 
-        guard let window = try? WindowUtility.frontmostWindow() else {
+        // Prefer the same target policy as other verbs; fall back to frontmost.
+        let candidates: [Window] = {
+            if let front = try? WindowUtility.frontmostWindow() {
+                return [front]
+            }
+            return []
+        }()
+        guard let window = resolveTargetWindow(candidates: candidates)
+            ?? (try? WindowUtility.frontmostWindow()) else {
             return
         }
 
@@ -482,26 +450,28 @@ final class URLCommandHandler {
             return
         }
 
-        // First check for custom actions by name
+        // First check for custom / stash actions by name
         let customKeybinds = Defaults[.keybinds].filter { $0.direction.isCustomizable && $0.name != nil }
         if let customAction = customKeybinds.first(where: { ($0.name?.lowercased() ?? "") == actionStr }) {
-            // Try multiple methods to get the target window
-            let targetWindow = findTargetWindow(from: WindowUtility.windowList().filter { win in
-                guard let app = win.nsRunningApplication else { return false }
-                return app.activationPolicy == .regular && !win.isApplicationHidden && !win.minimized
-            })
-
-            if let window = targetWindow,
+            let lineBundleID = Bundle.main.bundleIdentifier
+            let candidates = WindowUtility.windowList().filter {
+                URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
+            }
+            if let window = resolveTargetWindow(candidates: candidates),
                let screen = targetScreen(for: window) {
                 activateAndResizeWindow(window, customAction.action, screen)
             }
         } else if actionStr == "list" {
-            // For list command, just show the actions without the invalid message
             printAvailableActions(includeCustomNames: true)
-        } else if let direction = WindowDirection.allCases.first(where: { $0.rawValue.lowercased() == actionStr }),
-                  let window = findTargetWindow(from: WindowUtility.windowList()),
-                  let screen = targetScreen(for: window) {
-            activateAndResizeWindow(window, direction.toWindowAction(), screen)
+        } else if let direction = URLDirectionResolver.predefinedAction(for: actionStr) {
+            let lineBundleID = Bundle.main.bundleIdentifier
+            let candidates = WindowUtility.windowList().filter {
+                URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
+            }
+            if let window = resolveTargetWindow(candidates: candidates),
+               let screen = targetScreen(for: window) {
+                activateAndResizeWindow(window, direction.toWindowAction(), screen)
+            }
         } else {
             printAvailableActions(includeCustomNames: false)
         }
@@ -509,57 +479,10 @@ final class URLCommandHandler {
 
     /// Prints all available window actions in categories
     private func printAvailableActions(includeCustomNames: Bool) {
-        var items: [String] = []
-
-        // Get any custom keybinds with names and custom direction
-        let customKeybinds = Defaults[.keybinds].filter { $0.direction == .custom && $0.name?.isEmpty == false }
-        if includeCustomNames, !customKeybinds.isEmpty {
-            items.append("Custom Actions:")
-            items.append(contentsOf: customKeybinds.compactMap { keybind in
-                guard let name = keybind.name else { return nil }
-                return "  • \(Self.commandURL(.action, name.lowercased()))"
-            })
-            items.append("")
-        }
-
-        // Get any stash keybinds with names and custom direction
-        let stashKeybinds = Defaults[.keybinds].filter { $0.direction == .stash && $0.name?.isEmpty == false }
-        if includeCustomNames, !stashKeybinds.isEmpty {
-            items.append("Stash Actions:")
-            items.append(contentsOf: stashKeybinds.compactMap { keybind in
-                guard let name = keybind.name else { return nil }
-                return "  • \(Self.commandURL(.action, name.lowercased()))"
-            })
-            items.append("")
-        }
-
-        let categories: [(String, [WindowDirection])] = [
-            ("General Actions", Array(WindowDirection.general.dropFirst(3))), // Drop first 3 actions
-            ("Halves", WindowDirection.halves),
-            ("Quarters", WindowDirection.quarters),
-            ("Horizontal Thirds", WindowDirection.horizontalThirds),
-            ("Vertical Thirds", WindowDirection.verticalThirds),
-            ("Screen Switching", WindowDirection.screenSwitching),
-            ("Size Adjustment", WindowDirection.sizeAdjustment),
-            ("Shrink", WindowDirection.shrink),
-            ("Grow", WindowDirection.grow),
-            ("Move", WindowDirection.move),
-            ("Other", WindowDirection.more)
-        ]
-
-        for (title, actions) in categories {
-            if !actions.isEmpty {
-                items.append("\(title):")
-                items.append(contentsOf: actions.map { "  • \(Self.commandURL(.action, $0.rawValue.lowercased()))" })
-                items.append("")
-            }
-        }
-
-        // Remove the last empty line if it exists
-        if items.last?.isEmpty == true {
-            items.removeLast()
-        }
-
+        let items = URLCommandCatalog.printActionItems(
+            namedKeybinds: namedKeybindsSnapshot(),
+            includeCustomNames: includeCustomNames
+        )
         appendListOutput("", items)
     }
 
@@ -579,15 +502,13 @@ final class URLCommandHandler {
         }
 
         if let keybind = keybinds.first(where: { $0.name?.lowercased() == keybindName.lowercased() }) {
-            if let window = WindowUtility.userDefinedTargetWindow(),
+            let lineBundleID = Bundle.main.bundleIdentifier
+            let candidates = WindowUtility.windowList().filter {
+                URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
+            }
+            if let window = resolveTargetWindow(candidates: candidates),
                let screen = targetScreen(for: window) {
-                Task {
-                    _ = try await WindowActionEngine.shared.apply(
-                        keybind.action,
-                        window: window,
-                        screen: screen
-                    )
-                }
+                activateAndResizeWindow(window, keybind.action, screen)
             }
         } else {
             appendAvailableKeybindHints()
@@ -597,104 +518,12 @@ final class URLCommandHandler {
     /// Handles list commands for viewing available options
     /// - Parameter parameters: List parameters
     private func handleListCommand(_ parameters: [String]) {
-        let type = parameters.first?.lowercased() ?? "all"
-        var items: [String] = []
-
-        switch type {
-        case "actions":
-            items.append("Available Actions:")
-            // Get any custom keybinds with names and custom direction
-            let customKeybinds = Defaults[.keybinds].filter { $0.direction == .custom && $0.name?.isEmpty == false }
-            if !customKeybinds.isEmpty {
-                items.append("\nCustom Actions:")
-                items.append(contentsOf: customKeybinds.compactMap { keybind in
-                    guard let name = keybind.name else { return nil }
-                    return "  • \(Self.commandURL(.action, name.lowercased()))"
-                })
-            }
-
-            // Get any stash keybinds with names and custom direction
-            let stashKeybinds = Defaults[.keybinds].filter { $0.direction == .stash && $0.name?.isEmpty == false }
-            if !stashKeybinds.isEmpty {
-                items.append("\nStash Actions:")
-                items.append(contentsOf: stashKeybinds.compactMap { keybind in
-                    guard let name = keybind.name else { return nil }
-                    return "  • \(Self.commandURL(.action, name.lowercased()))"
-                })
-            }
-
-            let categories: [(String, [WindowDirection])] = [
-                ("General Actions", Array(WindowDirection.general.dropFirst(3))),
-                ("Halves", WindowDirection.halves),
-                ("Quarters", WindowDirection.quarters),
-                ("Horizontal Thirds", WindowDirection.horizontalThirds),
-                ("Vertical Thirds", WindowDirection.verticalThirds),
-                ("Screen Switching", WindowDirection.screenSwitching),
-                ("Size Adjustment", WindowDirection.sizeAdjustment),
-                ("Shrink", WindowDirection.shrink),
-                ("Grow", WindowDirection.grow),
-                ("Move", WindowDirection.move),
-                ("Other", WindowDirection.more)
-            ]
-
-            for (title, actions) in categories {
-                if !actions.isEmpty {
-                    items.append("\n\(title):")
-                    items.append(contentsOf: actions.map { "  • \(Self.commandURL(.action, $0.rawValue.lowercased()))" })
-                }
-            }
-
-        case "keybinds":
-            items.append("Available Keybinds:")
-            items.append(contentsOf: Defaults[.keybinds].compactMap { keybind in
-                guard let name = keybind.name else { return nil }
-                return "  • \(Self.commandURL(.keybind, name))"
-            })
-
-        default:
-            items.append("Available Commands:")
-
-            items.append("\nDirection Commands:")
-            items.append(contentsOf: WindowDirection.allCases.map { "  • \(Self.commandURL(.direction, $0.rawValue.lowercased()))" })
-
-            items.append("\nScreen Commands:")
-            items.append("  • \(Self.commandURL(.screen, "next"))")
-            items.append("  • \(Self.commandURL(.screen, "previous"))")
-
-            items.append("\nActions:")
-            // Get any custom keybinds with names and custom direction
-            let customKeybinds = Defaults[.keybinds].filter { $0.direction == .custom && $0.name?.isEmpty == false }
-            if !customKeybinds.isEmpty {
-                items.append("\nCustom Actions:")
-                items.append(contentsOf: customKeybinds.compactMap { keybind in
-                    guard let name = keybind.name else { return nil }
-                    return "  • \(Self.commandURL(.action, name.lowercased()))"
-                })
-            }
-
-            // Get any stash keybinds with names and custom direction
-            let stashKeybinds = Defaults[.keybinds].filter { $0.direction == .stash && $0.name?.isEmpty == false }
-            if !stashKeybinds.isEmpty {
-                items.append("\nStash Actions:")
-                items.append(contentsOf: stashKeybinds.compactMap { keybind in
-                    guard let name = keybind.name else { return nil }
-                    return "  • \(Self.commandURL(.action, name.lowercased()))"
-                })
-            }
-
-            items.append("\nKeybind Commands:")
-            items.append(contentsOf: Defaults[.keybinds].compactMap { keybind in
-                guard let name = keybind.name else { return nil }
-                return "  • \(Self.commandURL(.keybind, name))"
-            })
-
-            items.append("\nList Commands:")
-            items.append("  • \(Self.commandURL(.list, "actions"))")
-            items.append("  • \(Self.commandURL(.list, "keybinds"))")
-            items.append("  • \(Self.commandURL(.list, "all"))")
-        }
-
-        appendListOutput(type == "all" ? "All Commands" : items.removeFirst(), Array(items))
+        let kind = URLCommandCatalog.listKind(from: parameters.first)
+        let catalog = URLCommandCatalog.build(
+            kind: kind,
+            namedKeybinds: namedKeybindsSnapshot()
+        )
+        appendListOutput(catalog.title, catalog.items)
     }
 
     // MARK: - Helper Methods
@@ -706,24 +535,26 @@ final class URLCommandHandler {
         )
     }
 
-    /// Finds the most appropriate target window for an action
-    /// - Parameter visibleWindows: Array of visible windows to choose from
-    /// - Returns: The most appropriate window or nil if none found
-    private func findTargetWindow(from visibleWindows: [Window]) -> Window? {
-        if let targetWindow = WindowUtility.userDefinedTargetWindow() {
-            return targetWindow
-        }
+    /// Finds the most appropriate target window for an action.
+    private func resolveTargetWindow(candidates: [Window]) -> Window? {
+        URLTargetWindowPolicy.resolve(
+            candidates: candidates,
+            userDefined: WindowUtility.userDefinedTargetWindow(),
+            stickyWindow: lastActiveWindow,
+            stickyTime: lastActiveTime,
+            lineBundleID: Bundle.main.bundleIdentifier
+        )
+    }
 
-        if let lastWindow = lastActiveWindow,
-           let app = lastWindow.nsRunningApplication,
-           app.bundleIdentifier != Bundle.main.bundleIdentifier,
-           !lastWindow.isApplicationHidden, !lastWindow.minimized,
-           let lastTime = lastActiveTime,
-           lastTime.timeIntervalSinceNow > -5 {
-            return lastWindow
+    private func namedKeybindsSnapshot() -> [URLCommandCatalog.NamedKeybind] {
+        Defaults[.keybinds].compactMap { keybind in
+            guard let name = keybind.name, !name.isEmpty else { return nil }
+            return URLCommandCatalog.NamedKeybind(
+                name: name,
+                isCustom: keybind.direction == .custom,
+                isStash: keybind.direction == .stash
+            )
         }
-
-        return visibleWindows.first
     }
 
     /// Activates and resizes a window
