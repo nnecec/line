@@ -275,4 +275,35 @@ final class SessionManagerTests: XCTestCase {
         // Then: callback count should not have changed yet (no mouse movement)
         XCTAssertEqual(suppressEventCallCount, initialCount)
     }
+
+    // MARK: - Change side effects
+
+    func testChangeActionRestartsTimeoutViaCallbackWhenSessionActive() async {
+        var restartCount = 0
+        let manager = SessionManager(
+            windowActionCache: WindowActionCache(),
+            indicatorService: WindowActionIndicatorService(),
+            onRestartTimeout: { restartCount += 1 }
+        )
+
+        Defaults[.previewVisibility] = true
+        let action = BoundWindowAction(action: .standard(.maximize), keybind: [])
+        await manager.open(
+            window: nil,
+            initialMousePosition: CGPoint(x: 100, y: 100),
+            startingAction: action,
+            isReverseCycleRequested: { false }
+        )
+
+        // Open already called changeAction once for starting action.
+        let afterOpen = restartCount
+        XCTAssertGreaterThanOrEqual(afterOpen, 1)
+
+        await manager.changeAction(
+            BoundWindowAction(action: .standard(.center(.geometric)), keybind: []),
+            isReverseCycleRequested: { false }
+        )
+        XCTAssertGreaterThan(restartCount, afterOpen)
+    }
+
 }

@@ -42,26 +42,6 @@ enum LineCoordinatorOpeningPolicy {
     }
 }
 
-enum LineCoordinatorChangePolicy {
-    struct Instructions: Equatable {
-        var shouldRestartTimeout: Bool
-        var shouldPerformHapticFeedback: Bool
-        var continuation: BoundWindowAction?
-    }
-
-    static func instructions(
-        isSessionActive: Bool,
-        result: WindowActionSession.ChangeResult?,
-        hapticFeedbackEnabled: Bool
-    ) -> Instructions {
-        Instructions(
-            shouldRestartTimeout: isSessionActive && result?.shouldRestartTimeout == true,
-            shouldPerformHapticFeedback: hapticFeedbackEnabled && result?.shouldPerformHapticFeedback == true,
-            continuation: result?.continuation?.action
-        )
-    }
-}
-
 enum LineCoordinatorClosePolicy {
     struct Instructions: Equatable {
         var shouldReleaseCoordinatorStateBeforeSessionApply: Bool
@@ -118,7 +98,12 @@ final class LineCoordinator {
     )
     private lazy var sessionManager = SessionManager(
         windowActionCache: windowActionCache,
-        indicatorService: indicatorService
+        indicatorService: indicatorService,
+        onRestartTimeout: { [weak self] in
+            guard let self else { return }
+            self.triggerKeyTimeoutTimer.cancel()
+            self.triggerKeyTimeoutTimer.start()
+        }
     )
 
     private var accessibilityCheckerTask: Task<(), Never>?
@@ -377,7 +362,7 @@ extension LineCoordinator {
 // MARK: - Changing Actions
 
 extension LineCoordinator {
-    /// Changes the action to the provided one, or the next cycle action if available.
+    /// Forwards action changes to SessionManager, which owns session side effects.
     /// - Parameters:
     ///   - newAction: The action to change to. If a cycle is provided, Line will use the current action as context to choose an appropriate next action.
     ///   - triggeredFromScreenChange: If this action was triggered from a screen change, this will prevent cycle keybinds from infinitely changing screens.
@@ -388,7 +373,7 @@ extension LineCoordinator {
         disableHapticFeedback: Bool = false,
         isReverseCycleRequested: Bool? = nil
     ) async {
-        let result = await sessionManager.changeAction(
+        _ = await sessionManager.changeAction(
             newAction,
             triggeredFromScreenChange: triggeredFromScreenChange,
             disableHapticFeedback: disableHapticFeedback,
@@ -397,32 +382,8 @@ extension LineCoordinator {
             }
         )
 
-        // Update mirror for nonisolated access
+        // Update mirror for nonisolated access (trigger path may read this off MainActor).
         let hasParent = sessionManager.hasParentCycleAction
         hasParentCycleActionMirror.withLock { $0 = hasParent }
-
-        let instructions = LineCoordinatorChangePolicy.instructions(
-            isSessionActive: sessionManager.isActive,
-            result: result,
-            hapticFeedbackEnabled: Defaults[.hapticFeedback]
-        )
-
-        // Handle timeout restart
-        if instructions.shouldRestartTimeout {
-            triggerKeyTimeoutTimer.cancel()
-            triggerKeyTimeoutTimer.start()
-        }
-
-        // Haptic feedback
-        if instructions.shouldPerformHapticFeedback {
-            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-        }
-
-        if let continuation = instructions.continuation {
-            await changeAction(
-                continuation,
-                triggeredFromScreenChange: true
-            )
-        }
     }
 }

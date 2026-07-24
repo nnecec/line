@@ -10,7 +10,7 @@ Line is a menu bar macOS application built with SwiftUI and AppKit. It uses the 
 
 - `TriggerCoordinator` for keyboard and middle-click triggers
 - `GridModeCoordinator` for grid selection and overlays
-- `SessionManager` for the active window action session
+- `SessionManager` for the active window action session (including change-action side effects: indicators, apply, timeout restart, haptic, cycle continuation)
 
 The coordinator owns orchestration state. Geometry and action rules belong in testable calculation or policy types. Stash management after a resize is decided by Stash Aftermath (pure decision table); StashManager executes AX and store updates.
 

@@ -61,80 +61,45 @@ final class LineCoordinatorPolicyTests: XCTestCase {
         XCTAssertFalse(instructions.shouldStartTimeout)
     }
 
-    func testChangePolicyRestartsTimeoutOnlyWhenWindowActionSessionIsActiveAndResultRequestsIt() {
-        let timeoutResult = WindowActionSession.ChangeResult.timeoutOnly
-
+    func testSessionChangeEffectsRestartsTimeoutOnlyWhenSessionActiveAndResultRequestsIt() {
         XCTAssertTrue(
-            LineCoordinatorChangePolicy.instructions(
+            SessionChangeEffects.shouldRestartTimeout(
                 isSessionActive: true,
-                result: timeoutResult,
-                hapticFeedbackEnabled: true
-            ).shouldRestartTimeout
+                resultRequestsRestart: true
+            )
         )
         XCTAssertFalse(
-            LineCoordinatorChangePolicy.instructions(
+            SessionChangeEffects.shouldRestartTimeout(
                 isSessionActive: false,
-                result: timeoutResult,
-                hapticFeedbackEnabled: true
-            ).shouldRestartTimeout
+                resultRequestsRestart: true
+            )
         )
         XCTAssertFalse(
-            LineCoordinatorChangePolicy.instructions(
+            SessionChangeEffects.shouldRestartTimeout(
                 isSessionActive: true,
-                result: .ignored,
+                resultRequestsRestart: false
+            )
+        )
+    }
+
+    func testSessionChangeEffectsSuppressesHapticWhenGlobalSettingIsDisabled() {
+        XCTAssertFalse(
+            SessionChangeEffects.shouldPerformHaptic(
+                resultRequestsHaptic: true,
+                hapticFeedbackEnabled: false
+            )
+        )
+        XCTAssertTrue(
+            SessionChangeEffects.shouldPerformHaptic(
+                resultRequestsHaptic: true,
                 hapticFeedbackEnabled: true
-            ).shouldRestartTimeout
+            )
         )
-    }
-
-    func testChangePolicySuppressesHapticWhenGlobalHapticSettingIsDisabled() {
-        let hapticResult = WindowActionSession.ChangeResult.hapticOnly(disabled: false)
-
-        let instructions = LineCoordinatorChangePolicy.instructions(
-            isSessionActive: true,
-            result: hapticResult,
-            hapticFeedbackEnabled: false
-        )
-
-        XCTAssertFalse(instructions.shouldPerformHapticFeedback)
-    }
-
-    func testChangePolicyReturnsContinuationActionWhenWindowActionSessionResultContainsOne() {
-        let continuationAction = BoundWindowAction(
-            action: .standard(.proportional(.leftHalf)),
-            keybind: []
-        )
-        let result = changeResult(continuationAction: continuationAction)
-
-        let instructions = LineCoordinatorChangePolicy.instructions(
-            isSessionActive: true,
-            result: result,
-            hapticFeedbackEnabled: true
-        )
-
-        XCTAssertEqual(instructions.continuation, continuationAction)
     }
 
     func testClosePolicyReleasesCoordinatorStateBeforeWindowActionSessionApply() {
         let instructions = LineCoordinatorClosePolicy.windowActionSessionCloseInstructions
 
         XCTAssertTrue(instructions.shouldReleaseCoordinatorStateBeforeSessionApply)
-    }
-
-    private func changeResult(
-        shouldRestartTimeout: Bool = true,
-        shouldPerformHapticFeedback: Bool = false,
-        continuationAction: BoundWindowAction? = nil
-    ) -> WindowActionSession.ChangeResult {
-        WindowActionSession.ChangeResult(
-            isIgnored: false,
-            wasIntercepted: false,
-            shouldRestartTimeout: shouldRestartTimeout,
-            shouldUpdateIndicators: false,
-            shouldApplyImmediately: false,
-            shouldApplyFocusAction: false,
-            shouldPerformHapticFeedback: shouldPerformHapticFeedback,
-            continuation: continuationAction.map { .init(action: $0) }
-        )
     }
 }

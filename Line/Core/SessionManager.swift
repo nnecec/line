@@ -15,6 +15,17 @@ struct SessionCloseResult {
     let actionToApplyOnRelease: WindowResizeExecution.PreparedResize?
 }
 
+/// Pure helpers for change-action side effects owned by SessionManager.
+enum SessionChangeEffects {
+    static func shouldRestartTimeout(isSessionActive: Bool, resultRequestsRestart: Bool) -> Bool {
+        isSessionActive && resultRequestsRestart
+    }
+
+    static func shouldPerformHaptic(resultRequestsHaptic: Bool, hapticFeedbackEnabled: Bool) -> Bool {
+        hapticFeedbackEnabled && resultRequestsHaptic
+    }
+}
+
 /// Manages Window Action Session lifecycle and interactions.
 ///
 /// A session represents the period when Line is actively showing a window action:
@@ -22,6 +33,9 @@ struct SessionCloseResult {
 /// - Session opens with a Prepared Resize bootstrap and WindowActionSession
 /// - User can change actions, screens, or interact with mouse
 /// - Session closes when user releases trigger or explicitly cancels
+///
+/// SessionManager owns change-action side effects (indicators, apply, timeout restart,
+/// haptic, cycle continuation). LineCoordinator only orchestrates open/close and isLineActive.
 ///
 /// SessionManager is independent of GridModeCoordinator (they are mutually exclusive).
 @Loggable
@@ -31,6 +45,7 @@ final class SessionManager {
 
     private let windowActionCache: WindowActionCache
     private let indicatorService: WindowActionIndicatorService
+    private let onRestartTimeout: () -> Void
 
     // MARK: - Internal State
 
@@ -61,20 +76,17 @@ final class SessionManager {
 
     init(
         windowActionCache: WindowActionCache,
-        indicatorService: WindowActionIndicatorService
+        indicatorService: WindowActionIndicatorService,
+        onRestartTimeout: @escaping () -> Void = {}
     ) {
         self.windowActionCache = windowActionCache
         self.indicatorService = indicatorService
+        self.onRestartTimeout = onRestartTimeout
     }
 
     // MARK: - Public Interface
 
     /// Open a new Window Action Session.
-    /// - Parameters:
-    ///   - window: Target window to resize (optional)
-    ///   - initialMousePosition: Mouse position when session was triggered
-    ///   - startingAction: Initial action to display
-    ///   - isReverseCycleRequested: Whether shift is held for reverse cycle
     func open(
         window: Window?,
         initialMousePosition: CGPoint,
@@ -97,7 +109,11 @@ final class SessionManager {
 
         indicatorService.openAndUpdate(preparedResize: preparedResize)
 
-        await changeAction(startingAction, disableHapticFeedback: true, isReverseCycleRequested: isReverseCycleRequested)
+        await changeAction(
+            startingAction,
+            disableHapticFeedback: true,
+            isReverseCycleRequested: isReverseCycleRequested
+        )
     }
 
     /// Close the current session.
@@ -138,7 +154,7 @@ final class SessionManager {
         }
     }
 
-    /// Change to a new action within the current session.
+    /// Change to a new action within the current session and run all side effects.
     @discardableResult
     func changeAction(
         _ newAction: BoundWindowAction,
@@ -174,6 +190,28 @@ final class SessionManager {
 
         if result.shouldApplyImmediately || result.shouldApplyFocusAction {
             await applyImmediate()
+        }
+
+        if SessionChangeEffects.shouldRestartTimeout(
+            isSessionActive: isActive,
+            resultRequestsRestart: result.shouldRestartTimeout
+        ) {
+            onRestartTimeout()
+        }
+
+        if SessionChangeEffects.shouldPerformHaptic(
+            resultRequestsHaptic: result.shouldPerformHapticFeedback,
+            hapticFeedbackEnabled: Defaults[.hapticFeedback]
+        ) {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        }
+
+        if let continuation = result.continuation {
+            return await changeAction(
+                continuation.action,
+                triggeredFromScreenChange: true,
+                isReverseCycleRequested: isReverseCycleRequested
+            ) ?? result
         }
 
         return result
