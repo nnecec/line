@@ -126,10 +126,55 @@ final class StashAftermathDecisionTests: XCTestCase {
         )
     }
 
-    func testSizeAdjustingIncrementalClassification() {
-        XCTAssertTrue(StashAftermathDecision.isSizeAdjustingIncremental(.growLeft))
-        XCTAssertTrue(StashAftermathDecision.isSizeAdjustingIncremental(.scaleUp))
-        XCTAssertFalse(StashAftermathDecision.isSizeAdjustingIncremental(.moveUp))
-        XCTAssertFalse(StashAftermathDecision.isSizeAdjustingIncremental(.moveRight))
+    func testAllGrowActionsAreSizeAdjusting() {
+        let growActions: [WindowAction.IncrementalAction] = [
+            .growTop, .growBottom, .growLeft, .growRight, .growHorizontal, .growVertical
+        ]
+
+        for action in growActions {
+            XCTAssertTrue(
+                StashAftermathDecision.isSizeAdjustingIncremental(action),
+                "\(action) should be size-adjusting"
+            )
+        }
+    }
+
+    func testAllShrinkActionsAreSizeAdjusting() {
+        let shrinkActions: [WindowAction.IncrementalAction] = [
+            .shrinkTop, .shrinkBottom, .shrinkLeft, .shrinkRight, .shrinkHorizontal, .shrinkVertical
+        ]
+
+        for action in shrinkActions {
+            XCTAssertTrue(
+                StashAftermathDecision.isSizeAdjustingIncremental(action),
+                "\(action) should be size-adjusting"
+            )
+        }
+    }
+
+    func testScaleActionsAreSizeAdjusting() {
+        let scaleActions: [WindowAction.IncrementalAction] = [
+            .larger, .smaller, .scaleUp, .scaleDown
+        ]
+
+        for action in scaleActions {
+            XCTAssertTrue(
+                StashAftermathDecision.isSizeAdjustingIncremental(action),
+                "\(action) should be size-adjusting"
+            )
+        }
+    }
+
+    func testAllMoveActionsAreNotSizeAdjusting() {
+        let moveActions: [WindowAction.IncrementalAction] = [
+            .moveUp, .moveDown, .moveLeft, .moveRight
+        ]
+
+        for action in moveActions {
+            XCTAssertFalse(
+                StashAftermathDecision.isSizeAdjustingIncremental(action),
+                "\(action) should not be size-adjusting"
+            )
+        }
     }
 }
