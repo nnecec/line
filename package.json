@@ -14,7 +14,35 @@
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/release-notes-generator": "^14.1.1",
-    "conventional-changelog-conventionalcommits": "^8.0.0",
-    "semantic-release": "^25.0.7"
+    "conventional-changelog-conventionalcommits": "^10.2.1",
+    "semantic-release": "^25.0.8"
+  },
+  "allowScripts": {
+    "cosmiconfig@9.0.2": true,
+    "undici@7.28.0": true,
+    "yargs@18.0.0": true,
+    "file:../../cosmiconfig@9.0.2_typescript@6.0.3/node_modules/cosmiconfig": true,
+    "file:../../yargs@18.1.0/node_modules/yargs": true,
+    "file:../../undici@7.29.0/node_modules/undici": true,
+    "file:../../signal-exit@4.1.0/node_modules/signal-exit": true,
+    "file:../../lru-cache@11.5.2/node_modules/lru-cache": true,
+    "file:../../node-emoji@2.2.0/node_modules/node-emoji": true,
+    "file:../../yargs-parser@22.0.0/node_modules/yargs-parser": true,
+    "file:../../cliui@9.0.1/node_modules/cliui": true,
+    "file:../../y18n@5.0.8/node_modules/y18n": true,
+    "file:../../get-caller-file@2.0.5/node_modules/get-caller-file": true,
+    "file:../../meow@13.2.0/node_modules/meow": true,
+    "file:../../tinyexec@1.2.4/node_modules/tinyexec": true,
+    "file:../../yargs@16.2.2/node_modules/yargs": true,
+    "file:../../../@sindresorhus+is@4.6.0/node_modules/@sindresorhus/is": true,
+    "file:../../lightningcss@1.33.0/node_modules/lightningcss": true,
+    "file:../../content-type@2.0.0/node_modules/content-type": true,
+    "file:../../istanbul-reports@3.2.0/node_modules/istanbul-reports": true,
+    "file:../yargs-parser@21.1.1/node_modules/yargs-parser": true,
+    "file:../../web-worker@1.5.0/node_modules/web-worker": true,
+    "file:../../yargs-parser@20.2.9/node_modules/yargs-parser": true,
+    "file:../../cliui@7.0.4/node_modules/cliui": true,
+    "file:../../undici@6.28.0/node_modules/undici": true,
+    "file:../../lru-cache@10.4.3/node_modules/lru-cache": true
   }
 }
