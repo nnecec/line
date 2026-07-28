@@ -8,18 +8,37 @@ Line is a menu bar macOS application built with SwiftUI and AppKit. It uses the 
 
 `LineCoordinator` is the top-level window-management coordinator. It delegates to:
 
-- `TriggerCoordinator` for keyboard and middle-click triggers
-  Keybind open/close/consume decisions live in `KeybindTriggerDecision`; settings conflict and recorder validation share `KeybindBindingPolicy`.
+- `TriggerCoordinator` for keyboard and middle-click triggers (see `KeybindTriggerDecision` and `KeybindBindingPolicy` in the Decision and policy modules section)
 - `GridModeCoordinator` for grid selection and overlays
 - `SessionManager` for the active window action session (including change-action side effects: indicators, apply, timeout restart, haptic, cycle continuation)
 
-The coordinator owns orchestration state. Drag-to-snap edge zones and direction changes are decided by `DragSnapPolicy`; `WindowDragManager` monitors events and applies the result. Geometry and action rules belong in testable calculation or policy types. Stash management after a resize is decided by Stash Aftermath (pure decision table); StashManager executes AX and store updates.
+The coordinator owns orchestration state. `WindowDragManager` monitors drag events and applies results from `DragSnapPolicy`. `StashManager` executes Accessibility and store updates based on `StashAftermathDecision`. Geometry and action rules belong in testable calculation or policy types (see Decision and policy modules section).
+
+## Decision and policy modules
+
+Line separates pure decision logic from execution and orchestration. Decision and policy modules are static enums (never instantiated) that take inputs and return outcomes, with no side effects, no Accessibility calls, and no mutable state. This pattern makes core logic testable without window manager permissions and clarifies responsibility boundaries.
+
+Examples:
+
+- `KeybindTriggerDecision` — decides whether a keybind event should open the trigger, close it, or be consumed by the active session
+- `KeybindBindingPolicy` — computes effective keybinds (trigger ∪ action or bypass mode) and detects conflicts across all bound actions
+- `DragSnapPolicy` — determines snap edge zones and whether a drag-direction change should apply immediately
+- `URLTargetWindowPolicy` — selects the target window for `line://` automation (user-defined > sticky window within TTL > first candidate)
+- `StashAftermathDecision` — decides stash aftermath after a window resize (stash, unstash, reprocess, ignore, unmanage, etc.)
+
+When to extract a policy or decision module:
+
+- The logic is pure (deterministic output from inputs, no side effects)
+- It's called from multiple coordinators or UI components
+- Tests need to verify the decision without spinning up the full window manager
+
+Keep the logic in the calling coordinator when it's tightly coupled to that coordinator's lifecycle or rarely reused elsewhere.
 
 ## Window actions
 
 `WindowAction` represents standard, custom, cycle, screen-switch, and stash behavior. `BoundWindowAction` connects an action to a configured trigger. Window Resize Execution bootstraps a Prepared Resize for a Window Action Session (or grid), transitions mid-session without re-reading live window state, and commits either the current snapshot (release / grid confirm) or a live re-prepare that inherits the session layout snapshot. `WindowEngine` applies the result through Accessibility APIs. Drag still uses a mutable `ResizeContext` adapter.
 
-URL scheme automation (`line://`) is handled by `URLCommandHandler`, which delegates parsing, direction aliases, target-window selection, and list catalog building to pure modules (`URLCommandParser`, `URLDirectionResolver`, `URLTargetWindowPolicy`, `URLCommandCatalog`).
+URL scheme automation (`line://`) is handled by `URLCommandHandler`, which delegates parsing, direction aliases, target-window selection (see `URLTargetWindowPolicy` in Decision and policy modules), and list catalog building to pure modules (`URLCommandParser`, `URLDirectionResolver`, `URLCommandCatalog`).
 
 Grid overlays and window previews are auxiliary panels. They must not become the user's active work window or change focus unless the interaction requires it.
 
