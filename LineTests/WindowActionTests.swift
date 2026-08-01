@@ -919,38 +919,47 @@ final class WindowActionMigrationTests: XCTestCase {
     }
 }
 
-final class WindowDragMouseUpPolicyTests: XCTestCase {
-    func testSnappingDisabledRestoreMonitoringStillCleansUpOnMouseUp() {
-        XCTAssertTrue(
-            WindowDragMouseUpPolicy.shouldCleanupOnMouseUp(shouldMonitorDragActions: true)
-        )
-        XCTAssertFalse(
-            WindowDragMouseUpPolicy.shouldApplySnapOnMouseUp(windowSnapping: false)
-        )
+@available(macOS 15.0, *)
+final class SystemWindowManagerTests: XCTestCase {
+    func testWindowDirectionsMapToNativeMoveAndResizeActions() {
+        let cases: [(WindowDirection, SystemWindowManager.MoveAndResize)] = [
+            (.minimize, .minimize),
+            (.maximize, .fill),
+            (.center, .center),
+            (.leftHalf, .left),
+            (.rightHalf, .right),
+            (.topHalf, .top),
+            (.bottomHalf, .bottom),
+            (.topLeftQuarter, .topLeft),
+            (.topRightQuarter, .topRight),
+            (.bottomLeftQuarter, .bottomLeft),
+            (.bottomRightQuarter, .bottomRight),
+            (.initialFrame, .returnToPreviousSize)
+        ]
+
+        for (direction, expected) in cases {
+            XCTAssertEqual(
+                direction.systemEquivalent?.rawValue,
+                expected.rawValue,
+                "unexpected mapping for \(direction)"
+            )
+        }
     }
 
-    func testSnappingDisabledStashMonitoringStillCleansUpOnMouseUp() {
-        XCTAssertTrue(
-            WindowDragMouseUpPolicy.shouldCleanupOnMouseUp(shouldMonitorDragActions: true)
-        )
-        XCTAssertFalse(
-            WindowDragMouseUpPolicy.shouldApplySnapOnMouseUp(windowSnapping: false)
-        )
-    }
+    func testWindowDirectionsWithoutNativeMenuActionsUseFrameFallback() {
+        let unsupported: [WindowDirection] = [
+            .noAction,
+            .cycle,
+            .custom,
+            .stash,
+            .unstash,
+            .nextScreen,
+            .focusLeft
+        ]
 
-    func testSnappingEnabledCanStillApplySnapOnMouseUp() {
-        XCTAssertTrue(
-            WindowDragMouseUpPolicy.shouldCleanupOnMouseUp(shouldMonitorDragActions: true)
-        )
-        XCTAssertTrue(
-            WindowDragMouseUpPolicy.shouldApplySnapOnMouseUp(windowSnapping: true)
-        )
-    }
-
-    func testMouseUpDoesNotCleanUpWhenDragMonitoringIsInactive() {
-        XCTAssertFalse(
-            WindowDragMouseUpPolicy.shouldCleanupOnMouseUp(shouldMonitorDragActions: false)
-        )
+        for direction in unsupported {
+            XCTAssertNil(direction.systemEquivalent, "\(direction) should use the public fallback")
+        }
     }
 }
 

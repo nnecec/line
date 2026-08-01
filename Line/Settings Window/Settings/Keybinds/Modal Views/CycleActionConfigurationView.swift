@@ -121,6 +121,7 @@ struct CycleActionConfigurationView: View {
                     } label: {
                         Image(systemName: "chevron.up")
                     }
+                    .accessibilityLabel("Move selected cycle item up.")
                     .disabled(!canMoveSelectionUp)
                     .help("Move selected cycle item up.")
 
@@ -129,6 +130,7 @@ struct CycleActionConfigurationView: View {
                     } label: {
                         Image(systemName: "chevron.down")
                     }
+                    .accessibilityLabel("Move selected cycle item down.")
                     .disabled(!canMoveSelectionDown)
                     .help("Move selected cycle item down.")
                 }

@@ -19,19 +19,17 @@
 //  3. 快速连续授予/移除 → 验证去重逻辑
 //
 
-import XCTest
 @testable import Line
+import XCTest
 
+@MainActor
 final class AccessibilityManagerTests: XCTestCase {
-
     // MARK: - 基本权限检查（同步路径）
 
-    func testCheckAccessibilityReturnsBool() {
-        // 这个测试依赖实际系统权限状态
-        // 在 CI 中可能是 false，本地可能是 true
-        let result = AccessibilityManager.checkAccessibility()
-        XCTAssertNotNil(result, "checkAccessibility() 应该返回布尔值")
-        // 不断言具体值，因为依赖运行环境
+    func testRefreshStatusSynchronizesStoredPermissionState() {
+        let result = AccessibilityManager.shared.refreshStatus()
+
+        XCTAssertEqual(result, AccessibilityManager.shared.isGranted)
     }
 
     // MARK: - stream() 初始值
@@ -45,7 +43,7 @@ final class AccessibilityManagerTests: XCTestCase {
 
         XCTAssertNotNil(firstValue, "stream(initial: true) 应该立即发射初始值")
         // 值应该匹配当前权限状态
-        XCTAssertEqual(firstValue, AccessibilityManager.checkAccessibility())
+        XCTAssertEqual(firstValue, AccessibilityManager.shared.isGranted)
     }
 
     func testStreamDoesNotEmitInitialValueWhenNotRequested() async {
@@ -78,7 +76,7 @@ final class AccessibilityManagerTests: XCTestCase {
         async let value2 = stream2.makeAsyncIterator().next()
         async let value3 = stream3.makeAsyncIterator().next()
 
-        let results = await (value1, value2, value3)
+        let results = await(value1, value2, value3)
 
         XCTAssertNotNil(results.0, "流 1 应该收到初始值")
         XCTAssertNotNil(results.1, "流 2 应该收到初始值")
@@ -98,16 +96,16 @@ final class AccessibilityManagerTests: XCTestCase {
         // 注意：这会弹出授权对话框，所以标记为手动测试
         // 在 CI 中跳过
         #if !CI
-        let expectation = XCTestExpectation(description: "重置完成")
+            let expectation = XCTestExpectation(description: "重置完成")
 
-        Task {
-            await AccessibilityManager.resetAccessibility()
-            expectation.fulfill()
-        }
+            Task {
+                await AccessibilityManager.resetAccessibility()
+                expectation.fulfill()
+            }
 
-        await fulfillment(of: [expectation], timeout: 5.0)
+            await fulfillment(of: [expectation], timeout: 5.0)
         #else
-        throw XCTSkip("tccutil 重置在 CI 中跳过")
+            throw XCTSkip("tccutil 重置在 CI 中跳过")
         #endif
     }
 

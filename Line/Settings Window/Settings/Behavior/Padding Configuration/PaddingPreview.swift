@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct PaddingPreview: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var model: PaddingConfiguration
 
     init(_ paddingModel: Binding<PaddingConfiguration>) {
@@ -32,7 +33,7 @@ struct PaddingPreview: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }
-        .animation(.default, value: model)
+        .animation(reduceMotion ? nil : .default, value: model)
     }
 
     private func blurredWindow() -> some View {

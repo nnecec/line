@@ -15,6 +15,7 @@ private let gridOverlayMinimumOpacity = 0.16
 
 @available(macOS 15.0, *)
 struct PreviewConfigurationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var accentColorController: AccentColorController = .shared
 
     // Accent Color
@@ -162,7 +163,7 @@ struct PreviewConfigurationView: View {
                 comment: "Settings footer for accent color"
             )
         }
-        .animation(.default, value: accentColorMode)
+        .animation(reduceMotion ? nil : .default, value: accentColorMode)
     }
 
     private var syncWallpaperButton: some View {
@@ -174,7 +175,9 @@ struct PreviewConfigurationView: View {
                     Image(systemName: "checkmark")
                         .foregroundStyle(.green)
                         .bold()
-                        .transition(.opacity.combined(with: .scale(scale: 0.25)))
+                        .transition(
+                            reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.25))
+                        )
                 }
             }
         }
@@ -483,13 +486,13 @@ struct PreviewConfigurationView: View {
         syncWallpaperTask = Task {
             await accentColorController.refresh(ignoreThrottle: true)
 
-            withAnimation(.easeInOut(duration: 0.5)) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.5)) {
                 didSyncWallpaper = true
             }
 
             try? await Task.sleep(for: .seconds(2))
 
-            withAnimation(.easeInOut(duration: 0.5)) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.5)) {
                 didSyncWallpaper = false
             }
 

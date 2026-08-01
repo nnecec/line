@@ -186,6 +186,7 @@ final class WindowActionIntegrationTests: XCTestCase {
     }
 
     // MARK: - Custom Action Edge Cases
+
     //
     // 这些测试覆盖 CustomWindowActionCalculator 的边界条件：
     // - 超出屏幕范围的尺寸和坐标
@@ -495,5 +496,68 @@ final class WindowActionIntegrationTests: XCTestCase {
         } catch {
             XCTFail("序列化失败: \(error)")
         }
+    }
+}
+
+final class ScreenOrderPolicyTests: XCTestCase {
+    private struct ScreenFrame: Equatable {
+        let id: String
+        let frame: CGRect
+    }
+
+    func testOrdersScreensLeftToRightWithinTheSameVerticalBand() {
+        let left = ScreenFrame(id: "left", frame: CGRect(x: -1000, y: 0, width: 1000, height: 800))
+        let center = ScreenFrame(id: "center", frame: CGRect(x: 0, y: 0, width: 1000, height: 800))
+        let right = ScreenFrame(id: "right", frame: CGRect(x: 1000, y: 0, width: 1000, height: 800))
+
+        let ordered = ScreenOrderPolicy.ordered([right, left, center], frame: \.frame)
+
+        XCTAssertEqual(ordered.map(\.id), ["left", "center", "right"])
+    }
+
+    func testOrdersUpperVerticalBandBeforeLowerBand() {
+        let lower = ScreenFrame(id: "lower", frame: CGRect(x: 0, y: 0, width: 1000, height: 800))
+        let upper = ScreenFrame(id: "upper", frame: CGRect(x: 0, y: 800, width: 1000, height: 800))
+
+        let ordered = ScreenOrderPolicy.ordered([upper, lower], frame: \.frame)
+
+        XCTAssertEqual(ordered.map(\.id), ["upper", "lower"])
+    }
+
+    func testVerticallyOverlappingScreensStayInLeftToRightOrder() {
+        let left = ScreenFrame(id: "left", frame: CGRect(x: -1000, y: 300, width: 1000, height: 800))
+        let right = ScreenFrame(id: "right", frame: CGRect(x: 0, y: 0, width: 1000, height: 800))
+
+        let ordered = ScreenOrderPolicy.ordered([right, left], frame: \.frame)
+
+        XCTAssertEqual(ordered.map(\.id), ["left", "right"])
+    }
+
+    func testDirectionalNavigationChoosesNearestAlignedScreenAndWraps() {
+        let current = ScreenFrame(id: "current", frame: CGRect(x: 0, y: 0, width: 1000, height: 800))
+        let right = ScreenFrame(id: "right", frame: CGRect(x: 1000, y: 0, width: 1000, height: 800))
+        let farRight = ScreenFrame(id: "far-right", frame: CGRect(x: 2000, y: 0, width: 1000, height: 800))
+        let navigation = DirectionalNavigationUtility<ScreenFrame>(
+            minDirectionalSpan: .points(1),
+            minStackedArea: .percentage(100),
+            frameProvider: \.frame
+        )
+
+        XCTAssertEqual(
+            navigation.directionalItem(from: current, others: [farRight, right], direction: .right)?.id,
+            "right"
+        )
+        XCTAssertEqual(
+            navigation.directionalItem(from: farRight, others: [current, right], direction: .right)?.id,
+            "current"
+        )
+        XCTAssertNil(
+            navigation.directionalItem(
+                from: farRight,
+                others: [current, right],
+                direction: .right,
+                canWrap: false
+            )
+        )
     }
 }

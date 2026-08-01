@@ -9,13 +9,13 @@ import Defaults
 import Scribe
 import SwiftUI
 
-enum WindowDragMouseUpPolicy {
-    static func shouldCleanupOnMouseUp(shouldMonitorDragActions: Bool) -> Bool {
-        shouldMonitorDragActions
-    }
-
-    static func shouldApplySnapOnMouseUp(windowSnapping: Bool) -> Bool {
-        windowSnapping
+enum WindowDragMonitoringPolicy {
+    static func shouldMonitor(
+        windowSnapping: Bool,
+        restoreWindowFrameOnDrag: Bool,
+        hasStashedWindows: Bool
+    ) -> Bool {
+        windowSnapping || restoreWindowFrameOnDrag || hasStashedWindows
     }
 }
 
@@ -45,9 +45,11 @@ final class WindowDragManager {
 
     /// This is to avoid running global drag logic unless a feature actually depends on it.
     private var shouldMonitorDragActions: Bool {
-        Defaults[.windowSnapping] ||
-            Defaults[.restoreWindowFrameOnDrag] ||
-            !Defaults[.stashManagerStashedWindows].isEmpty
+        WindowDragMonitoringPolicy.shouldMonitor(
+            windowSnapping: Defaults[.windowSnapping],
+            restoreWindowFrameOnDrag: Defaults[.restoreWindowFrameOnDrag],
+            hasStashedWindows: !Defaults[.stashManagerStashedWindows].isEmpty
+        )
     }
 
     func addObservers() {
@@ -144,11 +146,7 @@ final class WindowDragManager {
     }
 
     private func leftMouseUp(_: CGEvent) {
-        guard WindowDragMouseUpPolicy.shouldCleanupOnMouseUp(
-            shouldMonitorDragActions: shouldMonitorDragActions
-        ) else {
-            return
-        }
+        guard shouldMonitorDragActions else { return }
 
         Task {
             previewController.close()
@@ -156,11 +154,7 @@ final class WindowDragManager {
                 resetDragState()
             }
 
-            guard WindowDragMouseUpPolicy.shouldApplySnapOnMouseUp(
-                windowSnapping: Defaults[.windowSnapping]
-            ) else {
-                return
-            }
+            guard Defaults[.windowSnapping] else { return }
 
             if let context = resizeContext,
                !context.action.direction.isNoOp,

@@ -25,6 +25,7 @@ struct CompactGridPreview: View {
     @Default(.gridGlassStyle) private var glassStyle
     @Default(.gridSelectionGlow) private var selectionGlow
     @Default(.gridOverlayOuterCornerRadius) private var outerCornerRadius
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         template: GridTemplate,
@@ -58,14 +59,14 @@ struct CompactGridPreview: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Grid layout preview")
         .accessibilityValue(accessibilityValue)
-        .animation(.snappy(duration: 0.2), value: drawStyle)
-        .animation(.snappy(duration: 0.2), value: glassEnabled)
-        .animation(.snappy(duration: 0.2), value: glassStyle)
-        .animation(.snappy(duration: 0.2), value: lineThickness)
-        .animation(.snappy(duration: 0.2), value: cellCornerRadius)
-        .animation(.snappy(duration: 0.2), value: selectionGlow)
-        .animation(.snappy(duration: 0.2), value: overlayOpacity)
-        .animation(.snappy(duration: 0.2), value: outerCornerRadius)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: drawStyle)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: glassEnabled)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: glassStyle)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: lineThickness)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: cellCornerRadius)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: selectionGlow)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: overlayOpacity)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: outerCornerRadius)
     }
 
     private var accessibilityValue: String {

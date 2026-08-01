@@ -76,4 +76,52 @@ final class CycleActionConfigurationTests: XCTestCase {
         XCTAssertEqual(selectedIDs, [selectedID])
         XCTAssertEqual(items.map(\.id), [selectedID, otherID, movedID])
     }
+
+    func testDirectionPickerSearchDoesNotReturnUnmatchedMoreItems() {
+        let results = DirectionPickerSearchPolicy.results(
+            for: "does-not-exist",
+            in: [.leftHalf, .custom, .cycle]
+        )
+
+        XCTAssertTrue(results.isEmpty)
+    }
+
+    func testDirectionPickerSearchIncludesMatchingMoreItems() {
+        let results = DirectionPickerSearchPolicy.results(
+            for: "custom",
+            in: [.leftHalf, .custom, .cycle]
+        )
+
+        XCTAssertEqual(results, [.custom])
+    }
+
+    func testDirectionPickerSearchTreatsEmptyQueryAsBrowsing() {
+        XCTAssertTrue(
+            DirectionPickerSearchPolicy.results(
+                for: "",
+                in: [.leftHalf, .custom, .cycle]
+            ).isEmpty
+        )
+    }
+
+    func testDirectionPickerSearchIsCaseInsensitiveAndSupportsSubsequences() {
+        XCTAssertEqual(
+            DirectionPickerSearchPolicy.results(for: "CuStOm", in: [.leftHalf, .custom]),
+            [.custom]
+        )
+        XCTAssertEqual(
+            DirectionPickerSearchPolicy.results(for: "lthf", in: [.leftHalf, .rightHalf]),
+            [.leftHalf]
+        )
+    }
+
+    func testDirectionPickerSearchRanksPrefixBeforeContainsAndKeepsSourceOrderForTies() {
+        XCTAssertEqual(
+            DirectionPickerSearchPolicy.results(
+                for: "left",
+                in: [.topLeftQuarter, .leftHalf, .bottomLeftQuarter]
+            ),
+            [.leftHalf, .topLeftQuarter, .bottomLeftQuarter]
+        )
+    }
 }

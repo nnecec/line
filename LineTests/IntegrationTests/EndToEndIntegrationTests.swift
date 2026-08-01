@@ -35,15 +35,14 @@
 //  5. 全屏应用交互
 //
 
-import XCTest
 @testable import Line
+import XCTest
 
 /// 完整栈集成测试
 ///
 /// 警告：这些测试依赖真实的窗口、Accessibility 权限和系统状态
 /// 可能在某些环境中不稳定
 final class EndToEndIntegrationTests: XCTestCase {
-
     override func setUp() {
         super.setUp()
 
@@ -55,6 +54,21 @@ final class EndToEndIntegrationTests: XCTestCase {
     override func tearDown() {
         // 清理状态
         super.tearDown()
+    }
+
+    func testNoOpActionCompletesWithoutAccessibilityPermission() async throws {
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+            throw XCTSkip("需要可用屏幕")
+        }
+
+        let result = try await WindowActionEngine.shared.apply(
+            .special(.noAction),
+            window: nil,
+            screen: screen
+        )
+
+        XCTAssertTrue(result.success)
+        XCTAssertNil(result.newTargetWindow)
     }
 
     // MARK: - 键绑定到窗口移动流程
@@ -213,28 +227,31 @@ final class EndToEndIntegrationTests: XCTestCase {
 
         let result = try await WindowActionEngine.shared.apply(action, window: window, screen: screen)
 
-        // Focus action 可能成功也可能失败（取决于是否有其他窗口）
-        // 主要验证不崩溃
-        XCTAssertTrue(true, "Focus action 流程完成")
+        guard let targetWindow = result.newTargetWindow else {
+            throw XCTSkip("当前窗口栈中没有其他可聚焦窗口")
+        }
+
+        XCTAssertTrue(result.success)
+        XCTAssertNotEqual(targetWindow.cgWindowID, window.cgWindowID)
     }
 
     // MARK: - 错误传播测试
 
     func testErrorPropagationThroughStack() async throws {
-        guard AccessibilityManager.shared.isGranted else {
-            throw XCTSkip("需要权限")
-        }
-
         // 使用一个会失败的场景：没有窗口
         let action = WindowAction.standard(.maximize)
 
-        let result = try await WindowActionEngine.shared.apply(action, window: nil, screen: NSScreen.main ?? NSScreen.screens[0])
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+            throw XCTSkip("没有可用显示器")
+        }
+
+        let result = try await WindowActionEngine.shared.apply(action, window: nil, screen: screen)
 
         // 没有窗口时应该失败
         XCTAssertFalse(result.success, "无效窗口应该失败")
     }
 
-    func testInvalidPIDHandling() async throws {
+    func testInvalidPIDHandling() throws {
         guard AccessibilityManager.shared.isGranted else {
             throw XCTSkip("需要权限")
         }

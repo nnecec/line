@@ -23,7 +23,7 @@ final class WindowActionEngine {
     static let shared = WindowActionEngine()
 
     @MainActor
-    private var actionTasks: [CGWindowID: Task<Result, any Error>] = [:]
+    private lazy var actionTasks = LatestTaskRegistry<CGWindowID, Result>()
 
     /// Result of applying a window action
     struct Result {
@@ -82,23 +82,16 @@ final class WindowActionEngine {
             return try await performApply(context: context)
         }
 
-        // Cancel any existing action on this window
-        actionTasks[windowID]?.cancel()
+        let handle = actionTasks.replace(for: windowID) { [weak self] in
+            guard let self else { throw CancellationError() }
 
-        // Create a task for this action
-        let task = Task {
-            let result = try await performApply(context: context)
+            let result = try await self.performApply(context: context)
             try Task.checkCancellation()
             return result
         }
-        actionTasks[windowID] = task
 
-        // Await the task and clean up
-        let result = try await task.value
-
-        _ = actionTasks.removeValue(forKey: windowID)
-
-        return result
+        defer { actionTasks.remove(handle, for: windowID) }
+        return try await handle.task.value
     }
 
     @MainActor
@@ -122,24 +115,48 @@ final class WindowActionEngine {
             return result
         }
 
+        guard context.window != nil else {
+            log.info("Cannot resize without a target window")
+            return .failed
+        }
+
         try await WindowEngine.performResize(context: context)
         return .resized
     }
 
     // MARK: - Focus Actions
 
+    @MainActor
     private func handleFocusAction(_ action: BoundWindowAction, currentWindow: Window?) -> Result {
-        var newTargetWindow: Window?
-
-        if case let .focus(focusAction) = action.action {
-            if focusAction == .focusNextInStack {
-                newTargetWindow = WindowUtility.focusNextWindowInStack(from: currentWindow)
-            } else if let focusDirection = focusAction.direction {
-                newTargetWindow = WindowUtility.focusWindow(from: currentWindow, direction: focusDirection)
+        let newTargetWindow = Self.resolveFocusTarget(
+            for: action.action,
+            currentWindow: currentWindow,
+            directionalFocus: { window, direction in
+                WindowUtility.focusWindow(from: window, direction: direction)
+            },
+            stackFocus: { window in
+                WindowUtility.focusNextWindowInStack(from: window)
             }
-        }
+        )
 
         return .focused(newTargetWindow)
+    }
+
+    @MainActor
+    static func resolveFocusTarget(
+        for action: WindowAction,
+        currentWindow: Window?,
+        directionalFocus: (Window?, NavigationDirection) -> Window?,
+        stackFocus: (Window?) -> Window?
+    ) -> Window? {
+        guard case let .focus(focusAction) = action else { return nil }
+
+        if focusAction == .focusNextInStack {
+            return stackFocus(currentWindow)
+        }
+
+        guard let direction = focusAction.direction else { return nil }
+        return directionalFocus(currentWindow, direction)
     }
 
     // MARK: - Quick Actions

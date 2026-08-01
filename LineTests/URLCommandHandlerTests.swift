@@ -112,60 +112,51 @@ final class URLCommandHandlerTests: XCTestCase {
 
     // MARK: - URL Length Validation Tests
 
-    func testRejectsExcessivelyLongURL() throws {
-        let handler = URLCommandHandler()
-        let longPath = String(repeating: "A", count: 2000)
-        let url = try XCTUnwrap(URL(string: "line://action/\(longPath)"))
-
-        // 应该安全返回，不会崩溃或挂起
-        handler.handle(url)
-
-        // 验证没有执行（通过检查日志或其他副作用）
-        XCTAssertTrue(true, "过长 URL 应该被拒绝")
-    }
-
-    func testRejectsExcessivelyLongParameter() throws {
-        let handler = URLCommandHandler()
-        let longParam = String(repeating: "B", count: 500)
-        let url = try XCTUnwrap(URL(string: "line://keybind/\(longParam)"))
-
-        handler.handle(url)
-
-        XCTAssertTrue(true, "过长参数应该被拒绝")
-    }
-
     func testAcceptsNormalLengthURL() throws {
-        let handler = URLCommandHandler()
         let url = try XCTUnwrap(URL(string: "line://list/actions"))
 
-        // 应该正常处理
-        handler.handle(url)
-
-        XCTAssertTrue(true, "正常长度 URL 应该被接受")
+        guard case let .accept(parsed) = URLCommandParser.parse(url) else {
+            return XCTFail("normal URL should be accepted")
+        }
+        XCTAssertEqual(parsed.command, .list)
+        XCTAssertEqual(parsed.parameters, ["actions"])
     }
 
-    func testAcceptsURLAtExactLimit() throws {
-        let handler = URLCommandHandler()
-        // 1023 字符（限制是 1024）
-        let path = String(repeating: "x", count: 1000)
+    func testAcceptsURLAtMaximumAllowedLength() throws {
+        let prefix = "line://action/"
+        let path = makePathWithValidParameters(length: URLCommandParser.maxURLLength - 1 - prefix.count)
         let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
 
-        XCTAssertLessThan(url.absoluteString.count, 1024)
-
-        handler.handle(url)
-        XCTAssertTrue(true)
+        XCTAssertEqual(url.absoluteString.count, URLCommandParser.maxURLLength - 1)
+        guard case .accept = URLCommandParser.parse(url) else {
+            return XCTFail("URL below the limit should be accepted")
+        }
     }
 
-    func testRejectsURLJustOverLimit() throws {
-        let handler = URLCommandHandler()
-        // 超过 1024 字符
-        let path = String(repeating: "x", count: 1020)
+    func testRejectsURLAtMaximumLength() throws {
+        let prefix = "line://action/"
+        let path = makePathWithValidParameters(length: URLCommandParser.maxURLLength - prefix.count)
         let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
 
-        XCTAssertGreaterThan(url.absoluteString.count, 1024)
+        XCTAssertEqual(url.absoluteString.count, URLCommandParser.maxURLLength)
+        XCTAssertEqual(URLCommandParser.parse(url), .reject(.urlTooLong))
+    }
 
-        handler.handle(url)
-        XCTAssertTrue(true, "超限 URL 应该被拒绝")
+    func testAcceptsParameterAtMaximumLength() throws {
+        let parameter = String(repeating: "x", count: URLCommandParser.maxParameterLength)
+        let url = try XCTUnwrap(URL(string: "line://keybind/\(parameter)"))
+
+        guard case let .accept(parsed) = URLCommandParser.parse(url) else {
+            return XCTFail("parameter at the limit should be accepted")
+        }
+        XCTAssertEqual(parsed.parameters, [parameter])
+    }
+
+    func testRejectsParameterAboveMaximumLength() throws {
+        let parameter = String(repeating: "x", count: URLCommandParser.maxParameterLength + 1)
+        let url = try XCTUnwrap(URL(string: "line://keybind/\(parameter)"))
+
+        XCTAssertEqual(URLCommandParser.parse(url), .reject(.parameterTooLong))
     }
 
     // MARK: - URLCommandParser
@@ -187,20 +178,6 @@ final class URLCommandHandlerTests: XCTestCase {
     func testParserRejectsUnknownCommand() throws {
         let url = try XCTUnwrap(URL(string: "line://fly/away"))
         XCTAssertEqual(URLCommandParser.parse(url), .reject(.unknownCommand))
-    }
-
-    func testParserRejectsURLTooLong() throws {
-        let path = String(repeating: "x", count: 1100)
-        let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
-        XCTAssertEqual(URLCommandParser.parse(url), .reject(.urlTooLong))
-    }
-
-    func testParserRejectsParameterTooLong() throws {
-        let param = String(repeating: "y", count: 300)
-        // Keep total URL under max length so only parameter limit fires
-        let url = try XCTUnwrap(URL(string: "line://keybind/\(param)"))
-        XCTAssertLessThan(url.absoluteString.count, URLCommandParser.maxURLLength)
-        XCTAssertEqual(URLCommandParser.parse(url), .reject(.parameterTooLong))
     }
 
     // MARK: - URLDirectionResolver
@@ -269,5 +246,22 @@ final class URLCommandHandlerTests: XCTestCase {
         XCTAssertFalse(without.joined(separator: "\n").contains("Secret"))
         let with = URLCommandCatalog.printActionItems(namedKeybinds: binds, includeCustomNames: true)
         XCTAssertTrue(with.joined(separator: "\n").contains("Custom Actions:"))
+    }
+
+    private func makePathWithValidParameters(length: Int) -> String {
+        var remainingLength = length
+        var parameters: [String] = []
+
+        while remainingLength > 0 {
+            if !parameters.isEmpty {
+                remainingLength -= 1 // Path separator
+            }
+
+            let parameterLength = min(URLCommandParser.maxParameterLength, remainingLength)
+            parameters.append(String(repeating: "x", count: parameterLength))
+            remainingLength -= parameterLength
+        }
+
+        return parameters.joined(separator: "/")
     }
 }

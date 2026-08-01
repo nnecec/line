@@ -2,6 +2,7 @@
   "name": "line-release-tooling",
   "private": true,
   "description": "Release tooling only (semantic-release). Not an npm-published package.",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=20"
   },

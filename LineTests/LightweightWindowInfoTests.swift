@@ -5,11 +5,10 @@
 //  Pure unit tests for WindowUtility.lightweightInfo filter/parser.
 //
 
-import XCTest
 @testable import Line
+import XCTest
 
 final class LightweightWindowInfoTests: XCTestCase {
-
     // MARK: - Helpers
 
     private func windowInfo(
@@ -149,5 +148,45 @@ final class LightweightWindowInfoTests: XCTestCase {
             XCTAssertGreaterThan(item.frame.height, 0)
             XCTAssertNotEqual(item.cgWindowID, 0)
         }
+    }
+
+    func testWindowInfoMatchPolicyRequiresExactPositionAndSize() {
+        let target = CGRect(x: 10, y: 20, width: 300, height: 200)
+
+        XCTAssertTrue(
+            WindowInfoMatchPolicy.matches(
+                targetFrame: target,
+                candidatePosition: target.origin,
+                candidateSize: target.size
+            )
+        )
+        XCTAssertFalse(
+            WindowInfoMatchPolicy.matches(
+                targetFrame: target,
+                candidatePosition: CGPoint(x: 11, y: 20),
+                candidateSize: target.size
+            )
+        )
+        XCTAssertFalse(
+            WindowInfoMatchPolicy.matches(
+                targetFrame: target,
+                candidatePosition: target.origin,
+                candidateSize: CGSize(width: 301, height: 200)
+            )
+        )
+        XCTAssertFalse(
+            WindowInfoMatchPolicy.matches(
+                targetFrame: target,
+                candidatePosition: nil,
+                candidateSize: target.size
+            )
+        )
+        XCTAssertFalse(
+            WindowInfoMatchPolicy.matches(
+                targetFrame: target,
+                candidatePosition: target.origin,
+                candidateSize: nil
+            )
+        )
     }
 }

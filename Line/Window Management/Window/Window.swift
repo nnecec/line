@@ -148,11 +148,13 @@ final class Window {
         let candidates: [AXUIElement] = if let boundsDict = windowInfo[kCGWindowBounds as String] as? [String: CGFloat],
                                            let frame = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) {
             windowElements.filter {
-                if let position: CGPoint = try? $0.getValue(.position),
-                   let size: CGSize = try? $0.getValue(.size) {
-                    return position == frame.origin && size == frame.size
-                }
-                return false
+                let position: CGPoint? = try? $0.getValue(.position)
+                let size: CGSize? = try? $0.getValue(.size)
+                return WindowInfoMatchPolicy.matches(
+                    targetFrame: frame,
+                    candidatePosition: position,
+                    candidateSize: size
+                )
             }
         } else {
             windowElements
@@ -583,22 +585,37 @@ final class Window {
             }
         }
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<(), Error>) in
-            let animation = WindowTransformAnimation(
-                rect,
-                window: self,
-                bounds: bounds,
-                shouldSetSize: shouldSetSize
-            ) { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: ())
+        let cancellationController = WindowTransformAnimationCancellationController()
+
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<(), Error>) in
+                let animation = WindowTransformAnimation(
+                    rect,
+                    window: self,
+                    bounds: bounds,
+                    shouldSetSize: shouldSetSize
+                ) { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(returning: ())
+                    }
+                }
+
+                if cancellationController.register(animation) {
+                    animation.start()
                 }
             }
-
-            animation.start()
+        } onCancel: {
+            Task { @MainActor in
+                cancellationController.cancel()
+            }
         }
+
+        if Task.isCancelled {
+            cancellationController.cancel()
+        }
+        try Task.checkCancellation()
     }
 }
 

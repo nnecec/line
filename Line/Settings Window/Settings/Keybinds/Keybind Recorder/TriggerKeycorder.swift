@@ -11,6 +11,7 @@ import SwiftUI
 struct TriggerKeycorder: View {
     @EnvironmentObject private var model: KeybindsConfigurationModel
     @Environment(\.appearsActive) private var appearsActive
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let keyLimit: Int = 5
 
@@ -72,7 +73,7 @@ struct TriggerKeycorder: View {
                     Image(systemName: isActive ? "ellipsis" : "keyboard")
                         .font(.callout.weight(.medium))
                         .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
-                        .symbolEffect(.pulse, isActive: isActive)
+                        .symbolEffect(.pulse, isActive: isActive && !reduceMotion)
 
                     Text(isActive ? "Set a trigger key…" : "None")
                         .foregroundStyle(isActive ? Color.primary : Color.secondary)
@@ -94,9 +95,9 @@ struct TriggerKeycorder: View {
                 .padding(.horizontal, 12)
             }
         }
-        .modifier(ShakeEffect(shakes: shouldShake ? 2 : 0))
-        .animation(.easeInOut(duration: 0.20), value: sideDependentTriggerKey)
-        .animation(Animation.default, value: shouldShake)
+        .modifier(ShakeEffect(shakes: reduceMotion ? 0 : (shouldShake ? 2 : 0)))
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.20), value: sideDependentTriggerKey)
+        .animation(reduceMotion ? nil : .default, value: shouldShake)
         .popover(isPresented: $tooManyKeysPopup, arrowEdge: .bottom) {
             Text("You can only use up to \(keyLimit) keys in your trigger key.")
                 .font(.caption)

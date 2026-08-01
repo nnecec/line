@@ -11,6 +11,7 @@ import SwiftUI
 /// Compact window preview that mirrors runtime `PreviewView` chrome on a desktop stage.
 struct CompactWindowPreview: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var accentColorController: AccentColorController = .shared
 
@@ -33,14 +34,14 @@ struct CompactWindowPreview: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Window preview style")
-        .animation(.snappy(duration: 0.2), value: borderStyle)
-        .animation(.snappy(duration: 0.2), value: glassStyle)
-        .animation(.snappy(duration: 0.2), value: blurEnabled)
-        .animation(.snappy(duration: 0.2), value: previewPadding)
-        .animation(.snappy(duration: 0.2), value: previewCornerRadius)
-        .animation(.snappy(duration: 0.2), value: previewBorderThickness)
-        .animation(.snappy(duration: 0.2), value: accentOpacity)
-        .animation(.snappy(duration: 0.2), value: accentColorMode)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: borderStyle)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: glassStyle)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: blurEnabled)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: previewPadding)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: previewCornerRadius)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: previewBorderThickness)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: accentOpacity)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: accentColorMode)
     }
 
     private var usesGlass: Bool {

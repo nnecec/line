@@ -19,10 +19,20 @@
 //  - 无法完全 mock CoreGraphics API
 //
 
-import XCTest
 @testable import Line
+import XCTest
 
 final class WindowEngineTests: XCTestCase {
+    func testResizeCancellationIsPropagatedToCaller() {
+        XCTAssertThrowsError(
+            try WindowEngine.frameAfterResizeError(
+                CancellationError(),
+                currentFrame: CGRect(x: 10, y: 20, width: 300, height: 200)
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+    }
 
     // MARK: - anchoredFrame Tests (纯几何计算)
 

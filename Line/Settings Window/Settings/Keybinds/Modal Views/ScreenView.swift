@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ScreenView<Content>: View where Content: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isEnabled) private var isEnabled
     @ObservedObject private var accentColorController: AccentColorController = .shared
 
@@ -67,7 +68,7 @@ struct ScreenView<Content>: View where Content: View {
             }
 
             await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.15)) {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.15)) {
                     image = fetchedImage
                 }
             }

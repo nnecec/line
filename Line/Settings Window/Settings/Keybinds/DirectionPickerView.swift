@@ -12,11 +12,16 @@ struct DirectionPickerView: View {
     @State private var searchResults: [WindowDirection] = []
     @State private var arrowSelection: WindowDirection?
     @FocusState private var isSearchFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @Binding private var direction: WindowDirection
     @Binding private var isPresented: Bool
     private let isInCycle: Bool
     private let eventMonitorID = "keybindDirectionPicker"
+
+    private var isSearching: Bool {
+        !searchText.isEmpty
+    }
 
     private var sections: [DirectionPickerSection] {
         DirectionPickerSection.windowDirections
@@ -38,7 +43,7 @@ struct DirectionPickerView: View {
     }
 
     private var displayedItems: [WindowDirection] {
-        searchResults.isEmpty ? sectionItems + moreSection.items : searchResults
+        isSearching ? searchResults : sectionItems + moreSection.items
     }
 
     init(direction: Binding<WindowDirection>, isInCycle: Bool, isPresented: Binding<Bool>) {
@@ -71,8 +76,16 @@ struct DirectionPickerView: View {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
                     LazyVStack(alignment: .leading, spacing: 3) {
-                        if searchResults.isEmpty {
+                        if !isSearching {
                             sectionsView
+                        } else if searchResults.isEmpty {
+                            ContentUnavailableView {
+                                Label("No matching actions", systemImage: "magnifyingglass")
+                            } description: {
+                                Text("Try a different search term.")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 36)
                         } else {
                             searchResultsView
                         }
@@ -141,19 +154,10 @@ struct DirectionPickerView: View {
             return
         }
 
-        let key = searchText.lowercased()
-
-        let matches = sectionItems
-            .compactMap { item -> (WindowDirection, Int)? in
-                if let score = fuzzyScore(item.name, key) {
-                    return (item, score)
-                }
-                return nil
-            }
-            .sorted { $0.1 < $1.1 }
-            .map(\.0)
-
-        searchResults = matches + moreSection.items
+        searchResults = DirectionPickerSearchPolicy.results(
+            for: searchText,
+            in: sectionItems + moreSection.items
+        )
     }
 
     private func setupEventMonitor(proxy: ScrollViewProxy) {
@@ -191,8 +195,12 @@ struct DirectionPickerView: View {
         let newSelection = items[nextIndex]
         arrowSelection = newSelection
 
-        withAnimation(.easeInOut(duration: 0.15)) {
+        if reduceMotion {
             proxy.scrollTo(newSelection, anchor: .center)
+        } else {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                proxy.scrollTo(newSelection, anchor: .center)
+            }
         }
     }
 
@@ -200,37 +208,6 @@ struct DirectionPickerView: View {
         direction = item
         isPresented = false
         PickerListEventMonitorManager.shared.removeMonitor(for: eventMonitorID)
-    }
-
-    private func fuzzyScore(_ text: String, _ pattern: String) -> Int? {
-        let text = text.lowercased()
-        let pattern = pattern.lowercased()
-
-        // Strong prefix match
-        if text.hasPrefix(pattern) {
-            return 0
-        }
-
-        // Contains substring
-        if text.contains(pattern) {
-            return 1
-        }
-
-        // Subsequence fuzzy match (letters appear in order)
-        var tIndex = text.startIndex
-        var pIndex = pattern.startIndex
-        while tIndex < text.endIndex, pIndex < pattern.endIndex {
-            if text[tIndex] == pattern[pIndex] {
-                pIndex = text.index(after: pIndex)
-            }
-            tIndex = text.index(after: tIndex)
-        }
-
-        if pIndex == pattern.endIndex {
-            return 2
-        }
-
-        return nil
     }
 }
 
@@ -240,6 +217,7 @@ private struct DirectionPickerRow: View {
     let select: () -> ()
 
     @State private var isHovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let cornerRadius: CGFloat = 8
 
@@ -259,7 +237,9 @@ private struct DirectionPickerRow: View {
                     Image(systemName: "checkmark")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.accentColor)
-                        .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                        .transition(
+                            reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.85))
+                        )
                 }
             }
             .padding(.horizontal, 8)
@@ -275,8 +255,8 @@ private struct DirectionPickerRow: View {
             RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                 .strokeBorder(borderColor, lineWidth: 1)
         }
-        .animation(.snappy(duration: 0.14), value: isHighlighted)
-        .animation(.snappy(duration: 0.12), value: isHovering)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.14), value: isHighlighted)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.12), value: isHovering)
         .onHover { isHovering = $0 }
     }
 

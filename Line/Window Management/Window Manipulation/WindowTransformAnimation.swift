@@ -7,6 +7,29 @@
 
 import SwiftUI
 
+@MainActor
+final class WindowTransformAnimationCancellationController {
+    private var animation: WindowTransformAnimation?
+    private var isCancelled = false
+
+    /// Registers the task's animation and reports whether it should be started.
+    func register(_ animation: WindowTransformAnimation) -> Bool {
+        self.animation = animation
+
+        guard !isCancelled else {
+            animation.cancel()
+            return false
+        }
+
+        return true
+    }
+
+    func cancel() {
+        isCancelled = true
+        animation?.cancel()
+    }
+}
+
 private enum ResizeAnimationConstraint {
     case none
     case fixedAxes(width: Bool, height: Bool)
@@ -85,24 +108,22 @@ final class WindowTransformAnimation: NSAnimation {
 
     override func stop() {
         super.stop()
-        Self.activeAnimationByWindow[window.cgWindowID] = nil
-
-        if !didCallCompletionHandler {
-            completionHandler(nil)
-        }
-
-        didCallCompletionHandler = true
+        finish(with: nil)
     }
 
     func cancel() {
         super.stop()
-        Self.activeAnimationByWindow[window.cgWindowID] = nil
+        finish(with: CancellationError())
+    }
 
-        if !didCallCompletionHandler {
-            completionHandler(CancellationError())
+    private func finish(with error: Error?) {
+        if Self.activeAnimationByWindow[window.cgWindowID] === self {
+            Self.activeAnimationByWindow.removeValue(forKey: window.cgWindowID)
         }
 
+        guard !didCallCompletionHandler else { return }
         didCallCompletionHandler = true
+        completionHandler(error)
     }
 
     override var currentProgress: NSAnimation.Progress {

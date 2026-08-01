@@ -10,6 +10,7 @@ import SwiftUI
 
 struct CustomActionConfigurationView: View {
     @Environment(\.settingsWindowProvider) private var settingsWindowProvider
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var windowAction: WindowAction
     @Binding var isPresented: Bool
 
@@ -51,12 +52,12 @@ struct CustomActionConfigurationView: View {
         return anchor == .center || anchor == .macOSCenter
     }
 
-    private var configurationScreen: NSScreen {
-        settingsWindowProvider.window?.screen ?? NSScreen.main ?? NSScreen.screens[0]
+    private var configurationScreen: NSScreen? {
+        settingsWindowProvider.window?.screen ?? NSScreen.main ?? NSScreen.screens.first
     }
 
     private var configurationScreenSize: CGSize {
-        configurationScreen.frame.size
+        configurationScreen?.frame.size ?? .zero
     }
 
     private let previewController = PreviewController()
@@ -123,7 +124,7 @@ struct CustomActionConfigurationView: View {
                 sizeConfiguration()
             }
         }
-        .animation(keybindConfigurationAnimation, value: customAction?.unit)
+        .animation(reduceMotion ? nil : keybindConfigurationAnimation, value: customAction?.unit)
         .onAppear {
             // Ensure we have a custom action with default values
             if case let .custom(custom) = action {
@@ -212,7 +213,7 @@ struct CustomActionConfigurationView: View {
     }
 
     private func tabPicker() -> some View {
-        Picker("Configuration", selection: $currentTab.animation(keybindConfigurationAnimation)) {
+        Picker("Configuration", selection: $currentTab.animation(reduceMotion ? nil : keybindConfigurationAnimation)) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Label {
                     Text(tab.rawValue)
@@ -314,6 +315,7 @@ struct CustomActionConfigurationView: View {
                         maximumDistance: .infinity,
                         pressing: { pressing in
                             if pressing {
+                                guard let configurationScreen else { return }
                                 let context = ResizeContext(screen: configurationScreen)
                                 context.setAction(to: BoundWindowAction(action: action, keybind: []), parent: nil)
                                 previewController.open(context: context)
@@ -346,7 +348,7 @@ struct CustomActionConfigurationView: View {
                     customAction?.positionMode == .coordinates
                 },
                 set: { newValue in
-                    withAnimation(keybindConfigurationAnimation) {
+                    withAnimation(reduceMotion ? nil : keybindConfigurationAnimation) {
                         if case let .custom(custom) = action {
                             action = .custom(WindowAction.CustomWindowAction(
                                 name: custom.name,
@@ -378,7 +380,7 @@ struct CustomActionConfigurationView: View {
                         return anchor
                     },
                     set: { newValue in
-                        withAnimation(keybindConfigurationAnimation) {
+                        withAnimation(reduceMotion ? nil : keybindConfigurationAnimation) {
                             if case let .custom(custom) = action {
                                 action = .custom(WindowAction.CustomWindowAction(
                                     name: custom.name,
@@ -499,7 +501,7 @@ struct CustomActionConfigurationView: View {
                     customAction?.sizeMode ?? .custom
                 },
                 set: { newValue in
-                    withAnimation(keybindConfigurationAnimation) {
+                    withAnimation(reduceMotion ? nil : keybindConfigurationAnimation) {
                         if case let .custom(custom) = action {
                             action = .custom(WindowAction.CustomWindowAction(
                                 name: custom.name,

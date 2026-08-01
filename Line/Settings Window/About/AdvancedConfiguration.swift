@@ -46,11 +46,11 @@ final class AdvancedConfigurationModel: ObservableObject {
     }
 
     /// Prompts the user to import keybinds from a file.
-    func importPrompt() {
+    func importPrompt(reduceMotion: Bool) {
         Task {
             do {
                 try await Migrator.importPrompt {
-                    showSuccessIndicator(\.showImportKeybindsSuccessIndicator)
+                    showSuccessIndicator(\.showImportKeybindsSuccessIndicator, reduceMotion: reduceMotion)
                 }
             } catch {
                 log.error("Error importing keybinds: \(ApplicationLogPrivacy.errorDescription(error))")
@@ -59,11 +59,11 @@ final class AdvancedConfigurationModel: ObservableObject {
     }
 
     /// Prompts the user to export keybinds to a file.
-    func exportPrompt() {
+    func exportPrompt(reduceMotion: Bool) {
         Task {
             do {
                 try await Migrator.exportPrompt {
-                    showSuccessIndicator(\.showExportKeybindsSuccessIndicator)
+                    showSuccessIndicator(\.showExportKeybindsSuccessIndicator, reduceMotion: reduceMotion)
                 }
             } catch {
                 log.error("Error exporting keybinds: \(ApplicationLogPrivacy.errorDescription(error))")
@@ -72,20 +72,23 @@ final class AdvancedConfigurationModel: ObservableObject {
     }
 
     /// Resets keybinds to default values.
-    func resetKeybinds() {
+    func resetKeybinds(reduceMotion: Bool) {
         Defaults.reset(.keybinds)
-        showSuccessIndicator(\.showResetKeybindsSuccessIndicator)
+        showSuccessIndicator(\.showResetKeybindsSuccessIndicator, reduceMotion: reduceMotion)
     }
 
-    private func showSuccessIndicator(_ keyPath: ReferenceWritableKeyPath<AdvancedConfigurationModel, Bool>) {
+    private func showSuccessIndicator(
+        _ keyPath: ReferenceWritableKeyPath<AdvancedConfigurationModel, Bool>,
+        reduceMotion: Bool
+    ) {
         Task {
-            withAnimation(.smooth(duration: 0.5)) {
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.5)) {
                 self[keyPath: keyPath] = true
             }
 
             try? await Task.sleep(for: .seconds(2))
 
-            withAnimation(.smooth(duration: 0.5)) {
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.5)) {
                 self[keyPath: keyPath] = false
             }
         }
@@ -93,6 +96,7 @@ final class AdvancedConfigurationModel: ObservableObject {
 }
 
 struct AdvancedConfigurationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
 
     @StateObject private var model = AdvancedConfigurationModel()
@@ -183,14 +187,14 @@ struct AdvancedConfigurationView: View {
                     "Import",
                     systemImage: "square.and.arrow.down",
                     showsSuccessIndicator: model.showImportKeybindsSuccessIndicator,
-                    action: model.importPrompt
+                    action: { model.importPrompt(reduceMotion: reduceMotion) }
                 )
 
                 keybindsButton(
                     "Export",
                     systemImage: "square.and.arrow.up",
                     showsSuccessIndicator: model.showExportKeybindsSuccessIndicator,
-                    action: model.exportPrompt
+                    action: { model.exportPrompt(reduceMotion: reduceMotion) }
                 )
 
                 Button(role: .destructive) {
@@ -207,7 +211,9 @@ struct AdvancedConfigurationView: View {
             .controlSize(.large)
             .alert("Reset keybinds?", isPresented: $isConfirmingResetKeybinds) {
                 Button("Cancel", role: .cancel) {}
-                Button("Reset", role: .destructive, action: model.resetKeybinds)
+                Button("Reset", role: .destructive) {
+                    model.resetKeybinds(reduceMotion: reduceMotion)
+                }
             } message: {
                 Text("This will reset all keybinds to their original defaults.")
             }
@@ -263,13 +269,14 @@ struct AdvancedConfigurationView: View {
                     Image(systemName: "checkmark")
                         .foregroundStyle(.green)
                         .bold()
-                        .transition(.opacity.combined(with: .scale(scale: 0.25)))
+                        .transition(
+                            reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.25))
+                        )
                 }
             }
-            .animation(.easeOut(duration: 0.3), value: showsSuccessIndicator)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.3), value: showsSuccessIndicator)
         } icon: {
             Image(systemName: systemImage)
         }
     }
 }
-

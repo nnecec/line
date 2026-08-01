@@ -9,6 +9,7 @@ import Defaults
 import SwiftUI
 
 struct BehaviorConfigurationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Default(.launchAtLogin) var launchAtLogin
     @Default(.hideMenuBarIcon) var hideMenuBarIcon
     @Default(.showDockIcon) var showDockIcon
@@ -64,7 +65,7 @@ struct BehaviorConfigurationView: View {
         }
         .settingsFormPanel()
         .animation(
-            .default,
+            reduceMotion ? nil : .default,
             value: [
                 previewVisibility,
                 resizeWindowUnderCursor,
@@ -298,4 +299,3 @@ struct BehaviorConfigurationView: View {
         }
     }
 }
-

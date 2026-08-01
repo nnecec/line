@@ -94,8 +94,9 @@ enum WindowEngine {
                     resolvedProperties: context.resolvedWindowProperties
                 )
             } catch {
+                let fallbackFrame = try frameAfterResizeError(error, currentFrame: window.frame)
                 log.error(ApplicationLogPrivacy.errorDescription(error))
-                finalFrame = window.frame
+                finalFrame = fallbackFrame
             }
 
             if Defaults[.moveCursorWithWindow] {
@@ -163,6 +164,15 @@ enum WindowEngine {
     }
 
     // MARK: - Animation Checks
+
+    /// Cancellation means a newer action has superseded this resize. Propagating it
+    /// prevents the caller from committing post-resize history for an intermediate frame.
+    static func frameAfterResizeError(_ error: Error, currentFrame: CGRect) throws -> CGRect {
+        if error is CancellationError {
+            throw error
+        }
+        return currentFrame
+    }
 
     private static func shouldAnimateResize(
         for window: Window,

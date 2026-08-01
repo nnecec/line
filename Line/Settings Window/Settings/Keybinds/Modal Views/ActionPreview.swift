@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ActionPreview: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var accentColorController: AccentColorController = .shared
     @Default(.accentColorMode) private var accentColorMode
 
@@ -22,7 +23,7 @@ struct ActionPreview: View {
             blurredWindow()
                 .frame(width: frame.width, height: frame.height)
                 .offset(x: frame.minX, y: frame.minY)
-                .animation(.easeInOut(duration: 0.20), value: frame)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.20), value: frame)
         }
     }
 

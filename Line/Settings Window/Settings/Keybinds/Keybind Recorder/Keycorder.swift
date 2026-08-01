@@ -12,6 +12,7 @@ import SwiftUI
 struct Keycorder: View {
     @EnvironmentObject private var model: KeybindsConfigurationModel
     @Environment(\.appearsActive) private var appearsActive
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let keyLimit: Int = 6
 
@@ -104,8 +105,8 @@ struct Keycorder: View {
                 .contentShape(.rect)
             }
         }
-        .modifier(ShakeEffect(shakes: shouldShake ? 2 : 0))
-        .animation(Animation.default, value: shouldShake)
+        .modifier(ShakeEffect(shakes: reduceMotion ? 0 : (shouldShake ? 2 : 0)))
+        .animation(reduceMotion ? nil : .default, value: shouldShake)
         .popover(isPresented: $shouldError, arrowEdge: .bottom) {
             Text(errorMessage)
                 .font(.caption)

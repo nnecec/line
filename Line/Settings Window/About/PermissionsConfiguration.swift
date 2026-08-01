@@ -35,6 +35,7 @@ final class PermissionsConfigurationModel: ObservableObject {
 }
 
 struct PermissionsConfigurationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var model = PermissionsConfigurationModel()
 
     var body: some View {
@@ -48,7 +49,7 @@ struct PermissionsConfigurationView: View {
             privacySection
         }
         .settingsFormPanel()
-        .animation(.snappy(duration: 0.22), value: model.isAccessibilityAccessGranted)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: model.isAccessibilityAccessGranted)
         .onAppear(perform: model.startTracking)
         .onDisappear(perform: model.stopTracking)
     }

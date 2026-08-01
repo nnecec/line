@@ -9,6 +9,7 @@ import Defaults
 import SwiftUI
 
 struct PaddingConfigurationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Default(.enablePadding) private var enablePadding
 
     @State private var paddingModel = Defaults[.padding]
@@ -163,7 +164,7 @@ struct PaddingConfigurationView: View {
         Binding {
             paddingModel.configureScreenPadding
         } set: { newValue in
-            withAnimation(.default) {
+            withAnimation(reduceMotion ? nil : .default) {
                 paddingModel.configureScreenPadding = newValue
 
                 if !paddingModel.configureScreenPadding {

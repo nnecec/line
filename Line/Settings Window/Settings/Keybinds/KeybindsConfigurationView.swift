@@ -8,6 +8,7 @@
 import Defaults
 import SwiftUI
 
+@MainActor
 final class KeybindsConfigurationModel: ObservableObject {
     @Published var currentEventMonitor: LocalEventMonitor?
     @Published var selectedKeybinds = Set<BoundWindowAction>()
@@ -16,6 +17,7 @@ final class KeybindsConfigurationModel: ObservableObject {
 
 struct KeybindsConfigurationView: View {
     @EnvironmentObject private var settingsState: SettingsState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var model = KeybindsConfigurationModel()
 
     @Default(.triggerKey) private var triggerKey
@@ -82,7 +84,7 @@ struct KeybindsConfigurationView: View {
         }
         .settingsFormPanel(maxWidth: 560)
         .animation(
-            .default,
+            reduceMotion ? nil : .default,
             value: [
                 showMiddleClickTriggerDelayOption,
                 cycleModeRestartEnabled,
@@ -277,4 +279,3 @@ struct KeybindsConfigurationView: View {
         }
     }
 }
-

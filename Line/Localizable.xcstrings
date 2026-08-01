@@ -3449,10 +3449,36 @@
       }
     },
     "Move selected cycle item down." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move selected cycle item down."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向下移动选中的循环操作。"
+          }
+        }
+      }
     },
     "Move selected cycle item up." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move selected cycle item up."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向上移动选中的循环操作。"
+          }
+        }
+      }
     },
     "Move Up" : {
       "comment" : "Window action\nWindow action name",
@@ -3604,6 +3630,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无快捷键"
+          }
+        }
+      }
+    },
+    "No matching actions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No matching actions"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有匹配的动作"
           }
         }
       }
@@ -5847,6 +5889,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "顶部"
+          }
+        }
+      }
+    },
+    "Try a different search term." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try a different search term."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请尝试其他搜索词。"
           }
         }
       }

@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct KeybindItemView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var action: BoundWindowAction
     @Binding private var boundAction: BoundWindowAction
 
@@ -66,6 +67,7 @@ struct KeybindItemView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Customize this action's custom frame.")
                     .sheet(isPresented: $isConfiguringCustom) {
                         if case .custom = action.action {
                             CustomActionConfigurationView(
@@ -99,6 +101,7 @@ struct KeybindItemView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Customize what this action cycles through.")
                     .sheet(isPresented: $isConfiguringCycle) {
                         CycleActionConfigurationView(
                             action: Binding(
@@ -151,7 +154,9 @@ struct KeybindItemView: View {
                     if hasDuplicateKeybinds {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)
-                            .transition(.opacity.combined(with: .scale(scale: 0.25)))
+                            .transition(
+                                reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.25))
+                            )
                             .help("There are other keybinds that conflict with this key combination.")
                     }
                 }
@@ -281,6 +286,7 @@ struct KeybindKeyCapStyle: ViewModifier {
 }
 
 struct KeybindButtonSurfaceStyle: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isHovering = false
     @State private var isPressed = false
 
@@ -292,8 +298,8 @@ struct KeybindButtonSurfaceStyle: ViewModifier {
                         isPressed
                             ? Color.secondary.opacity(0.14)
                             : isHovering
-                                ? Color.secondary.opacity(0.10)
-                                : Color.clear
+                            ? Color.secondary.opacity(0.10)
+                            : Color.clear
                     )
             }
             .overlay {
@@ -305,8 +311,8 @@ struct KeybindButtonSurfaceStyle: ViewModifier {
             }
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .scaleEffect(isPressed ? 0.98 : 1)
-            .animation(.snappy(duration: 0.16), value: isHovering)
-            .animation(.snappy(duration: 0.12), value: isPressed)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.16), value: isHovering)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.12), value: isPressed)
             .onHover { isHovering = $0 }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)

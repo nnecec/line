@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 struct StashActionConfigurationView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var windowAction: WindowAction
     @Binding var isPresented: Bool
 
@@ -61,7 +62,6 @@ struct StashActionConfigurationView: View {
     }
 
     private let previewController = PreviewController()
-    private let screenSize: CGSize = NSScreen.main?.frame.size ?? NSScreen.screens[0].frame.size
 
     init(action: Binding<WindowAction>, isPresented: Binding<Bool>) {
         _windowAction = action
@@ -109,11 +109,11 @@ struct StashActionConfigurationView: View {
                 sizeConfiguration()
             }
         }
-        .animation(keybindConfigurationAnimation, value: actionUnit)
+        .animation(reduceMotion ? nil : keybindConfigurationAnimation, value: actionUnit)
     }
 
     private func tabPicker() -> some View {
-        Picker("Configuration", selection: $currentTab.animation(keybindConfigurationAnimation)) {
+        Picker("Configuration", selection: $currentTab.animation(reduceMotion ? nil : keybindConfigurationAnimation)) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Label {
                     Text(tab.rawValue)
