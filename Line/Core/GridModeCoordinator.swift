@@ -31,8 +31,13 @@ final class GridModeCoordinator {
     private var gridContext: GridContext?
     /// Latest hover Prepared Resize; commit applies this snapshot (release-style).
     private var hoverPreparedResize: WindowResizeExecution.PreparedResize?
+    /// Kept while a committed resize is awaiting application so lifecycle cleanup can still identify its owner.
+    private var applyingProcessIdentifier: pid_t?
 
     private(set) var isActive: Bool = false
+    var targetProcessIdentifier: pid_t? {
+        gridContext?.window?.pid ?? applyingProcessIdentifier
+    }
 
     // MARK: - Initialization
 
@@ -73,7 +78,14 @@ final class GridModeCoordinator {
         let configManager = GridConfigurationManager.shared
         let template = configManager.template(for: screen)
         let bundleId = window?.nsRunningApplication?.bundleIdentifier
-        let rememberedSize = configManager.rememberedSize(bundleId: bundleId, screen: screen)
+        let windowIdentity = window.map {
+            GridWindowIdentity(processIdentifier: $0.pid, windowID: $0.cgWindowID)
+        }
+        let rememberedSize = configManager.rememberedSize(
+            bundleId: bundleId,
+            windowIdentity: windowIdentity,
+            screen: screen
+        )
 
         // Create grid geometry centered at the trigger position
         let displayBounds = GridGeometry.thumbnailBounds(
@@ -210,11 +222,14 @@ final class GridModeCoordinator {
     ) async {
         // Prefer the hover snapshot so preview and commit match; rebuild only if missing.
         let preparedResize = hoverPreparedResize ?? context.preparePreview(for: region)
+        let memorySessionGeneration = GridConfigurationManager.shared.sessionGeneration
+        applyingProcessIdentifier = context.window?.pid
+        defer { applyingProcessIdentifier = nil }
 
         // Close overlay immediately
         close(reason: .committed)
 
-        guard context.window != nil else {
+        guard let targetWindow = context.window else {
             log.warn("No target window for grid layout")
             return
         }
@@ -226,13 +241,30 @@ final class GridModeCoordinator {
                 log.info("Grid layout applied successfully")
 
                 // Save memory on success
-                if shouldSaveMemory, let memorySize {
+                let configManager = GridConfigurationManager.shared
+                let targetApplication = targetWindow.nsRunningApplication
+                    ?? NSRunningApplication(processIdentifier: targetWindow.pid)
+                let canSaveMemory = GridMemoryLifecyclePolicy.shouldSaveAfterSuccessfulApply(
+                    requested: shouldSaveMemory,
+                    hasMemorySize: memorySize != nil,
+                    isAccessibilityGranted: AccessibilityManager.shared.isGranted,
+                    isTargetApplicationRunning: targetApplication?.isTerminated == false,
+                    isSessionGenerationCurrent: configManager.isCurrentSessionGeneration(memorySessionGeneration)
+                )
+
+                if canSaveMemory, let memorySize {
                     GridConfigurationManager.shared.saveSize(
                         memorySize,
                         bundleId: context.bundleId,
+                        windowIdentity: GridWindowIdentity(
+                            processIdentifier: targetWindow.pid,
+                            windowID: targetWindow.cgWindowID
+                        ),
                         screen: context.screen
                     )
                     log.info("Saved grid memory: \(memorySize)")
+                } else if shouldSaveMemory {
+                    log.info("Skipped grid memory save because the window session is no longer valid")
                 }
             } else {
                 log.warn("Grid layout apply returned didApply=false")

@@ -12,8 +12,12 @@ import Defaults
 import Foundation
 
 /// Manages grid configuration: templates per screen and size memory per app+screen.
+@MainActor
 final class GridConfigurationManager {
     static let shared = GridConfigurationManager()
+    private var windowMemory = GridWindowMemoryStore()
+    private(set) var sessionGeneration: UInt = 0
+
     private init() {}
 
     // MARK: - Template Management
@@ -72,6 +76,25 @@ final class GridConfigurationManager {
         return stored.clamped(to: template)
     }
 
+    /// Get remembered size for a concrete window, with persistent app memory as fallback.
+    func rememberedSize(
+        bundleId: String?,
+        windowIdentity: GridWindowIdentity?,
+        screen: NSScreen
+    ) -> GridSize {
+        if let windowIdentity {
+            let key = GridWindowMemoryKey(
+                identity: windowIdentity,
+                screenIdentifier: screen.gridIdentifier
+            )
+            if let stored = windowMemory.size(for: key) {
+                return stored.clamped(to: template(for: screen))
+            }
+        }
+
+        return rememberedSize(bundleId: bundleId, screen: screen)
+    }
+
     /// Save size memory for an app on a screen.
     /// Does nothing if bundleId is nil.
     func saveSize(_ size: GridSize, bundleId: String?, screen: NSScreen) {
@@ -83,6 +106,26 @@ final class GridConfigurationManager {
         var memory = Defaults[.gridMemory]
         memory[key.storageKey] = size
         Defaults[.gridMemory] = memory
+    }
+
+    /// Save both the current window's session override and the app's persistent fallback.
+    func saveSize(
+        _ size: GridSize,
+        bundleId: String?,
+        windowIdentity: GridWindowIdentity?,
+        screen: NSScreen
+    ) {
+        let clampedSize = size.clamped(to: template(for: screen))
+
+        if let windowIdentity {
+            let key = GridWindowMemoryKey(
+                identity: windowIdentity,
+                screenIdentifier: screen.gridIdentifier
+            )
+            windowMemory.save(clampedSize, for: key)
+        }
+
+        saveSize(clampedSize, bundleId: bundleId, screen: screen)
     }
 
     /// Clear all grid size memory.
@@ -109,5 +152,30 @@ final class GridConfigurationManager {
             return parsed.screenIdentifier != identifier
         }
         Defaults[.gridMemory] = memory
+    }
+
+    /// Clear selected persistent app+screen records. Session overrides remain active.
+    func clearMemory(for keys: Set<GridMemoryKey>) {
+        var memory = Defaults[.gridMemory]
+        for key in keys {
+            memory.removeValue(forKey: key.storageKey)
+        }
+        Defaults[.gridMemory] = memory
+    }
+
+    /// Clear every window-specific override for this Line session.
+    func clearAllSessionMemory() {
+        windowMemory.removeAll()
+        sessionGeneration &+= 1
+    }
+
+    /// Check whether no full-session reset occurred since a grid apply began.
+    func isCurrentSessionGeneration(_ generation: UInt) -> Bool {
+        sessionGeneration == generation
+    }
+
+    /// Clear window-specific overrides for an application that terminated.
+    func clearSessionMemory(forProcessIdentifier processIdentifier: pid_t) {
+        windowMemory.removeAll(processIdentifier: processIdentifier)
     }
 }

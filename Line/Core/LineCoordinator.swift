@@ -107,6 +107,7 @@ final class LineCoordinator {
     )
 
     private var accessibilityCheckerTask: Task<(), Never>?
+    private var applicationTerminationTask: Task<(), Never>?
 
     /// Opening bootstraps Prepared Resize asynchronously. We track that setup separately
     /// so rapid trigger events cannot act on the previous/default context.
@@ -158,6 +159,8 @@ final class LineCoordinator {
     }
 
     func start() {
+        startApplicationTerminationMonitoring()
+
         accessibilityCheckerTask = Task(priority: .background) { [weak self] in
             for await status in AccessibilityManager.shared.stream(initial: true) {
                 guard let self, !Task.isCancelled else {
@@ -167,7 +170,13 @@ final class LineCoordinator {
                 if status {
                     await triggerCoordinator.setup()
                 } else {
+                    GridConfigurationManager.shared.clearAllSessionMemory()
+                    if gridModeCoordinator.isActive {
+                        gridModeCoordinator.close(reason: .cancelled)
+                    }
                     triggerCoordinator.teardown()
+                    triggerKeyTimeoutTimer.cancel()
+                    isLineActive = false
                 }
             }
         }
@@ -176,6 +185,13 @@ final class LineCoordinator {
     func shutdown() {
         accessibilityCheckerTask?.cancel()
         accessibilityCheckerTask = nil
+        applicationTerminationTask?.cancel()
+        applicationTerminationTask = nil
+
+        if gridModeCoordinator.isActive {
+            gridModeCoordinator.close(reason: .cancelled)
+        }
+        GridConfigurationManager.shared.clearAllSessionMemory()
 
         indicatorService.closeAll()
 
@@ -186,6 +202,42 @@ final class LineCoordinator {
         pendingOpeningAction = nil
         shouldCancelOpening = false
         isLineActive = false
+    }
+
+    private func startApplicationTerminationMonitoring() {
+        applicationTerminationTask?.cancel()
+        applicationTerminationTask = Task { [weak self] in
+            let notifications = NSWorkspace.shared.notificationCenter.notifications(
+                named: NSWorkspace.didTerminateApplicationNotification
+            )
+
+            for await notification in notifications {
+                guard self != nil, !Task.isCancelled else { return }
+                guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+                    as? NSRunningApplication
+                else {
+                    continue
+                }
+
+                GridConfigurationManager.shared.clearSessionMemory(
+                    forProcessIdentifier: application.processIdentifier
+                )
+
+                guard GridMemoryLifecyclePolicy.shouldCancelGrid(
+                    targetProcessIdentifier: gridModeCoordinator.targetProcessIdentifier,
+                    terminatedProcessIdentifier: application.processIdentifier
+                ) else {
+                    continue
+                }
+
+                if isLineOpening {
+                    shouldCancelOpening = true
+                }
+                gridModeCoordinator.close(reason: .cancelled)
+                triggerKeyTimeoutTimer.cancel()
+                isLineActive = false
+            }
+        }
     }
 }
 

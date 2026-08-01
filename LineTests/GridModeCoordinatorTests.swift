@@ -41,6 +41,69 @@ final class GridModeCoordinatorTests: XCTestCase {
         XCTAssertLessThanOrEqual(interval, .milliseconds(32))
     }
 
+    // MARK: - Grid Memory Lifecycle Policy
+
+    func testGridMemorySaveRequiresLivePermissionApplicationAndSession() {
+        XCTAssertTrue(
+            GridMemoryLifecyclePolicy.shouldSaveAfterSuccessfulApply(
+                requested: true,
+                hasMemorySize: true,
+                isAccessibilityGranted: true,
+                isTargetApplicationRunning: true,
+                isSessionGenerationCurrent: true
+            )
+        )
+
+        XCTAssertFalse(
+            GridMemoryLifecyclePolicy.shouldSaveAfterSuccessfulApply(
+                requested: true,
+                hasMemorySize: true,
+                isAccessibilityGranted: false,
+                isTargetApplicationRunning: true,
+                isSessionGenerationCurrent: true
+            )
+        )
+        XCTAssertFalse(
+            GridMemoryLifecyclePolicy.shouldSaveAfterSuccessfulApply(
+                requested: true,
+                hasMemorySize: true,
+                isAccessibilityGranted: true,
+                isTargetApplicationRunning: false,
+                isSessionGenerationCurrent: true
+            )
+        )
+        XCTAssertFalse(
+            GridMemoryLifecyclePolicy.shouldSaveAfterSuccessfulApply(
+                requested: true,
+                hasMemorySize: true,
+                isAccessibilityGranted: true,
+                isTargetApplicationRunning: true,
+                isSessionGenerationCurrent: false
+            )
+        )
+    }
+
+    func testTerminatedProcessOnlyCancelsItsOwnGrid() {
+        XCTAssertTrue(
+            GridMemoryLifecyclePolicy.shouldCancelGrid(
+                targetProcessIdentifier: 42,
+                terminatedProcessIdentifier: 42
+            )
+        )
+        XCTAssertFalse(
+            GridMemoryLifecyclePolicy.shouldCancelGrid(
+                targetProcessIdentifier: 43,
+                terminatedProcessIdentifier: 42
+            )
+        )
+        XCTAssertFalse(
+            GridMemoryLifecyclePolicy.shouldCancelGrid(
+                targetProcessIdentifier: nil,
+                terminatedProcessIdentifier: 42
+            )
+        )
+    }
+
     // MARK: - State Tests
 
     func testIsActiveReturnsFalseInitially() {

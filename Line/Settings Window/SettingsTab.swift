@@ -13,6 +13,7 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
 
     case preview
     case gridLayout
+    case gridMemory
 
     case behavior
     case keybinds
@@ -26,6 +27,7 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
         switch self {
         case .preview: .init(localized: "Settings tab: Preview", defaultValue: "Preview")
         case .gridLayout: .init(localized: "Settings tab: Grid Layout", defaultValue: "Grid Layout")
+        case .gridMemory: .init(localized: "Settings tab: Grid Memory", defaultValue: "Grid Memory")
         case .behavior: .init(localized: "Settings tab: General", defaultValue: "General")
         case .keybinds: .init(localized: "Settings tab: Keyboard Shortcuts", defaultValue: "Keyboard Shortcuts")
         case .permissions: .init(localized: "Settings tab: Permissions", defaultValue: "Permissions")
@@ -39,6 +41,7 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
         switch self {
         case .preview: Image(systemName: "rectangle.dashed")
         case .gridLayout: Image(systemName: "square.grid.3x3")
+        case .gridMemory: Image(systemName: "clock.arrow.circlepath")
         case .behavior: Image(systemName: "gearshape")
         case .keybinds: Image(systemName: "keyboard")
         case .permissions: Image(systemName: "lock.shield")
@@ -62,6 +65,12 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
             } else {
                 Text("Grid layout configuration requires macOS 15.0 or later")
             }
+        case .gridMemory:
+            if #available(macOS 15.0, *) {
+                GridMemoryConfigurationView()
+            } else {
+                Text("Grid memory configuration requires macOS 15.0 or later")
+            }
         case .behavior: BehaviorConfigurationView()
         case .keybinds: KeybindsConfigurationView()
         case .permissions: PermissionsConfigurationView()
@@ -71,7 +80,7 @@ enum SettingsTab: CaseIterable, Hashable, Identifiable {
         }
     }
 
-    static let appearanceTabs: [Self] = [.preview, .gridLayout]
+    static let appearanceTabs: [Self] = [.preview, .gridLayout, .gridMemory]
     static let settingsTabs: [Self] = [.behavior, .keybinds]
     static let loopTabs: [Self] = [.permissions, .advanced, .excludedApps, .about]
 }

@@ -15,13 +15,11 @@ struct GridLayoutConfigurationView: View {
     @Default(.defaultGridTemplate) private var defaultTemplate
 
     @State private var connectedScreens: [NSScreen] = []
-    @State private var showClearMemoryConfirmation = false
 
     var body: some View {
         Form {
             defaultTemplateSection
             screenTemplatesSection
-            memorySection
         }
         .settingsFormPanel(maxWidth: 560)
         .onAppear(perform: refreshConnectedScreens)
@@ -75,36 +73,6 @@ struct GridLayoutConfigurationView: View {
             Text(
                 "Display settings only override the layout template. Visual styling (colors, glass effects, borders) is configured in Preview.",
                 comment: "Settings footer explaining per-display grid overrides"
-            )
-        }
-    }
-
-    // MARK: - Memory Management
-
-    private var memorySection: some View {
-        Section {
-            Button(role: .destructive) {
-                showClearMemoryConfirmation = true
-            } label: {
-                Label("Clear All Grid Size Memory", systemImage: "trash")
-            }
-            .alert("Confirm Clear", isPresented: $showClearMemoryConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Clear", role: .destructive) {
-                    GridConfigurationManager.shared.clearAllMemory()
-                }
-            } message: {
-                Text(
-                    "This clears grid size memory for every app on every display. This action cannot be undone.",
-                    comment: "Confirmation message for clearing all grid size memory"
-                )
-            }
-        } header: {
-            Text("Memory Management", comment: "Settings section header for grid memory controls")
-        } footer: {
-            Text(
-                "Grid size memory only affects the default selection size when different apps enter grid mode again.",
-                comment: "Settings footer explaining grid size memory"
             )
         }
     }

@@ -46,6 +46,8 @@ Grid overlays and window previews are auxiliary panels. They must not become the
 
 Settings keys live in `Line/Extensions/Defaults+Extensions.swift` and related extensions. SwiftUI reads them through the Defaults property wrappers. Current builds do not ship an iCloud entitlement, so settings must be treated as local even where upstream-compatible key metadata still mentions iCloud.
 
+Grid size memory has two layers. `GridConfigurationManager` persists the latest grid size for an application bundle identifier and display, which acts as the fallback for future windows. It also keeps a bounded, process-local override keyed by process identifier, `CGWindowID`, and display so separate windows from the same application can retain different grid sizes during the current Line session. Window identifiers are never persisted; session overrides are removed when the owning application terminates and cleared when Accessibility access is revoked or Line shuts down. Lookup order is window-and-display override, application-and-display fallback, then the default 1 × 1 grid.
+
 Migrations in `Line/Migration` run during application startup. A migration should be idempotent and covered by characterization tests before old storage is removed.
 
 ## Updates

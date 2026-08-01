@@ -6789,6 +6789,228 @@
           }
         }
       }
+    },
+    "Application" : {
+      "comment" : "Column title for the application associated with a remembered grid size.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Application"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用"
+          }
+        }
+      }
+    },
+    "Clear All" : {
+      "comment" : "Button that clears all persistent grid memory records.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear All"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部清除"
+          }
+        }
+      }
+    },
+    "Clear Grid Memory?" : {
+      "comment" : "Title of the confirmation alert for clearing persistent grid memory.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Grid Memory?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除网格记忆？"
+          }
+        }
+      }
+    },
+    "Clear every persistent app and display grid size? Active window choices remain until the session ends." : {
+      "comment" : "Confirmation message shown before clearing all persistent grid memory.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear every persistent app and display grid size? Active window choices remain until the session ends."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除所有应用和显示器的持久化网格尺寸？当前窗口的选择会保留到本次会话结束。"
+          }
+        }
+      }
+    },
+    "Display" : {
+      "comment" : "Column title for the display associated with a remembered grid size.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Display"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示器"
+          }
+        }
+      }
+    },
+    "Grid Size" : {
+      "comment" : "Column title for a remembered grid size.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid Size"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网格尺寸"
+          }
+        }
+      }
+    },
+    "Grid memory configuration requires macOS 15.0 or later" : {
+      "comment" : "Fallback message when the Grid Memory settings view is unavailable.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid memory configuration requires macOS 15.0 or later"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网格记忆设置需要 macOS 15.0 或更高版本"
+          }
+        }
+      }
+    },
+    "No Remembered Grid Sizes" : {
+      "comment" : "Empty-state title in Grid Memory settings.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Remembered Grid Sizes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无已记忆的网格尺寸"
+          }
+        }
+      }
+    },
+    "Persistent app and display defaults are listed here. Window-specific choices stay in memory for this Line session and reset when Line quits or Accessibility access is revoked." : {
+      "comment" : "Footer explaining persistent and session-only grid memory behavior.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persistent app and display defaults are listed here. Window-specific choices stay in memory for this Line session and reset when Line quits or Accessibility access is revoked."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此处列出应用与显示器的持久化默认值。各窗口的选择仅在本次 Line 会话中保留，并会在 Line 退出或辅助功能权限被撤销时重置。"
+          }
+        }
+      }
+    },
+    "Remembered Grid Sizes" : {
+      "comment" : "Section title for persistent grid memory records.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remembered Grid Sizes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已记忆的网格尺寸"
+          }
+        }
+      }
+    },
+    "Remove Selected" : {
+      "comment" : "Button that removes selected persistent grid memory records.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Selected"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除所选记录"
+          }
+        }
+      }
+    },
+    "Settings tab: Grid Memory" : {
+      "comment" : "Title of the Grid Memory settings tab.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid Memory"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网格记忆"
+          }
+        }
+      }
+    },
+    "Use grid mode with an app to create a persistent default." : {
+      "comment" : "Empty-state guidance in Grid Memory settings.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use grid mode with an app to create a persistent default."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在应用中使用网格模式，即可创建持久化默认值。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
