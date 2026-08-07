@@ -225,7 +225,7 @@ final class KeybindBindingPolicyTests: XCTestCase {
             existing: [existing]
         )
 
-        guard case .conflict(let displayName) = result else {
+        guard case let .conflict(displayName) = result else {
             XCTFail("Expected conflict but got \(result)")
             return
         }
@@ -247,7 +247,7 @@ final class KeybindBindingPolicyTests: XCTestCase {
             existing: [existing]
         )
 
-        guard case .conflict(let displayName) = result else {
+        guard case let .conflict(displayName) = result else {
             XCTFail("Expected conflict but got \(result)")
             return
         }

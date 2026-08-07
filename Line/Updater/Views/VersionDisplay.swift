@@ -52,7 +52,7 @@ struct VersionDisplay {
             baseVersion
         }
 
-        let fullDisplay: String = if shouldTreatAsPrerelease {
+        let fullDisplay = if shouldTreatAsPrerelease {
             "\(baseVersion) \(buildString)".trimmingCharacters(in: .whitespaces)
         } else {
             "\(baseVersion) \(buildString)".trimmingCharacters(in: .whitespaces)

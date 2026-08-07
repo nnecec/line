@@ -148,7 +148,7 @@ struct SettingsEmptyState: View {
 struct SettingsListToolbar<Trailing: View>: View {
     let onAdd: () -> ()
     var addHelp: LocalizedStringKey = "Add"
-    var addKeyboardShortcut: KeyEquivalent? = nil
+    var addKeyboardShortcut: KeyEquivalent?
     let onRemove: () -> ()
     var removeHelp: LocalizedStringKey = "Remove"
     var canRemove: Bool = true

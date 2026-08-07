@@ -5,11 +5,10 @@
 //  Tests for GridGeometry cell calculations and region mapping.
 //
 
-import XCTest
 @testable import Line
+import XCTest
 
 final class GridGeometryTests: XCTestCase {
-
     // MARK: - Basic Cell Frame Calculations
 
     func testGridCellFrameCalculation2x2() {

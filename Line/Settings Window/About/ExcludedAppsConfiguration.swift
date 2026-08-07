@@ -208,4 +208,3 @@ struct ExcludedListAppView: View, Equatable {
         }
     }
 }
-

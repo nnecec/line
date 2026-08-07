@@ -10,7 +10,6 @@ import SwiftUI
 /// Centralized utilities for window frame calculations and boundary checks.
 /// Consolidates repeated logic from CGGeometry extensions, calculators, and animation code.
 enum WindowFrameUtility {
-
     // MARK: - Tolerance Values
 
     /// Standard tolerance values for approximate equality checks
@@ -152,7 +151,7 @@ enum WindowFrameUtility {
         tolerance: CGFloat = Tolerance.default
     ) -> Bool {
         abs(from.origin.x - to.origin.x) >= tolerance ||
-        abs(from.origin.y - to.origin.y) >= tolerance
+            abs(from.origin.y - to.origin.y) >= tolerance
     }
 
     /// Checks if a frame has been resized.
@@ -168,6 +167,6 @@ enum WindowFrameUtility {
         tolerance: CGFloat = Tolerance.default
     ) -> Bool {
         abs(from.width - to.width) >= tolerance ||
-        abs(from.height - to.height) >= tolerance
+            abs(from.height - to.height) >= tolerance
     }
 }

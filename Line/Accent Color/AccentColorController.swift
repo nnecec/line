@@ -28,7 +28,7 @@ final class AccentColorController: ObservableObject {
     private var observationTask: Task<(), Never>?
 
     private init() {
-        observationTask = Task { [weak self] in
+        self.observationTask = Task { [weak self] in
             let updates = Defaults.updates(
                 .accentColorMode,
                 .customAccentColor

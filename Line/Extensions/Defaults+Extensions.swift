@@ -13,7 +13,7 @@ import SwiftUI
 // MARK: - UI-configurable Settings
 
 extension Defaults.Keys {
-    // Dock presentation
+    /// Dock presentation
     static let showDockIcon = Key<Bool>("showDockIcon", default: false)
 }
 
@@ -38,7 +38,7 @@ extension Defaults.Keys {
     static let previewGlassStyle = Key<LiquidGlassStyle>("previewGlassStyle", default: .regular)
     static let previewBorderStyle = Key<PreviewBorderStyle>("previewBorderStyle", default: .hairline)
 
-    // Glass Effect Sync (Phase 1 improvement)
+    /// Glass Effect Sync (Phase 1 improvement)
     static let syncGlassEffectSettings = Key<Bool>("syncGlassEffectSettings", default: true)
 
     // Behavior
@@ -188,9 +188,9 @@ extension Defaults.Keys {
 
     static let lastMigratorURL = Key<URL?>("lastMigratorURL", default: nil)
 
-    // StashManager
-    // Stores only WindowAction (not full BoundWindowAction) because keybinds are irrelevant
-    // to persisted window stash state. The stash edge and name are what matter for restoration.
+    /// StashManager
+    /// Stores only WindowAction (not full BoundWindowAction) because keybinds are irrelevant
+    /// to persisted window stash state. The stash edge and name are what matter for restoration.
     static let stashManagerStashedWindows = Key<[CGWindowID: String]>("stashManagerStashed", default: [:])
 
     // AccentColorController

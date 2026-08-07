@@ -305,5 +305,4 @@ final class SessionManagerTests: XCTestCase {
         )
         XCTAssertGreaterThan(restartCount, afterOpen)
     }
-
 }

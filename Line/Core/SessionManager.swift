@@ -45,7 +45,7 @@ final class SessionManager {
 
     private let windowActionCache: WindowActionCache
     private let indicatorService: WindowActionIndicatorService
-    private let onRestartTimeout: () -> Void
+    private let onRestartTimeout: () -> ()
 
     // MARK: - Internal State
 
@@ -77,7 +77,7 @@ final class SessionManager {
     init(
         windowActionCache: WindowActionCache,
         indicatorService: WindowActionIndicatorService,
-        onRestartTimeout: @escaping () -> Void = {}
+        onRestartTimeout: @escaping () -> () = {}
     ) {
         self.windowActionCache = windowActionCache
         self.indicatorService = indicatorService

@@ -204,7 +204,6 @@ final class WindowActionSessionTests: XCTestCase {
     }
 }
 
-
 private extension WindowActionSession {
     static func testSession(
         action: BoundWindowAction = BoundWindowAction(action: .special(.noSelection), keybind: []),

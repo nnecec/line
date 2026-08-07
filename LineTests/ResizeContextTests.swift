@@ -3,11 +3,10 @@
 //  LineTests
 //
 
-import XCTest
 @testable import Line
+import XCTest
 
 final class ResizeContextTests: XCTestCase {
-
     func makeTestAction(_ action: WindowAction = .standard(.maximize)) -> BoundWindowAction {
         BoundWindowAction(action: action, keybind: [])
     }

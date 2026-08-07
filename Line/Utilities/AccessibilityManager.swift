@@ -153,7 +153,6 @@ final class AccessibilityManager {
         yield(status)
         return status
     }
-
 }
 
 private extension Notification.Name {

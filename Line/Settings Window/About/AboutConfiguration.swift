@@ -255,4 +255,3 @@ struct AboutConfigurationView: View {
         }
     }
 }
-

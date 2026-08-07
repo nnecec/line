@@ -10,7 +10,6 @@ import Defaults
 /// Centralized utilities for window state validation and manipulation checks.
 /// Consolidates repeated window state logic from coordinators, managers, and utilities.
 enum WindowStateValidator {
-
     // MARK: - Manipulation Checks
 
     /// Checks if a window can be manipulated (resized, moved, etc.).

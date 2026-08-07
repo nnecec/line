@@ -27,7 +27,7 @@ final class GridMouseObserver {
     private let previewCallback: (GridRegion?) -> ()
 
     /// Debounced task for hover preview updates (AX-free but still non-trivial work).
-    private var previewTask: Task<Void, Never>?
+    private var previewTask: Task<(), Never>?
 
     init(
         submitCallback: @escaping (GridOverlayViewModel.GridOverlayAction) -> (),

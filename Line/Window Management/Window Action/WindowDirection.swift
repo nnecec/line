@@ -256,7 +256,6 @@ extension WindowDirection {
         // Empty actions
         case .noAction: String(localized: "No Action", comment: "Window action name")
         case .noSelection: String(localized: "No Selection", comment: "Window action name")
-
         // General Actions
         case .maximize: String(localized: "Maximize", comment: "Window action name")
         case .almostMaximize: String(localized: "Almost Maximize", comment: "Window action name")
@@ -271,7 +270,6 @@ extension WindowDirection {
         case .minimizeOthers: String(localized: "Minimize Others", comment: "Window action name")
         case .macOSCenter: String(localized: "macOS Center", comment: "Window action name")
         case .center: String(localized: "Center", comment: "Window action name")
-
         // Halves
         case .topHalf: String(localized: "Top Half", comment: "Window action name")
         case .rightHalf: String(localized: "Right Half", comment: "Window action name")
@@ -279,20 +277,17 @@ extension WindowDirection {
         case .leftHalf: String(localized: "Left Half", comment: "Window action name")
         case .horizontalCenterHalf: String(localized: "Horizontal Center Half", comment: "Window action name")
         case .verticalCenterHalf: String(localized: "Vertical Center Half", comment: "Window action name")
-
         // Quarters
         case .topLeftQuarter: String(localized: "Top Left Quarter", comment: "Window action name")
         case .topRightQuarter: String(localized: "Top Right Quarter", comment: "Window action name")
         case .bottomRightQuarter: String(localized: "Bottom Right Quarter", comment: "Window action name")
         case .bottomLeftQuarter: String(localized: "Bottom Left Quarter", comment: "Window action name")
-
         // Horizontal Thirds
         case .rightThird: String(localized: "Right Third", comment: "Window action name")
         case .rightTwoThirds: String(localized: "Right Two Thirds", comment: "Window action name")
         case .horizontalCenterThird: String(localized: "Horizontal Center Third", comment: "Window action name")
         case .leftThird: String(localized: "Left Third", comment: "Window action name")
         case .leftTwoThirds: String(localized: "Left Two Thirds", comment: "Window action name")
-
         // Horizontal Fourths
         case .firstFourth: String(localized: "First Fourth", comment: "Window action name")
         case .secondFourth: String(localized: "Second Fourth", comment: "Window action name")
@@ -300,14 +295,12 @@ extension WindowDirection {
         case .fourthFourth: String(localized: "Fourth Fourth", comment: "Window action name")
         case .leftThreeFourths: String(localized: "Left Three Fourths", comment: "Window action name")
         case .rightThreeFourths: String(localized: "Right Three Fourths", comment: "Window action name")
-
         // Vertical Thirds
         case .topThird: String(localized: "Top Third", comment: "Window action name")
         case .topTwoThirds: String(localized: "Top Two Thirds", comment: "Window action name")
         case .verticalCenterThird: String(localized: "Vertical Center Third", comment: "Window action name")
         case .bottomThird: String(localized: "Bottom Third", comment: "Window action name")
         case .bottomTwoThirds: String(localized: "Bottom Two Thirds", comment: "Window action name")
-
         // Screen Switching
         case .nextScreen: String(localized: "Next Screen", comment: "Window action name")
         case .previousScreen: String(localized: "Previous Screen", comment: "Window action name")
@@ -315,13 +308,11 @@ extension WindowDirection {
         case .rightScreen: String(localized: "Right Screen", comment: "Window action name")
         case .topScreen: String(localized: "Top Screen", comment: "Window action name")
         case .bottomScreen: String(localized: "Bottom Screen", comment: "Window action name")
-
         // Size Adjustment
         case .larger: String(localized: "Larger", comment: "Window action name")
         case .smaller: String(localized: "Smaller", comment: "Window action name")
         case .scaleUp: String(localized: "Scale Up", comment: "Window action name")
         case .scaleDown: String(localized: "Scale Down", comment: "Window action name")
-
         // Shrink
         case .shrinkTop: String(localized: "Shrink Top", comment: "Window action name")
         case .shrinkBottom: String(localized: "Shrink Bottom", comment: "Window action name")
@@ -329,7 +320,6 @@ extension WindowDirection {
         case .shrinkLeft: String(localized: "Shrink Left", comment: "Window action name")
         case .shrinkHorizontal: String(localized: "Shrink Horizontal", comment: "Window action name")
         case .shrinkVertical: String(localized: "Shrink Vertical", comment: "Window action name")
-
         // Grow
         case .growTop: String(localized: "Grow Top", comment: "Window action name")
         case .growBottom: String(localized: "Grow Bottom", comment: "Window action name")
@@ -337,24 +327,20 @@ extension WindowDirection {
         case .growLeft: String(localized: "Grow Left", comment: "Window action name")
         case .growHorizontal: String(localized: "Grow Horizontal", comment: "Window action name")
         case .growVertical: String(localized: "Grow Vertical", comment: "Window action name")
-
         // Move
         case .moveUp: String(localized: "Move Up", comment: "Window action name")
         case .moveDown: String(localized: "Move Down", comment: "Window action name")
         case .moveRight: String(localized: "Move Right", comment: "Window action name")
         case .moveLeft: String(localized: "Move Left", comment: "Window action name")
-
         // Focus
         case .focusUp: String(localized: "Focus Up", comment: "Window action name")
         case .focusDown: String(localized: "Focus Down", comment: "Window action name")
         case .focusRight: String(localized: "Focus Right", comment: "Window action name")
         case .focusLeft: String(localized: "Focus Left", comment: "Window action name")
         case .focusNextInStack: String(localized: "Focus Next in Stack", comment: "Window action name")
-
         // Stash
         case .stash: String(localized: "Stash", comment: "Window action name")
         case .unstash: String(localized: "Unstash", comment: "Window action name")
-
         // Custom Actions
         case .custom: String(localized: "Custom", comment: "Window action name")
         case .cycle: String(localized: "Cycle", comment: "Window action name")

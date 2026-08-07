@@ -5,14 +5,13 @@
 //  Tests for GridContext initialization and configuration.
 //
 
-import XCTest
 @testable import Line
+import XCTest
 
 @MainActor
 final class GridContextTests: XCTestCase {
-
-    func testGridContextInitialization() {
-        let screen = NSScreen.main!
+    func testGridContextInitialization() throws {
+        let screen = try XCTUnwrap(NSScreen.main)
         let template = GridTemplate(rows: 3, columns: 4, gap: 8)
         let geometry = GridGeometry(
             screenFrame: screen.frame,
@@ -36,8 +35,8 @@ final class GridContextTests: XCTestCase {
         XCTAssertNil(context.record)
     }
 
-    func testGridContextWithoutWindow() {
-        let screen = NSScreen.main!
+    func testGridContextWithoutWindow() throws {
+        let screen = try XCTUnwrap(NSScreen.main)
         let template = GridTemplate.default
         let geometry = GridGeometry(
             screenFrame: screen.frame,
@@ -57,8 +56,8 @@ final class GridContextTests: XCTestCase {
         XCTAssertNil(context.bundleId)
     }
 
-    func testGridContextStoresSnapshottedWindowProperties() {
-        let screen = NSScreen.main!
+    func testGridContextStoresSnapshottedWindowProperties() throws {
+        let screen = try XCTUnwrap(NSScreen.main)
         let template = GridTemplate.default
         let geometry = GridGeometry(
             screenFrame: screen.frame,
@@ -88,8 +87,8 @@ final class GridContextTests: XCTestCase {
         XCTAssertEqual(context.record, record)
     }
 
-    func testPreparePreviewUsesCachedPropertiesWithoutAX() {
-        let screen = NSScreen.main!
+    func testPreparePreviewUsesCachedPropertiesWithoutAX() throws {
+        let screen = try XCTUnwrap(NSScreen.main)
         let workingBounds = CGRect(x: 0, y: 0, width: 1000, height: 800)
         let template = GridTemplate(rows: 2, columns: 2, gap: 0)
         let geometry = GridGeometry(
@@ -168,8 +167,8 @@ final class GridContextTests: XCTestCase {
         XCTAssertNotEqual(geometry1.workingBounds, geometry2.workingBounds)
     }
 
-    func testGridContextWithCustomTemplate() {
-        let screen = NSScreen.main!
+    func testGridContextWithCustomTemplate() throws {
+        let screen = try XCTUnwrap(NSScreen.main)
         let customTemplate = GridTemplate(rows: 5, columns: 6, gap: 12)
         let geometry = GridGeometry(
             screenFrame: screen.frame,

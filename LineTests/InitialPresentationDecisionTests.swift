@@ -5,8 +5,8 @@
 //  Created by Codex on 2026-07-08.
 //
 
-@testable import Line
 import Defaults
+@testable import Line
 import XCTest
 
 final class InitialPresentationDecisionTests: XCTestCase {
