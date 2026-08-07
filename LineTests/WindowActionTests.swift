@@ -871,22 +871,27 @@ final class WindowActionMigrationTests: XCTestCase {
         )
     }
 
-    func testWindowResizeExecutionLegacyContextPreservesPreparedRequest() {
+    func testWindowResizeExecutionPreparedResizeCarriesExecutionInputs() {
+        let record = WindowRecord(initialFrame: currentFrame, lastAction: .standard(.maximize))
+        let initialMousePosition = CGPoint(x: 120, y: 240)
         let prepared = WindowResizeExecution.prepareResolved(
             action: BoundWindowAction(action: .standard(.almostMaximize), keybind: []),
+            parentAction: BoundWindowAction(action: .standard(.maximize), keybind: []),
             screen: testScreen,
             bounds: testBounds,
             padding: .zero,
+            initialMousePosition: initialMousePosition,
             windowProperties: WindowProperties(frame: currentFrame, isResizable: true),
-            record: nil
+            record: record
         )
 
-        let context = ResizeContext(preparedResize: prepared)
-
-        XCTAssertEqual(context.bounds, testBounds)
-        XCTAssertEqual(context.padding, .zero)
-        XCTAssertEqual(context.action.action, WindowAction.standard(.almostMaximize))
-        XCTAssertEqual(context.cachedTargetFrame.padded, prepared.targetFrame.padded, accuracy: 0.01)
+        XCTAssertEqual(prepared.bounds, testBounds)
+        XCTAssertEqual(prepared.padding, .zero)
+        XCTAssertEqual(prepared.action.action, WindowAction.standard(.almostMaximize))
+        XCTAssertEqual(prepared.parentAction?.action, WindowAction.standard(.maximize))
+        XCTAssertEqual(prepared.initialMousePosition, initialMousePosition)
+        XCTAssertEqual(prepared.record, record)
+        XCTAssertEqual(prepared.targetFrame.padded, prepared.targetFrame.raw, accuracy: 0.01)
     }
 
     private func makeRequest(

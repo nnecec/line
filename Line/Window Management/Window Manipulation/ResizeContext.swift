@@ -75,17 +75,6 @@ final class ResizeContext {
         self.initialMousePosition = initialMousePosition
     }
 
-    init(preparedResize prepared: WindowResizeExecution.PreparedResize) {
-        self.request = prepared.request
-        self._action = prepared.action
-        self.parentAction = prepared.parentAction
-        self.sidesToAdjust = prepared.sidesToAdjust
-        self.initialMousePosition = prepared.initialMousePosition
-        self.resolvedWindowProperties = prepared.resolvedWindowProperties
-        self.resolvedRecord = prepared.resolvedRecord
-        self._cachedTargetFrame = prepared.targetFrame
-    }
-
     private func rebuildRequest(
         action: WindowAction? = nil,
         screen: NSScreen? = nil,
@@ -182,7 +171,6 @@ struct ComputedFrame {
         ComputedFrame(raw: .zero, padded: .zero)
     }
 }
-
 
 // MARK: - PreparedResize bridge (settings / drag still use ResizeContext)
 

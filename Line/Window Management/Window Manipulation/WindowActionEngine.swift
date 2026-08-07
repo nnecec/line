@@ -64,7 +64,10 @@ final class WindowActionEngine {
 
     @MainActor
     func apply(preparedResize: WindowResizeExecution.PreparedResize) async throws -> Result {
-        try await apply(context: ResizeContext(preparedResize: preparedResize))
+        try await applyLatest(for: preparedResize.window) { [weak self] in
+            guard let self else { throw CancellationError() }
+            return try await self.performApply(.prepared(preparedResize))
+        }
     }
 
     /// Apply a window action with explicit resize context tracking.
@@ -78,14 +81,23 @@ final class WindowActionEngine {
     /// - Throws: `CancellationError` if a new action is applied to the same window
     @MainActor
     func apply(context: ResizeContext) async throws -> Result {
-        guard let windowID = context.window?.cgWindowID else {
-            return try await performApply(context: context)
+        try await applyLatest(for: context.window) { [weak self] in
+            guard let self else { throw CancellationError() }
+            return try await self.performApply(.legacyContext(context))
+        }
+    }
+
+    @MainActor
+    private func applyLatest(
+        for window: Window?,
+        operation: @escaping @MainActor () async throws -> Result
+    ) async throws -> Result {
+        guard let windowID = window?.cgWindowID else {
+            return try await operation()
         }
 
-        let handle = actionTasks.replace(for: windowID) { [weak self] in
-            guard let self else { throw CancellationError() }
-
-            let result = try await self.performApply(context: context)
+        let handle = actionTasks.replace(for: windowID) {
+            let result = try await operation()
             try Task.checkCancellation()
             return result
         }
@@ -95,10 +107,10 @@ final class WindowActionEngine {
     }
 
     @MainActor
-    private func performApply(context: ResizeContext) async throws -> Result {
-        log.info("Applying window action context")
+    private func performApply(_ input: ApplyInput) async throws -> Result {
+        log.info("Applying prepared window action")
 
-        let action = context.action
+        let action = input.action
 
         // No-op actions: return early
         if action.isNoOp || action.direction == .cycle {
@@ -107,21 +119,46 @@ final class WindowActionEngine {
 
         // Focus actions: find and focus the target window
         if action.willFocusWindow {
-            return handleFocusAction(action, currentWindow: context.window)
+            return handleFocusAction(action, currentWindow: input.window)
         }
 
         // Quick actions that don't require resize logic
-        if let result = handleQuickAction(action, window: context.window) {
+        if let result = handleQuickAction(action, window: input.window) {
             return result
         }
 
-        guard context.window != nil else {
+        guard input.window != nil else {
             log.info("Cannot resize without a target window")
             return .failed
         }
 
-        try await WindowEngine.performResize(context: context)
+        switch input {
+        case let .prepared(preparedResize):
+            try await WindowEngine.performResize(preparedResize: preparedResize)
+        case let .legacyContext(context):
+            try await WindowEngine.performResize(context: context)
+        }
         return .resized
+    }
+
+    @MainActor
+    private enum ApplyInput {
+        case prepared(WindowResizeExecution.PreparedResize)
+        case legacyContext(ResizeContext)
+
+        var action: BoundWindowAction {
+            switch self {
+            case let .prepared(preparedResize): preparedResize.action
+            case let .legacyContext(context): context.action
+            }
+        }
+
+        var window: Window? {
+            switch self {
+            case let .prepared(preparedResize): preparedResize.window
+            case let .legacyContext(context): context.window
+            }
+        }
     }
 
     // MARK: - Focus Actions

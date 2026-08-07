@@ -36,7 +36,7 @@ Keep the logic in the calling coordinator when it's tightly coupled to that coor
 
 ## Window actions
 
-`WindowAction` represents standard, custom, cycle, screen-switch, and stash behavior. `BoundWindowAction` connects an action to a configured trigger. Window Resize Execution bootstraps a Prepared Resize for a Window Action Session (or grid), transitions mid-session without re-reading live window state, and commits either the current snapshot (release / grid confirm) or a live re-prepare that inherits the session layout snapshot. `WindowEngine` applies the result through Accessibility APIs. Drag still uses a mutable `ResizeContext` adapter.
+`WindowAction` represents standard, custom, cycle, screen-switch, and stash behavior. `BoundWindowAction` connects an action to a configured trigger. Window Resize Execution bootstraps a Prepared Resize for a Window Action Session (or grid), transitions mid-session without re-reading live window state, and commits either the current snapshot (release / grid confirm) or a live re-prepare that inherits the session layout snapshot. `WindowActionEngine` and `WindowEngine` apply Prepared Resize directly through Accessibility APIs. Drag still uses a mutable `ResizeContext` adapter that converts into Prepared Resize at the execution seam.
 
 URL scheme automation (`line://`) is handled by `URLCommandHandler`, which delegates parsing, direction aliases, target-window selection (see `URLTargetWindowPolicy` in Decision and policy modules), and list catalog building to pure modules (`URLCommandParser`, `URLDirectionResolver`, `URLCommandCatalog`).
 

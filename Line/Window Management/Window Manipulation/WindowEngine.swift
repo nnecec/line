@@ -16,42 +16,63 @@ enum WindowEngine {
     /// Performs the actual resize operation on a window.
     /// This is an internal method - callers should use `WindowActionEngine.apply()` instead.
     @MainActor
+    static func performResize(preparedResize: WindowResizeExecution.PreparedResize) async throws {
+        _ = try await performPreparedResize(preparedResize)
+    }
+
+    /// Legacy Drag Snap adapter. Mutable state stays outside the Prepared Resize execution seam.
+    @MainActor
     static func performResize(context: ResizeContext) async throws {
-        // Immediately return for no-op or focus-only actions
-        guard let window = context.window,
-              !context.action.isNoOp,
-              !context.action.willFocusWindow
-        else {
-            return
-        }
-
-        // Quick actions are handled by WindowActionEngine
-        let quickActions: [WindowDirection] = [.hide, .minimize, .fullscreen, .minimizeOthers]
-        guard !quickActions.contains(context.action.direction) else { return }
-
         if context.resolvedWindowProperties == nil {
             await context.refreshResolvedState()
         }
 
-        let willChangeScreens = ScreenUtility.screenContaining(window) != context.screen
-        let targetFrame = context.cachedTargetFrame
+        guard let outcome = try await performPreparedResize(.init(context: context)) else {
+            return
+        }
+
+        context.resolvedWindowProperties = outcome.resolvedWindowProperties
+        context.lastAppliedFrame = outcome.finalFrame
+        context.resolvedRecord = outcome.resolvedRecord
+    }
+
+    @MainActor
+    private static func performPreparedResize(
+        _ preparedResize: WindowResizeExecution.PreparedResize
+    ) async throws -> ResizeOutcome? {
+        // Immediately return for no-op or focus-only actions
+        guard let window = preparedResize.window,
+              !preparedResize.action.isNoOp,
+              !preparedResize.action.willFocusWindow
+        else {
+            return nil
+        }
+
+        // Quick actions are handled by WindowActionEngine
+        let quickActions: [WindowDirection] = [.hide, .minimize, .fullscreen, .minimizeOthers]
+        guard !quickActions.contains(preparedResize.action.direction) else { return nil }
+
+        let resolvedWindowProperties = preparedResize.resolvedWindowProperties
+            ?? Window.ResolvedProperties(from: window)
+        let willChangeScreens = ScreenUtility.screenContaining(window) != preparedResize.screen
+        let targetFrame = preparedResize.targetFrame
         log.info("Resizing \(window) to \(targetFrame.padded)")
 
         // Record first frame if needed
         await WindowRecords.shared.recordFirstIfNeeded(
             for: window,
-            resolvedProperties: context.resolvedWindowProperties
+            resolvedProperties: resolvedWindowProperties
         )
 
-        let storeAsFrame = WindowRecords.shared.shouldStoreAsFinalFrame(context.action)
+        let storeAsFrame = WindowRecords.shared.shouldStoreAsFinalFrame(preparedResize.action)
 
         // If this action doesn't require storage as a frame, then record it beforehand.
         // Otherwise, this action will be recorded *after* resizing, such that its final frame is considered if undoing.
         if !storeAsFrame {
             await WindowRecords.shared.record(
                 window,
-                resolvedProperties: context.resolvedWindowProperties,
-                context.action
+                resolvedProperties: resolvedWindowProperties,
+                preparedResize.action
             )
         }
 
@@ -70,10 +91,10 @@ enum WindowEngine {
         // Attempt system window manager if possible
         if !willChangeScreens, useSystemWM,
            #available(macOS 15, *),
-           await resizeWithSystemWindowManager(window: window, to: context.action) {
+           await resizeWithSystemWindowManager(window: window, to: preparedResize.action) {
             finalFrame = window.frame
         } else {
-            if context.resolvedWindowProperties?.isFullscreen ?? true {
+            if resolvedWindowProperties.isFullscreen {
                 // Otherwise, we obviously need to disable fullscreen to resize the window
                 window.fullscreen = false
             }
@@ -81,17 +102,17 @@ enum WindowEngine {
             let shouldAnimate = shouldAnimateResize(
                 for: window,
                 willChangeScreens: willChangeScreens,
-                resolvedProperties: context.resolvedWindowProperties
+                resolvedProperties: resolvedWindowProperties
             )
 
             do {
                 finalFrame = try await resizeWindow(
                     window,
                     targetFrame: targetFrame.padded,
-                    bounds: context.paddedBounds,
+                    bounds: preparedResize.paddedBounds,
                     willChangeScreens: willChangeScreens,
                     animate: shouldAnimate,
-                    resolvedProperties: context.resolvedWindowProperties
+                    resolvedProperties: resolvedWindowProperties
                 )
             } catch {
                 let fallbackFrame = try frameAfterResizeError(error, currentFrame: window.frame)
@@ -104,35 +125,41 @@ enum WindowEngine {
             }
         }
 
-        let postResizeProperties = context.resolvedWindowProperties.map {
-            Window.ResolvedProperties(updating: finalFrame, from: $0)
-        }
+        let postResizeProperties = Window.ResolvedProperties(
+            updating: finalFrame,
+            from: resolvedWindowProperties
+        )
 
         // Record post-resize actions (replaces former defer block)
-        if context.action.direction == .undo {
+        if preparedResize.action.direction == .undo {
             await WindowRecords.shared.removeLastAction(for: window)
         } else if storeAsFrame {
             await WindowRecords.shared.record(
                 window,
                 resolvedProperties: postResizeProperties,
-                context.action
+                preparedResize.action
             )
         }
 
-        // Update the snapshot
-        if let postResizeProperties {
-            context.resolvedWindowProperties = postResizeProperties
-        }
-        context.lastAppliedFrame = finalFrame
-        context.resolvedRecord = await WindowRecords.ResolvedRecord(for: window)
+        let resolvedRecord = await WindowRecords.ResolvedRecord(for: window)
 
-        if let screen = context.screen {
-            await StashManager.shared.onWindowResized(
-                action: context.action,
-                window: window,
-                screen: screen
-            )
-        }
+        await StashManager.shared.onWindowResized(
+            action: preparedResize.action,
+            window: window,
+            screen: preparedResize.screen
+        )
+
+        return ResizeOutcome(
+            finalFrame: finalFrame,
+            resolvedWindowProperties: postResizeProperties,
+            resolvedRecord: resolvedRecord
+        )
+    }
+
+    private struct ResizeOutcome {
+        let finalFrame: CGRect
+        let resolvedWindowProperties: Window.ResolvedProperties
+        let resolvedRecord: WindowRecords.ResolvedRecord
     }
 
     // MARK: - System Window Manager
