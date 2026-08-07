@@ -10,19 +10,20 @@ import Foundation
 import Scribe
 import SwiftUI
 
+@MainActor
 protocol StashedWindowsStoreDelegate: AnyObject {
     var stashedWindowVisiblePadding: CGFloat { get }
     func onStashedWindowsRestored()
 }
 
-/// Keep the stashed windows and the revealed window ids both in memory and in Defaults.
-/// Restore windows stashed from a previous session.
+/// Keeps stashed window metadata in memory and persists restorable identities in Defaults.
+/// Visual reveal state belongs to `StashRevealTransition`.
 @Loggable
+@MainActor
 final class StashedWindowsStore {
     weak var delegate: StashedWindowsStoreDelegate?
 
     private(set) var stashed: [CGWindowID: StashedWindowInfo] = [:]
-    private(set) var revealed: Set<CGWindowID> = []
 
     /// Hold data from `Defaults[.stashManagerStashedWindows]` for windows that failed to be restored.
     private var failedToRestore: [CGWindowID: WindowAction] = [:]
@@ -32,18 +33,6 @@ final class StashedWindowsStore {
 
     func restore() async {
         await restoreStashedWindows()
-    }
-
-    func isWindowRevealed(_ id: CGWindowID) -> Bool {
-        revealed.contains(id)
-    }
-
-    func markWindowAsRevealed(_ id: CGWindowID) {
-        revealed.insert(id)
-    }
-
-    func markWindowAsHidden(_ id: CGWindowID) {
-        revealed.remove(id)
     }
 
     /// Return the stashed window that match the given `action` and `screen`
@@ -84,7 +73,7 @@ final class StashedWindowsStore {
         )
     }
 
-    static func stashActionsMatch(requested: BoundWindowAction, stashed: BoundWindowAction) -> Bool {
+    nonisolated static func stashActionsMatch(requested: BoundWindowAction, stashed: BoundWindowAction) -> Bool {
         guard let requestedEdge = requested.stashEdge,
               let stashedEdge = stashed.stashEdge
         else {

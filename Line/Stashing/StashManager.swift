@@ -135,7 +135,6 @@ enum StashZOrderPolicy {
 ///
 /// ## Constants:
 /// - `mouseMovedDebounceInterval`: The minimum time interval (in seconds) between processing consecutive mouse move events.
-/// - `revealThrottleInterval`: The minimum time interval (in seconds) between revealing or hiding actions for a specific window.
 /// - `minimumVisibleSizeToKeepWindowStacked`:
 ///     - The minimum required non-overlapping space (in points) between two stashed windows on the same screen edge.
 ///     - Uses vertical space for the left and right edges, and horizontal space for the bottom edge.
@@ -145,6 +144,7 @@ enum StashZOrderPolicy {
 /// ## Considerations:
 /// - Currently supports only one revealed window at a time.
 @Loggable
+@MainActor
 final class StashManager {
     static let shared = StashManager()
     private init() {}
@@ -166,9 +166,6 @@ final class StashManager {
     /// The time interval to debounce mouse moved events to avoid excessive processing.
     private let mouseMovedDebounceInterval: TimeInterval = 0.05
 
-    /// The throttle interval for revealing/hiding windows when the mouse moves.
-    private let revealThrottleInterval: TimeInterval = 0.1
-
     /// Two windows can be stacked along the same edge of the screen as long as there is enough non-overlapping space
     /// to allow the user to easily position the cursor over either window.
     /// The left and right edges use vertical space; the bottom edge uses horizontal space.
@@ -180,11 +177,10 @@ final class StashManager {
         return store
     }()
 
-    private var lastRevealTime: [CGWindowID: Date] = [:]
+    private var revealTransition = StashRevealTransition(throttleInterval: 0.1)
     private var mouseMonitor: PassiveEventMonitor?
     private var frontmostAppMonitor: Task<(), Never>?
     private var mouseMovedTask: Task<(), Never>?
-    private var transitionIDs: [CGWindowID: UUID] = [:]
 
     // MARK: - Public methods
 
@@ -214,8 +210,10 @@ final class StashManager {
 
             store.setStashedWindow(cgWindowID: updated.window.cgWindowID, to: updated)
 
-            // Don't animate when configuration changes
-            await updated.window.setFrame(updated.stashedFrame)
+            // A peek-size change only affects hidden windows; keep an active reveal on screen.
+            if !revealTransition.isWindowRevealed(updated.window.cgWindowID) {
+                await updated.window.setFrame(updated.stashedFrame)
+            }
         }
     }
 
@@ -240,7 +238,7 @@ final class StashManager {
         log.info("Intercepting window action for stashed window \(stashedWindow.window.description)")
 
         Task {
-            if store.isWindowRevealed(stashedWindow.window.cgWindowID) {
+            if revealTransition.isWindowRevealed(stashedWindow.window.cgWindowID) {
                 await hideWindow(stashedWindow)
             } else {
                 await revealWindow(stashedWindow)
@@ -340,8 +338,22 @@ extension StashManager {
                 peekSize: stashedWindowVisiblePadding
             )
             store.setStashedWindow(cgWindowID: window.cgWindowID, to: updated)
-            if markRevealedIfFullyOnScreen, !store.isWindowRevealed(window.cgWindowID) {
-                store.markWindowAsRevealed(window.cgWindowID)
+            if markRevealedIfFullyOnScreen, !revealTransition.isWindowRevealed(window.cgWindowID) {
+                if let previousID = revealTransition.revealedWindowID(excluding: window.cgWindowID),
+                   let previousWindow = store.stashed[previousID] {
+                    let didHide = await hideWindow(
+                        previousWindow,
+                        shouldUnfocus: false,
+                        allowUnrevealed: true,
+                        shouldThrottle: false
+                    )
+                    if !didHide {
+                        // The old window is still visible; stop treating it as stashed rather than
+                        // retaining an unrecoverable second reveal in managed state.
+                        unmanage(windowID: previousID)
+                    }
+                }
+                revealTransition.markRevealed(windowID: window.cgWindowID)
             }
 
         case .ignore:
@@ -425,22 +437,28 @@ private extension StashManager {
     func revealWindow(_ window: StashedWindowInfo) async {
         let windowID = window.window.cgWindowID
 
-        guard !store.isWindowRevealed(windowID) else { return }
-        guard !shouldThrottle(windowID: windowID) else { return }
+        guard let request = revealTransition.beginReveal(windowID: windowID, now: Date.now.timeIntervalSince1970) else {
+            return
+        }
 
-        // Keep only one window as revealed
-        for revealedWindowId in store.revealed {
-            guard revealedWindowId != windowID else { continue }
-            guard let revealedWindow = store.stashed[revealedWindowId] else { break }
-
-            // Run on another thread to prevent this window's reveal from delaying
-            Task {
-                // No need to unfocus the previously revealed window, since we'll focus our window below anyway
-                await hideWindow(revealedWindow, shouldUnfocus: false)
+        if let previousID = request.previousRevealedWindowID,
+           let previousWindow = store.stashed[previousID] {
+            // Hide the old target before moving the new target on screen.
+            let didHide = await hideWindow(
+                previousWindow,
+                shouldUnfocus: false,
+                allowUnrevealed: true,
+                shouldThrottle: false
+            )
+            guard didHide else {
+                _ = revealTransition.fail(request.token)
+                return
             }
         }
 
-        let transitionID = beginTransition(windowID: windowID, revealed: true)
+        guard revealTransition.activate(request.token) else {
+            return
+        }
         let frame = window.revealedFrame
 
         if shiftFocusWhenStashed {
@@ -459,34 +477,39 @@ private extension StashManager {
                 await window.window.setFrame(frame)
             }
         } catch is CancellationError {
-            cancelTransition(windowID: windowID, transitionID: transitionID, fallbackRevealed: false)
+            _ = revealTransition.fail(request.token)
             return
         } catch {
-            cancelTransition(windowID: windowID, transitionID: transitionID, fallbackRevealed: false)
+            _ = revealTransition.fail(request.token)
             log.error("Failed to revealWindow \(window.window.description): \(ApplicationLogPrivacy.errorDescription(error))")
             return
         }
 
-        if finishTransition(windowID: windowID, transitionID: transitionID) {
+        if revealTransition.complete(request.token) {
             log.info("revealWindow \(window.window.description)")
         }
     }
 
     /// Hides a stashed window by moving it to its stashed frame.
-    func hideWindow(_ window: StashedWindowInfo, shouldUnfocus: Bool = true, allowUnrevealed: Bool = false, shouldThrottle: Bool = true) async {
+    @discardableResult
+    func hideWindow(_ window: StashedWindowInfo, shouldUnfocus: Bool = true, allowUnrevealed: Bool = false, shouldThrottle: Bool = true) async -> Bool {
         let windowID = window.window.cgWindowID
 
-        guard allowUnrevealed || store.isWindowRevealed(windowID) else {
+        guard allowUnrevealed || revealTransition.isWindowRevealed(windowID) else {
             log.warn("Skipping hideWindow because window is not revealed: \(window.window.description)")
-            return
+            return false
         }
 
-        guard !shouldThrottle || !self.shouldThrottle(windowID: windowID) else {
+        guard let transitionToken = revealTransition.beginHide(
+            windowID: windowID,
+            now: Date.now.timeIntervalSince1970,
+            allowUnrevealed: allowUnrevealed,
+            shouldThrottle: shouldThrottle
+        ) else {
             log.warn("Skipping hideWindow because transition is throttled: \(window.window.description)")
-            return
+            return false
         }
 
-        let transitionID = beginTransition(windowID: windowID, revealed: false)
         let frame = window.stashedFrame
 
         if shouldUnfocus {
@@ -503,27 +526,19 @@ private extension StashManager {
                 await window.window.setFrame(frame)
             }
         } catch is CancellationError {
-            cancelTransition(windowID: windowID, transitionID: transitionID, fallbackRevealed: true)
-            return
+            _ = revealTransition.fail(transitionToken)
+            return false
         } catch {
-            cancelTransition(windowID: windowID, transitionID: transitionID, fallbackRevealed: true)
+            _ = revealTransition.fail(transitionToken)
             log.error("Failed to hideWindow \(window.window.description): \(ApplicationLogPrivacy.errorDescription(error))")
-            return
+            return false
         }
 
-        if finishTransition(windowID: windowID, transitionID: transitionID) {
+        let didFinish = revealTransition.complete(transitionToken)
+        if didFinish {
             log.info("hideWindow \(window.window.description)")
         }
-    }
-
-    /// Checks if the window reveal / hide should be throttled based on the last reveal time.
-    func shouldThrottle(windowID: CGWindowID) -> Bool {
-        let now = Date.now
-        if let lastTime = lastRevealTime[windowID], now.timeIntervalSince(lastTime) < revealThrottleInterval {
-            return true
-        }
-        lastRevealTime[windowID] = now
-        return false
+        return didFinish
     }
 
     /// Attempts to unfocus (i.e., shift focus away from) a specified window.
@@ -635,7 +650,7 @@ private extension StashManager {
         let windows = getZSortedStashedWindows()
 
         for window in windows {
-            if store.isWindowRevealed(window.window.cgWindowID) {
+            if revealTransition.isWindowRevealed(window.window.cgWindowID) {
                 if await shouldHide(window: window, for: mouseLocation) {
                     await hideWindow(window)
                 } else {
@@ -663,7 +678,7 @@ private extension StashManager {
             let windows = getZSortedStashedWindows()
 
             for window in windows {
-                if store.isWindowRevealed(window.window.cgWindowID) {
+                if revealTransition.isWindowRevealed(window.window.cgWindowID) {
                     if appWindow.cgWindowID != window.window.cgWindowID,
                        await !isMouseOverStashed(window: window, location: mouseLocation) {
                         await hideWindow(window, shouldUnfocus: false) // No need to unfocus, since the user already did that
@@ -753,9 +768,7 @@ private extension StashManager {
     /// Cleanup references of the given window ID from the stash manager.
     func unmanage(windowID: CGWindowID) {
         store.setStashedWindow(cgWindowID: windowID, to: nil)
-        store.markWindowAsRevealed(windowID)
-        lastRevealTime.removeValue(forKey: windowID)
-        transitionIDs.removeValue(forKey: windowID)
+        revealTransition.remove(windowID: windowID)
 
         if store.stashed.isEmpty {
             stopListeningToRevealTriggers()
@@ -773,41 +786,6 @@ private extension StashManager {
             currentScreen.rightmostScreenInSameRow(overlapThreshold: threshold)
         case .bottom:
             currentScreen.bottommostScreenInSameColumn(overlapThreshold: threshold)
-        }
-    }
-
-    func beginTransition(windowID: CGWindowID, revealed: Bool) -> UUID {
-        let transitionID = UUID()
-        transitionIDs[windowID] = transitionID
-
-        if revealed {
-            store.markWindowAsRevealed(windowID)
-        } else {
-            store.markWindowAsHidden(windowID)
-        }
-
-        return transitionID
-    }
-
-    @discardableResult
-    func finishTransition(windowID: CGWindowID, transitionID: UUID) -> Bool {
-        guard transitionIDs[windowID] == transitionID else {
-            return false
-        }
-
-        transitionIDs.removeValue(forKey: windowID)
-        return true
-    }
-
-    func cancelTransition(windowID: CGWindowID, transitionID: UUID, fallbackRevealed: Bool) {
-        guard finishTransition(windowID: windowID, transitionID: transitionID) else {
-            return
-        }
-
-        if fallbackRevealed {
-            store.markWindowAsRevealed(windowID)
-        } else {
-            store.markWindowAsHidden(windowID)
         }
     }
 }
