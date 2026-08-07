@@ -1,3 +1,5 @@
+const forcePatch = process.env.RELEASE_BUMP === "patch";
+
 /**
  * semantic-release config for Line open-source GitHub releases.
  *
@@ -16,7 +18,7 @@ module.exports = {
       {
         preset: "conventionalcommits",
         releaseRules: [
-          { type: "feat", release: "minor" },
+          { type: "feat", release: forcePatch ? "patch" : "minor" },
           { type: "fix", release: "patch" },
           { type: "perf", release: "patch" },
           { type: "revert", release: "patch" },

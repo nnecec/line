@@ -33,9 +33,13 @@ Workflow: **`Publish`** (`.github/workflows/publish.yml`).
 4. Open **Actions → Publish → Run workflow** on `main`.
    - `dry_run: true` — compute version, build packages, **do not** tag / Release / appcast.
    - `dry_run: false` — full publish when there are releasable commits.
+   - `version_bump: auto` — follow Conventional Commits (default).
+   - `version_bump: patch` — treat `feat` commits as patch for this run; breaking changes still produce a major release.
 
 ```bash
-gh workflow run Publish --ref main -f dry_run=false
+gh workflow run Publish --ref main -f dry_run=false -f version_bump=auto
+# Explicit patch release when the accumulated feature is intentionally patch-sized:
+gh workflow run Publish --ref main -f dry_run=false -f version_bump=patch
 gh run watch
 ```
 
@@ -47,6 +51,9 @@ gh run watch
 | at least one `feat` | minor |
 | breaking (`!` or `BREAKING CHANGE`) | major |
 | no releasable commits | **skip** (job succeeds, nothing published) |
+
+`version_bump: patch` is an explicit exception for intentionally patch-sized features. It only
+downgrades `feat` from minor to patch; breaking commits remain major. Keep `auto` for normal releases.
 
 **First release** (no prior `vX.Y.Z` tags): the workflow seeds a local-only bootstrap tag `v0.0.0` at the root commit so semantic-release stays on the `0.x` / conventional path (`0.0.1` / `0.1.0` / `1.0.0`) instead of jumping to `1.0.0` by default. That bootstrap tag is **not** pushed.
 

@@ -8,6 +8,14 @@ on:
         required: true
         default: false
         type: boolean
+      version_bump:
+        description: "Version policy: auto follows Conventional Commits; patch treats feat as patch (breaking stays major)"
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
 
 permissions:
   contents: read
@@ -34,6 +42,7 @@ jobs:
       APP_NAME: Line
       MINIMUM_SYSTEM_VERSION: "26.0"
       HUSKY: "0"
+      RELEASE_BUMP: ${{ inputs.version_bump }}
 
     steps:
       - name: Check out main
@@ -325,6 +334,7 @@ jobs:
             echo ""
             echo "- mode: \`${{ steps.mode.outputs.mode }}\`"
             echo "- dry_run: \`${{ inputs.dry_run }}\`"
+            echo "- version_bump: \`${{ inputs.version_bump }}\`"
             echo "- version: \`${{ steps.release.outputs.version || steps.mode.outputs.latest_version || 'n/a' }}\`"
             echo "- tag: \`${{ steps.release.outputs.tag || steps.mode.outputs.latest_tag || 'n/a' }}\`"
             echo "- skipped: \`${{ steps.release.outputs.skipped || 'n/a' }}\`"
