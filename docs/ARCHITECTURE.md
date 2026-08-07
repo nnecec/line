@@ -25,6 +25,7 @@ Examples:
 - `DragSnapPolicy` — determines snap edge zones and whether a drag-direction change should apply immediately
 - `DragSnapSession` — owns per-drag resolution/tracking state and emits ordered effects for the manager to execute
 - `StashRevealTransition` — owns the single revealed-window invariant, throttling, and token-checked async transition lifecycle
+- `DefaultsGridMemoryStore` — owns persistent grid-memory encoding and Defaults access; coordinators and settings consume typed records
 - `URLTargetWindowPolicy` — selects the target window for `line://` automation (user-defined > sticky window within TTL > first candidate)
 - `StashAftermathDecision` — decides stash aftermath after a window resize (stash, unstash, reprocess, ignore, unmanage, etc.)
 

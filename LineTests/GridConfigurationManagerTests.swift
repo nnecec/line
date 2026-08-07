@@ -79,52 +79,144 @@ final class GridWindowMemoryStoreTests: XCTestCase {
     }
 }
 
-final class GridMemoryRecordTests: XCTestCase {
-    func testParsesValidPersistentRecordsAndSortsByAppThenScreen() {
+@MainActor
+final class DefaultsGridMemoryStoreTests: XCTestCase {
+    private var rawMemory: [String: GridSize] = [:]
+    private var store: DefaultsGridMemoryStore!
+
+    override func setUp() {
+        super.setUp()
+        rawMemory = [:]
+        store = DefaultsGridMemoryStore(
+            read: { [unowned self] in rawMemory },
+            write: { [unowned self] in rawMemory = $0 }
+        )
+    }
+
+    func testSavesAndReadsTypedRecords() {
+        let key = GridMemoryKey(bundleId: "com.example.Editor", screenIdentifier: "screen-a")
+        let size = GridSize(rows: 2, columns: 3)
+
+        store.save(size, for: key)
+
+        XCTAssertEqual(store.size(for: key), size)
+        XCTAssertEqual(store.records(), [GridMemoryRecord(key: key, size: size)])
+    }
+
+    func testRemovingSelectedKeysPreservesUnknownRawEntries() {
+        let removed = GridMemoryKey(bundleId: "com.example.Remove", screenIdentifier: "screen-a")
+        let kept = GridMemoryKey(bundleId: "com.example.Keep", screenIdentifier: "screen-b")
+        rawMemory = [
+            "com.example.Remove::screen-a": GridSize(rows: 1, columns: 2),
+            "com.example.Keep::screen-b": GridSize(rows: 2, columns: 1),
+            "future-format": GridSize(rows: 3, columns: 3)
+        ]
+
+        store.remove(Set([removed]))
+
+        XCTAssertNil(rawMemory["com.example.Remove::screen-a"])
+        XCTAssertNotNil(store.size(for: kept))
+        XCTAssertNotNil(rawMemory["future-format"])
+    }
+
+    func testRecordsIgnoreMalformedEntriesAndSortByAppThenScreen() {
         let firstKey = GridMemoryKey(bundleId: "com.example.Alpha", screenIdentifier: "screen-b")
         let secondKey = GridMemoryKey(bundleId: "com.example.Alpha", screenIdentifier: "screen-a")
         let thirdKey = GridMemoryKey(bundleId: "com.example.Zulu", screenIdentifier: "screen-a")
-        let memory = [
-            thirdKey.storageKey: GridSize(rows: 1, columns: 3),
+        rawMemory = [
+            "com.example.Zulu::screen-a": GridSize(rows: 1, columns: 3),
             "malformed": GridSize(rows: 9, columns: 9),
             "::screen": GridSize(rows: 9, columns: 9),
             "bundle::": GridSize(rows: 9, columns: 9),
             "bundle::screen::extra": GridSize(rows: 9, columns: 9),
-            firstKey.storageKey: GridSize(rows: 1, columns: 2),
-            secondKey.storageKey: GridSize(rows: 2, columns: 1)
+            "com.example.Alpha::screen-b": GridSize(rows: 1, columns: 2),
+            "com.example.Alpha::screen-a": GridSize(rows: 2, columns: 1)
         ]
 
-        let records = GridMemoryRecord.records(from: memory)
+        XCTAssertEqual(store.records().map(\.key), [secondKey, firstKey, thirdKey])
+    }
 
-        XCTAssertEqual(records.map(\.key), [secondKey, firstKey, thirdKey])
-        XCTAssertEqual(records.map(\.id), [secondKey.storageKey, firstKey.storageKey, thirdKey.storageKey])
+    func testRemoveAllClearsKnownAndUnknownEntries() {
+        rawMemory = [
+            "com.example.Editor::screen-a": GridSize(rows: 1, columns: 2),
+            "future-format": GridSize(rows: 3, columns: 3)
+        ]
+
+        store.removeAll()
+
+        XCTAssertTrue(rawMemory.isEmpty)
+    }
+}
+
+@MainActor
+private final class InMemoryGridMemoryStore: GridMemoryPersisting {
+    private var memory: [GridMemoryKey: GridSize]
+
+    init(memory: [GridMemoryKey: GridSize] = [:]) {
+        self.memory = memory
+    }
+
+    func size(for key: GridMemoryKey) -> GridSize? {
+        memory[key]
+    }
+
+    func save(_ size: GridSize, for key: GridMemoryKey) {
+        memory[key] = size
+    }
+
+    func records() -> [GridMemoryRecord] {
+        memory.map { GridMemoryRecord(key: $0.key, size: $0.value) }
+            .sorted {
+                if $0.key.bundleId != $1.key.bundleId {
+                    return $0.key.bundleId.localizedStandardCompare($1.key.bundleId) == .orderedAscending
+                }
+                return $0.key.screenIdentifier.localizedStandardCompare($1.key.screenIdentifier) == .orderedAscending
+            }
+    }
+
+    func remove(_ keys: Set<GridMemoryKey>) {
+        for key in keys {
+            memory.removeValue(forKey: key)
+        }
+    }
+
+    func removeAll() {
+        memory.removeAll()
     }
 }
 
 @MainActor
 final class GridConfigurationManagerTests: XCTestCase {
-    private let manager = GridConfigurationManager.shared
+    private var manager: GridConfigurationManager!
+    private var persistentStore: InMemoryGridMemoryStore!
     private var originalDefaultTemplate: GridTemplate!
     private var originalScreenTemplates: [String: GridTemplate]!
-    private var originalGridMemory: [String: GridSize]!
 
     override func setUp() {
         super.setUp()
         originalDefaultTemplate = Defaults[.defaultGridTemplate]
         originalScreenTemplates = Defaults[.screenGridTemplates]
-        originalGridMemory = Defaults[.gridMemory]
         Defaults[.defaultGridTemplate] = .default
         Defaults[.screenGridTemplates] = [:]
-        Defaults[.gridMemory] = [:]
-        manager.clearAllSessionMemory()
+        persistentStore = InMemoryGridMemoryStore()
+        manager = GridConfigurationManager(persistentStore: persistentStore)
     }
 
     override func tearDown() {
         manager.clearAllSessionMemory()
         Defaults[.defaultGridTemplate] = originalDefaultTemplate
         Defaults[.screenGridTemplates] = originalScreenTemplates
-        Defaults[.gridMemory] = originalGridMemory
         super.tearDown()
+    }
+
+    func testInitializesPublishedRecordsFromInjectedStore() {
+        let key = GridMemoryKey(bundleId: "com.example.Editor", screenIdentifier: "screen-a")
+        let size = GridSize(rows: 2, columns: 1)
+        let store = InMemoryGridMemoryStore(memory: [key: size])
+
+        let manager = GridConfigurationManager(persistentStore: store)
+
+        XCTAssertEqual(manager.persistentRecords, [GridMemoryRecord(key: key, size: size)])
     }
 
     func testWindowMemoryOverridesPersistentAppFallbackWithoutChangingOtherWindows() throws {
@@ -222,7 +314,7 @@ final class GridConfigurationManagerTests: XCTestCase {
             manager.rememberedSize(bundleId: nil, windowIdentity: identity, screen: screen),
             GridSize(rows: 2, columns: 1)
         )
-        XCTAssertTrue(Defaults[.gridMemory].isEmpty)
+        XCTAssertTrue(persistentStore.records().isEmpty)
     }
 
     func testRemovingPersistentRecordsDoesNotClearWindowSessionMemory() throws {
@@ -237,10 +329,12 @@ final class GridConfigurationManagerTests: XCTestCase {
             screen: screen
         )
         let key = GridMemoryKey(bundleId: bundleIdentifier, screenIdentifier: screen.gridIdentifier)
+        XCTAssertEqual(manager.persistentRecords.map(\.key), [key])
 
         manager.clearMemory(for: Set([key]))
 
-        XCTAssertTrue(Defaults[.gridMemory].isEmpty)
+        XCTAssertTrue(persistentStore.records().isEmpty)
+        XCTAssertTrue(manager.persistentRecords.isEmpty)
         XCTAssertEqual(
             manager.rememberedSize(
                 bundleId: bundleIdentifier,

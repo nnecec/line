@@ -10,15 +10,23 @@
 import AppKit
 import Defaults
 import Foundation
+import Observation
 
 /// Manages grid configuration: templates per screen and size memory per app+screen.
 @MainActor
+@Observable
 final class GridConfigurationManager {
-    static let shared = GridConfigurationManager()
-    private var windowMemory = GridWindowMemoryStore()
+    static let shared = GridConfigurationManager(persistentStore: DefaultsGridMemoryStore())
+    @ObservationIgnored private let persistentStore: any GridMemoryPersisting
+    @ObservationIgnored private var windowMemory = GridWindowMemoryStore()
+
+    private(set) var persistentRecords: [GridMemoryRecord]
     private(set) var sessionGeneration: UInt = 0
 
-    private init() {}
+    init(persistentStore: any GridMemoryPersisting) {
+        self.persistentStore = persistentStore
+        self.persistentRecords = persistentStore.records()
+    }
 
     // MARK: - Template Management
 
@@ -69,7 +77,7 @@ final class GridConfigurationManager {
         let key = GridMemoryKey(bundleId: bundleId, screenIdentifier: screen.gridIdentifier)
         let template = self.template(for: screen)
 
-        guard let stored = Defaults[.gridMemory][key.storageKey] else {
+        guard let stored = persistentStore.size(for: key) else {
             return .default
         }
 
@@ -103,9 +111,8 @@ final class GridConfigurationManager {
         }
 
         let key = GridMemoryKey(bundleId: bundleId, screenIdentifier: screen.gridIdentifier)
-        var memory = Defaults[.gridMemory]
-        memory[key.storageKey] = size
-        Defaults[.gridMemory] = memory
+        persistentStore.save(size, for: key)
+        refreshPersistentRecords()
     }
 
     /// Save both the current window's session override and the app's persistent fallback.
@@ -130,37 +137,14 @@ final class GridConfigurationManager {
 
     /// Clear all grid size memory.
     func clearAllMemory() {
-        Defaults[.gridMemory] = [:]
-    }
-
-    /// Clear memory for a specific app across all screens (useful for testing/debugging).
-    func clearMemory(for bundleId: String) {
-        var memory = Defaults[.gridMemory]
-        memory = memory.filter { key, _ in
-            guard let parsed = GridMemoryKey(storageKey: key) else { return true }
-            return parsed.bundleId != bundleId
-        }
-        Defaults[.gridMemory] = memory
-    }
-
-    /// Clear memory for a specific screen (useful for testing/debugging).
-    func clearMemory(for screen: NSScreen) {
-        let identifier = screen.gridIdentifier
-        var memory = Defaults[.gridMemory]
-        memory = memory.filter { key, _ in
-            guard let parsed = GridMemoryKey(storageKey: key) else { return true }
-            return parsed.screenIdentifier != identifier
-        }
-        Defaults[.gridMemory] = memory
+        persistentStore.removeAll()
+        refreshPersistentRecords()
     }
 
     /// Clear selected persistent app+screen records. Session overrides remain active.
     func clearMemory(for keys: Set<GridMemoryKey>) {
-        var memory = Defaults[.gridMemory]
-        for key in keys {
-            memory.removeValue(forKey: key.storageKey)
-        }
-        Defaults[.gridMemory] = memory
+        persistentStore.remove(keys)
+        refreshPersistentRecords()
     }
 
     /// Clear every window-specific override for this Line session.
@@ -177,5 +161,9 @@ final class GridConfigurationManager {
     /// Clear window-specific overrides for an application that terminated.
     func clearSessionMemory(forProcessIdentifier processIdentifier: pid_t) {
         windowMemory.removeAll(processIdentifier: processIdentifier)
+    }
+
+    private func refreshPersistentRecords() {
+        persistentRecords = persistentStore.records()
     }
 }

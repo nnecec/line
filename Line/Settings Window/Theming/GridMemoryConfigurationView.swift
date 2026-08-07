@@ -4,18 +4,17 @@
 //
 
 import AppKit
-import Defaults
 import SwiftUI
 
 @available(macOS 15.0, *)
 struct GridMemoryConfigurationView: View {
-    @Default(.gridMemory) private var persistentMemory
+    @State private var manager = GridConfigurationManager.shared
 
     @State private var selectedRecordIDs = Set<GridMemoryRecord.ID>()
     @State private var showClearAllConfirmation = false
 
     private var records: [GridMemoryRecord] {
-        GridMemoryRecord.records(from: persistentMemory)
+        manager.persistentRecords
     }
 
     var body: some View {
@@ -47,7 +46,7 @@ struct GridMemoryConfigurationView: View {
         .alert("Clear Grid Memory?", isPresented: $showClearAllConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Clear", role: .destructive) {
-                GridConfigurationManager.shared.clearAllMemory()
+                manager.clearAllMemory()
                 selectedRecordIDs.removeAll()
             }
         } message: {
@@ -107,7 +106,7 @@ struct GridMemoryConfigurationView: View {
             } label: {
                 Label("Clear All", systemImage: "trash")
             }
-            .disabled(persistentMemory.isEmpty)
+            .disabled(records.isEmpty)
         }
         .buttonStyle(.bordered)
     }
@@ -118,8 +117,8 @@ struct GridMemoryConfigurationView: View {
                 .filter { selectedRecordIDs.contains($0.id) }
                 .map(\.key)
         )
-        GridConfigurationManager.shared.clearMemory(for: selectedKeys)
-        selectedRecordIDs.subtract(selectedKeys.map(\.storageKey))
+        manager.clearMemory(for: selectedKeys)
+        selectedRecordIDs.subtract(selectedKeys)
     }
 
     private func applicationName(for bundleIdentifier: String) -> String {
