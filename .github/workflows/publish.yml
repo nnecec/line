@@ -230,14 +230,14 @@ jobs:
           set -euo pipefail
           set -o pipefail
           LOG="$RUNNER_TEMP/semantic-release.log"
-          EXTRA=()
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            EXTRA+=(--dry-run)
-          fi
 
           # Capture next version from output when published / dry-run
           gh auth setup-git
-          pnpm exec semantic-release "${EXTRA[@]}" 2>&1 | tee "$LOG"
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            pnpm exec semantic-release --dry-run 2>&1 | tee "$LOG"
+          else
+            pnpm exec semantic-release 2>&1 | tee "$LOG"
+          fi
 
           if grep -Eq 'There are no relevant changes|no new version is released|The next release version is not determined' "$LOG"; then
             echo "skipped=true" >> "$GITHUB_OUTPUT"
