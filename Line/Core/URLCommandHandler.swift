@@ -99,6 +99,8 @@ enum TargetScreenResolutionPolicy {
 }
 
 enum URLScreenCommandParser {
+    static let canonicalCommands = ["next", "previous", "left", "right", "top", "bottom"]
+
     static func screenAction(for rawCommand: String?) -> WindowAction.ScreenSwitchAction? {
         guard let rawCommand else {
             return nil
@@ -125,6 +127,7 @@ enum URLScreenCommandParser {
 
 /// Handles URL scheme commands for the Line application
 @Loggable
+@MainActor
 final class URLCommandHandler {
     // MARK: - Types
 
@@ -168,26 +171,22 @@ final class URLCommandHandler {
         static let posixPermissions: Int = 0o600
     }
 
-    static func supports(_ url: URL) -> Bool {
+    nonisolated static func supports(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased() else { return false }
         return Scheme.supported.contains(scheme)
     }
 
-    static var requiredFormat: String {
+    nonisolated static var requiredFormat: String {
         "\(Scheme.canonical)://<command>/<parameters>"
     }
 
-    static func commandURL(_ command: Command, _ parameter: String) -> String {
+    nonisolated static func commandURL(_ command: Command, _ parameter: String) -> String {
         "\(Scheme.canonical)://\(command.rawValue)/\(parameter)"
     }
 
     // MARK: - Properties
 
-    /// Tracks the last active window for context preservation
-    private var lastActiveWindow: Window?
-
-    /// Timestamp of last window activation
-    private var lastActiveTime: Date?
+    private lazy var targetOrchestrator = makeTargetOrchestrator()
 
     /// Whether command output should be collected for the user-facing temporary document.
     private var shouldCollectOutput = false
@@ -219,28 +218,25 @@ final class URLCommandHandler {
     }
 
     /// Returns only stable, non-user-specific command hints for error feedback.
-    static func availableCommandHints() -> [String] {
+    nonisolated static func availableCommandHints() -> [String] {
         [
             "line://direction/<direction>",
-            "line://screen/<next|previous>",
+            "line://screen/<next|previous|left|right|top|bottom>",
             "line://action/<action>",
             "line://keybind/<name>",
             "line://list/<actions|keybinds|all>"
         ]
     }
 
-    static func availableDirectionHints() -> [String] {
+    nonisolated static func availableDirectionHints() -> [String] {
         WindowDirection.allCases.map { commandURL(.direction, $0.rawValue.lowercased()) }
     }
 
-    static func availableScreenHints() -> [String] {
-        [
-            commandURL(.screen, "next"),
-            commandURL(.screen, "previous")
-        ]
+    nonisolated static func availableScreenHints() -> [String] {
+        URLScreenCommandParser.canonicalCommands.map { commandURL(.screen, $0) }
     }
 
-    static func availableKeybindHints() -> [String] {
+    nonisolated static func availableKeybindHints() -> [String] {
         ["Use line://list/keybinds to view configured keybinds."]
     }
 
@@ -364,11 +360,11 @@ final class URLCommandHandler {
         flushOutput()
     }
 
-    static func processingLogDescription(command: Command, parameters: [String]) -> String {
+    nonisolated static func processingLogDescription(command: Command, parameters: [String]) -> String {
         "Processing \(command.rawValue) command with \(parameters.count) parameter(s)"
     }
 
-    static func listOutputFallbackLogDescription(_ items: [String]) -> String {
+    nonisolated static func listOutputFallbackLogDescription(_ items: [String]) -> String {
         "URL command list output omitted from logs (item count: \(items.count))"
     }
 
@@ -404,18 +400,7 @@ final class URLCommandHandler {
     /// Executes a window action for a given direction
     /// - Parameter direction: The direction to move/resize the window
     private func executeWindowAction(_ direction: WindowDirection) {
-        let lineBundleID = Bundle.main.bundleIdentifier
-        let visibleWindows = WindowUtility.windowList().filter {
-            URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
-        }
-
-        guard let window = resolveTargetWindow(candidates: visibleWindows),
-              let screen = targetScreen(for: window) else {
-            return
-        }
-
-        let action = WindowAction(direction)
-        activateAndResizeWindow(window, action, screen)
+        executeTargetedCommand(.action(WindowAction(direction)))
     }
 
     /// Handles screen management commands
@@ -427,19 +412,7 @@ final class URLCommandHandler {
             return
         }
 
-        // Prefer the same target policy as other verbs; fall back to frontmost.
-        let candidates: [Window] = {
-            if let front = try? WindowUtility.frontmostWindow() {
-                return [front]
-            }
-            return []
-        }()
-        guard let window = resolveTargetWindow(candidates: candidates)
-            ?? (try? WindowUtility.frontmostWindow()) else {
-            return
-        }
-
-        moveWindowToScreen(window, screenAction)
+        executeTargetedCommand(.screenSwitch(screenAction))
     }
 
     /// Handles predefined window actions
@@ -453,25 +426,11 @@ final class URLCommandHandler {
         // First check for custom / stash actions by name
         let customKeybinds = Defaults[.keybinds].filter { $0.direction.isCustomizable && $0.name != nil }
         if let customAction = customKeybinds.first(where: { ($0.name?.lowercased() ?? "") == actionStr }) {
-            let lineBundleID = Bundle.main.bundleIdentifier
-            let candidates = WindowUtility.windowList().filter {
-                URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
-            }
-            if let window = resolveTargetWindow(candidates: candidates),
-               let screen = targetScreen(for: window) {
-                activateAndResizeWindow(window, customAction.action, screen)
-            }
+            executeTargetedCommand(.action(customAction.action))
         } else if actionStr == "list" {
             printAvailableActions(includeCustomNames: true)
         } else if let direction = URLDirectionResolver.predefinedAction(for: actionStr) {
-            let lineBundleID = Bundle.main.bundleIdentifier
-            let candidates = WindowUtility.windowList().filter {
-                URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
-            }
-            if let window = resolveTargetWindow(candidates: candidates),
-               let screen = targetScreen(for: window) {
-                activateAndResizeWindow(window, direction.toWindowAction(), screen)
-            }
+            executeTargetedCommand(.action(direction.toWindowAction()))
         } else {
             printAvailableActions(includeCustomNames: false)
         }
@@ -502,14 +461,7 @@ final class URLCommandHandler {
         }
 
         if let keybind = keybinds.first(where: { $0.name?.lowercased() == keybindName.lowercased() }) {
-            let lineBundleID = Bundle.main.bundleIdentifier
-            let candidates = WindowUtility.windowList().filter {
-                URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
-            }
-            if let window = resolveTargetWindow(candidates: candidates),
-               let screen = targetScreen(for: window) {
-                activateAndResizeWindow(window, keybind.action, screen)
-            }
+            executeTargetedCommand(.action(keybind.action))
         } else {
             appendAvailableKeybindHints()
         }
@@ -528,24 +480,6 @@ final class URLCommandHandler {
 
     // MARK: - Helper Methods
 
-    private func targetScreen(for window: Window) -> NSScreen? {
-        TargetScreenResolutionPolicy.choose(
-            targetWindowScreen: ScreenUtility.screenContaining(window),
-            mainScreen: NSScreen.main
-        )
-    }
-
-    /// Finds the most appropriate target window for an action.
-    private func resolveTargetWindow(candidates: [Window]) -> Window? {
-        URLTargetWindowPolicy.resolve(
-            candidates: candidates,
-            userDefined: WindowUtility.userDefinedTargetWindow(),
-            stickyWindow: lastActiveWindow,
-            stickyTime: lastActiveTime,
-            lineBundleID: Bundle.main.bundleIdentifier
-        )
-    }
-
     private func namedKeybindsSnapshot() -> [URLCommandCatalog.NamedKeybind] {
         Defaults[.keybinds].compactMap { keybind in
             guard let name = keybind.name, !name.isEmpty else { return nil }
@@ -557,41 +491,41 @@ final class URLCommandHandler {
         }
     }
 
-    /// Activates and resizes a window
-    private func activateAndResizeWindow(_ window: Window, _ action: WindowAction, _ screen: NSScreen) {
-        lastActiveWindow = window
-        lastActiveTime = Date()
-
-        if let app = window.nsRunningApplication {
-            app.activate()
-        }
-
-        Task {
-            try? await Task.sleep(for: .seconds(0.1))
-
-            _ = try await WindowActionEngine.shared.apply(
-                action,
-                window: window,
-                screen: screen
-            )
+    private func executeTargetedCommand(_ request: URLCommandTargetOrchestrator<Window, NSScreen>.Request) {
+        Task { [weak self] in
+            guard let self else { return }
+            let result = await targetOrchestrator.execute(request)
+            guard result != .applied else { return }
+            log.error("URL command was not applied (result: \(String(describing: result)))")
         }
     }
 
-    /// Moves a window to another screen
-    private func moveWindowToScreen(_ window: Window, _ action: WindowAction.ScreenSwitchAction) {
-        guard let currentScreen = ScreenUtility.screenContaining(window),
-              let targetScreen = ScreenSwitchActionPolicy.targetScreen(for: action, from: currentScreen) else {
-            return
-        }
-
-        let preservedFrameAction = ScreenSwitchActionPolicy.preservingCurrentFrameAction(for: window, on: currentScreen)
-
-        Task {
-            _ = try await WindowActionEngine.shared.apply(
-                preservedFrameAction.action,
-                window: window,
-                screen: targetScreen
+    private func makeTargetOrchestrator() -> URLCommandTargetOrchestrator<Window, NSScreen> {
+        let lineBundleID = Bundle.main.bundleIdentifier
+        return URLCommandTargetOrchestrator(
+            dependencies: .init(
+                candidates: { WindowUtility.windowList() },
+                userDefinedTarget: { WindowUtility.userDefinedTargetWindow() },
+                isEligible: {
+                    URLTargetWindowPolicy.isEligibleCandidate($0, lineBundleID: lineBundleID)
+                },
+                screen: { ScreenUtility.screenContaining($0) },
+                mainScreen: { NSScreen.main },
+                activate: { $0.nsRunningApplication?.activate() },
+                destinationScreen: {
+                    ScreenSwitchActionPolicy.targetScreen(for: $0, from: $1)
+                },
+                preservingFrameAction: {
+                    ScreenSwitchActionPolicy.preservingCurrentFrameAction(for: $0, on: $1).action
+                },
+                apply: {
+                    try await WindowActionEngine.shared.apply($0, window: $1, screen: $2).success
+                },
+                activationDelay: {
+                    try await Task.sleep(for: .seconds(0.1))
+                },
+                now: { Date() }
             )
-        }
+        )
     }
 }

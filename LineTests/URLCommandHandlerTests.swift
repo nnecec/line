@@ -6,6 +6,7 @@
 @testable import Line
 import XCTest
 
+@MainActor
 final class URLCommandHandlerTests: XCTestCase {
     func testLineSchemeIsAccepted() throws {
         let url = try XCTUnwrap(URL(string: "line://direction/right"))
@@ -108,6 +109,14 @@ final class URLCommandHandlerTests: XCTestCase {
     func testScreenCommandParserRejectsUnknownCommand() {
         XCTAssertNil(URLScreenCommandParser.screenAction(for: "diagonal"))
         XCTAssertNil(URLScreenCommandParser.screenAction(for: nil))
+    }
+
+    func testScreenHintsIncludeEveryDocumentedDirection() {
+        let hints = URLCommandHandler.availableScreenHints()
+
+        for command in ["next", "previous", "left", "right", "top", "bottom"] {
+            XCTAssertTrue(hints.contains("line://screen/\(command)"))
+        }
     }
 
     // MARK: - URL Length Validation Tests
@@ -233,6 +242,15 @@ final class URLCommandHandlerTests: XCTestCase {
         XCTAssertTrue(joined.contains("Stash Actions:"))
     }
 
+    func testCatalogAllIncludesEveryCanonicalScreenCommand() {
+        let catalog = URLCommandCatalog.build(kind: .all, namedKeybinds: [])
+        let joined = catalog.items.joined(separator: "\n")
+
+        for command in URLScreenCommandParser.canonicalCommands {
+            XCTAssertTrue(joined.contains("line://screen/\(command)"))
+        }
+    }
+
     func testCatalogKeybindsListsNames() {
         let binds = [URLCommandCatalog.NamedKeybind(name: "Focus Work", isCustom: false, isStash: false)]
         let catalog = URLCommandCatalog.build(kind: .keybinds, namedKeybinds: binds)
@@ -263,5 +281,325 @@ final class URLCommandHandlerTests: XCTestCase {
         }
 
         return parameters.joined(separator: "/")
+    }
+}
+
+final class URLTargetWindowPolicyTests: XCTestCase {
+    func testResolutionPriorityAndEligibility() {
+        let now = Date(timeIntervalSince1970: 100)
+        let resolved = URLTargetWindowPolicy.resolve(
+            candidates: ["candidate"],
+            userDefined: "user",
+            stickyWindow: "sticky",
+            stickyTime: now,
+            now: now,
+            isEligible: { $0 != "user" }
+        )
+
+        XCTAssertEqual(resolved, "sticky")
+    }
+
+    func testExpiredOrFutureStickyFallsBackToFirstEligibleCandidate() {
+        let now = Date(timeIntervalSince1970: 100)
+
+        XCTAssertEqual(
+            URLTargetWindowPolicy.resolve(
+                candidates: ["ineligible", "candidate"],
+                userDefined: nil,
+                stickyWindow: "sticky",
+                stickyTime: now.addingTimeInterval(-URLTargetWindowPolicy.stickyTTL - 0.01),
+                now: now,
+                isEligible: { $0 != "ineligible" }
+            ),
+            "candidate"
+        )
+        XCTAssertEqual(
+            URLTargetWindowPolicy.resolve(
+                candidates: ["candidate"],
+                userDefined: nil,
+                stickyWindow: "sticky",
+                stickyTime: now.addingTimeInterval(1),
+                now: now,
+                isEligible: { _ in true }
+            ),
+            "candidate"
+        )
+    }
+}
+
+@MainActor
+final class URLCommandTargetOrchestratorTests: XCTestCase {
+    private final class Target {
+        let id: String
+
+        init(_ id: String) {
+            self.id = id
+        }
+    }
+
+    func testActionActivatesAppliesAndReusesSuccessfulStickyTarget() async {
+        let first = Target("first")
+        let second = Target("second")
+        var candidates = [second]
+        var userDefined: Target? = first
+        var activated: [String] = []
+        var applied: [String] = []
+        let orchestrator = makeOrchestrator(
+            candidates: { candidates },
+            userDefined: { userDefined },
+            activate: { activated.append($0.id) },
+            apply: { _, target, _ in
+                applied.append(target.id)
+                return true
+            }
+        )
+
+        let firstResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(firstResult, .applied)
+        userDefined = nil
+        candidates = [second]
+        let secondResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(secondResult, .applied)
+
+        XCTAssertEqual(activated, ["first", "first"])
+        XCTAssertEqual(applied, ["first", "first"])
+    }
+
+    func testFailedApplyDoesNotBecomeSticky() async {
+        let first = Target("first")
+        let second = Target("second")
+        var userDefined: Target? = first
+        var candidates = [second]
+        var shouldFail = true
+        var applied: [String] = []
+        let orchestrator = makeOrchestrator(
+            candidates: { candidates },
+            userDefined: { userDefined },
+            apply: { _, target, _ in
+                if shouldFail {
+                    return false
+                }
+                applied.append(target.id)
+                return true
+            }
+        )
+
+        let failedResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(failedResult, .failed)
+        shouldFail = false
+        userDefined = nil
+        candidates = [second]
+        let appliedResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(appliedResult, .applied)
+
+        XCTAssertEqual(applied, ["second"])
+    }
+
+    func testScreenSwitchUsesDestinationWithoutActivation() async {
+        let target = Target("target")
+        var activationCount = 0
+        var appliedScreen: String?
+        let orchestrator = makeOrchestrator(
+            candidates: { [target] },
+            userDefined: { nil },
+            activate: { _ in activationCount += 1 },
+            destinationScreen: { _, _ in "destination" },
+            apply: { _, _, screen in
+                appliedScreen = screen
+                return true
+            }
+        )
+
+        let result = await orchestrator.execute(.screenSwitch(.next))
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(activationCount, 0)
+        XCTAssertEqual(appliedScreen, "destination")
+    }
+
+    func testMissingTargetAndScreenReturnDistinctResults() async {
+        let target = Target("target")
+        let noTarget = makeOrchestrator(
+            candidates: { [] },
+            userDefined: { nil }
+        )
+        let noScreen = makeOrchestrator(
+            candidates: { [target] },
+            userDefined: { nil },
+            screen: { _ in nil },
+            mainScreen: { nil }
+        )
+
+        let noTargetResult = await noTarget.execute(.action(.standard(.maximize)))
+        let noScreenResult = await noScreen.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(noTargetResult, .noTarget)
+        XCTAssertEqual(noScreenResult, .noScreen)
+    }
+
+    func testOverlappingCancellationDoesNotReplaceSuccessfulStickyTarget() async {
+        let first = Target("first")
+        let second = Target("second")
+        let third = Target("third")
+        var userDefined: Target? = first
+        var candidates = [second]
+        var delayCalls = 0
+        var applied: [String] = []
+        let orchestrator = makeOrchestrator(
+            candidates: { candidates },
+            userDefined: { userDefined },
+            activationDelay: {
+                delayCalls += 1
+                if delayCalls == 1 {
+                    try await Task.sleep(for: .seconds(60))
+                }
+            },
+            apply: { _, target, _ in
+                applied.append(target.id)
+                return true
+            }
+        )
+
+        let firstTask = Task {
+            await orchestrator.execute(.action(.standard(.maximize)))
+        }
+        while delayCalls == 0 {
+            await Task.yield()
+        }
+
+        userDefined = second
+        let secondTask = Task {
+            await orchestrator.execute(.action(.standard(.maximize)))
+        }
+        while delayCalls < 2 {
+            await Task.yield()
+        }
+        firstTask.cancel()
+
+        let firstResult = await firstTask.value
+        let secondResult = await secondTask.value
+        XCTAssertEqual(firstResult, .cancelled)
+        XCTAssertEqual(secondResult, .applied)
+
+        userDefined = nil
+        candidates = [third]
+        let stickyResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(stickyResult, .applied)
+        XCTAssertEqual(applied, ["second", "second"])
+    }
+
+    func testEarlierSlowSuccessCannotOverwriteLaterSuccessfulStickyTarget() async {
+        let first = Target("first")
+        let second = Target("second")
+        let third = Target("third")
+        var userDefined: Target? = first
+        var candidates = [third]
+        var delayCalls = 0
+        var releaseFirstDelay: CheckedContinuation<(), Never>?
+        var applied: [String] = []
+        let orchestrator = makeOrchestrator(
+            candidates: { candidates },
+            userDefined: { userDefined },
+            activationDelay: {
+                delayCalls += 1
+                if delayCalls == 1 {
+                    await withCheckedContinuation { releaseFirstDelay = $0 }
+                }
+            },
+            apply: { _, target, _ in
+                applied.append(target.id)
+                return true
+            }
+        )
+
+        let firstTask = Task {
+            await orchestrator.execute(.action(.standard(.maximize)))
+        }
+        while releaseFirstDelay == nil {
+            await Task.yield()
+        }
+
+        userDefined = second
+        let secondResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(secondResult, .applied)
+        releaseFirstDelay?.resume()
+        let firstResult = await firstTask.value
+        XCTAssertEqual(firstResult, .applied)
+
+        userDefined = nil
+        candidates = [third]
+        let stickyResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(stickyResult, .applied)
+        XCTAssertEqual(applied, ["second", "first", "second"])
+    }
+
+    func testLaterFailureStillAllowsEarlierSlowSuccessToBecomeSticky() async {
+        let first = Target("first")
+        let second = Target("second")
+        let third = Target("third")
+        var userDefined: Target? = first
+        var candidates = [third]
+        var delayCalls = 0
+        var releaseFirstDelay: CheckedContinuation<(), Never>?
+        var attempted: [String] = []
+        let orchestrator = makeOrchestrator(
+            candidates: { candidates },
+            userDefined: { userDefined },
+            activationDelay: {
+                delayCalls += 1
+                if delayCalls == 1 {
+                    await withCheckedContinuation { releaseFirstDelay = $0 }
+                }
+            },
+            apply: { _, target, _ in
+                attempted.append(target.id)
+                return target !== second
+            }
+        )
+
+        let firstTask = Task {
+            await orchestrator.execute(.action(.standard(.maximize)))
+        }
+        while releaseFirstDelay == nil {
+            await Task.yield()
+        }
+
+        userDefined = second
+        let secondResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(secondResult, .failed)
+        releaseFirstDelay?.resume()
+        let firstResult = await firstTask.value
+        XCTAssertEqual(firstResult, .applied)
+
+        userDefined = nil
+        candidates = [third]
+        let stickyResult = await orchestrator.execute(.action(.standard(.maximize)))
+        XCTAssertEqual(stickyResult, .applied)
+        XCTAssertEqual(attempted, ["second", "first", "first"])
+    }
+
+    private func makeOrchestrator(
+        candidates: @escaping @MainActor () -> [Target],
+        userDefined: @escaping @MainActor () -> Target?,
+        screen: @escaping @MainActor (Target) -> String? = { _ in "current" },
+        mainScreen: @escaping @MainActor () -> String? = { "main" },
+        activate: @escaping @MainActor (Target) -> () = { _ in },
+        destinationScreen: @escaping @MainActor (WindowAction.ScreenSwitchAction, String) -> String? = { _, _ in nil },
+        activationDelay: @escaping @MainActor () async throws -> () = {},
+        apply: @escaping @MainActor (WindowAction, Target, String) async throws -> Bool = { _, _, _ in true }
+    ) -> URLCommandTargetOrchestrator<Target, String> {
+        URLCommandTargetOrchestrator(
+            dependencies: .init(
+                candidates: candidates,
+                userDefinedTarget: userDefined,
+                isEligible: { _ in true },
+                screen: screen,
+                mainScreen: mainScreen,
+                activate: activate,
+                destinationScreen: destinationScreen,
+                preservingFrameAction: { _, _ in .standard(.maximize) },
+                apply: apply,
+                activationDelay: activationDelay,
+                now: { Date(timeIntervalSince1970: 100) }
+            )
+        )
     }
 }

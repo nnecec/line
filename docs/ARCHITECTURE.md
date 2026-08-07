@@ -26,6 +26,7 @@ Examples:
 - `DragSnapSession` — owns per-drag resolution/tracking state and emits ordered effects for the manager to execute
 - `StashRevealTransition` — owns the single revealed-window invariant, throttling, and token-checked async transition lifecycle
 - `DefaultsGridMemoryStore` — owns persistent grid-memory encoding and Defaults access; coordinators and settings consume typed records
+- `URLCommandTargetOrchestrator` — owns URL target selection, activation/screen effects, execution results, and successful sticky-target updates
 - `URLTargetWindowPolicy` — selects the target window for `line://` automation (user-defined > sticky window within TTL > first candidate)
 - `StashAftermathDecision` — decides stash aftermath after a window resize (stash, unstash, reprocess, ignore, unmanage, etc.)
 

@@ -49,20 +49,20 @@ enum URLCommandCatalog {
     ) -> (title: String, items: [String]) {
         switch kind {
         case .actions:
-            var items: [String] = ["Available Actions:"]
+            var items = ["Available Actions:"]
             items.append(contentsOf: namedSections(namedKeybinds: namedKeybinds, style: .listActions))
             items.append(contentsOf: predefinedActionSections(style: .listActions))
             return ("", items)
 
         case .keybinds:
-            var items: [String] = ["Available Keybinds:"]
+            var items = ["Available Keybinds:"]
             items.append(contentsOf: namedKeybinds.map {
                 "  • \(URLCommandHandler.commandURL(.keybind, $0.name))"
             })
             return ("", items)
 
         case .all:
-            var items: [String] = ["Available Commands:"]
+            var items = ["Available Commands:"]
 
             items.append("\nDirection Commands:")
             items.append(contentsOf: WindowDirection.allCases.map {
@@ -70,8 +70,9 @@ enum URLCommandCatalog {
             })
 
             items.append("\nScreen Commands:")
-            items.append("  • \(URLCommandHandler.commandURL(.screen, "next"))")
-            items.append("  • \(URLCommandHandler.commandURL(.screen, "previous"))")
+            items.append(contentsOf: URLScreenCommandParser.canonicalCommands.map {
+                "  • \(URLCommandHandler.commandURL(.screen, $0))"
+            })
 
             items.append("\nActions:")
             items.append(contentsOf: namedSections(namedKeybinds: namedKeybinds, style: .listActions))

@@ -12,27 +12,27 @@ enum URLTargetWindowPolicy {
 
     /// Choose a target from candidate windows.
     /// Priority: user-defined target → sticky last-active (within TTL, still eligible) → first candidate.
-    static func resolve(
-        candidates: [Window],
-        userDefined: Window?,
-        stickyWindow: Window?,
+    static func resolve<Target>(
+        candidates: [Target],
+        userDefined: Target?,
+        stickyWindow: Target?,
         stickyTime: Date?,
         now: Date = Date(),
         stickyTTL: TimeInterval = stickyTTL,
-        lineBundleID: String? = Bundle.main.bundleIdentifier
-    ) -> Window? {
-        if let userDefined {
+        isEligible: (Target) -> Bool
+    ) -> Target? {
+        if let userDefined, isEligible(userDefined) {
             return userDefined
         }
 
         if let stickyWindow,
            let stickyTime,
-           now.timeIntervalSince(stickyTime) <= stickyTTL,
-           isEligibleSticky(stickyWindow, lineBundleID: lineBundleID) {
+           (0...stickyTTL).contains(now.timeIntervalSince(stickyTime)),
+           isEligible(stickyWindow) {
             return stickyWindow
         }
 
-        return candidates.first
+        return candidates.first(where: isEligible)
     }
 
     /// Filter used by direction / action / keybind verbs for visible regular app windows.
@@ -42,12 +42,5 @@ enum URLTargetWindowPolicy {
         let isRegular = app.activationPolicy == .regular
         let isVisible = !window.isApplicationHidden && !window.minimized
         return !isLine && isRegular && isVisible
-    }
-
-    private static func isEligibleSticky(_ window: Window, lineBundleID: String?) -> Bool {
-        guard let app = window.nsRunningApplication else { return false }
-        return app.bundleIdentifier != lineBundleID
-            && !window.isApplicationHidden
-            && !window.minimized
     }
 }

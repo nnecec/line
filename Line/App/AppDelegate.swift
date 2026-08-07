@@ -50,6 +50,7 @@ enum AppLaunchCoordinationPolicy {
 }
 
 @Loggable
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let urlCommandHandler = URLCommandHandler()
 
