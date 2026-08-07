@@ -26,10 +26,7 @@ final class WindowDragManager {
     private init() {}
 
     private var resizeContext: ResizeContext?
-    private var initialWindowFrame: CGRect?
-
-    /// This is to avoid repeated window resolution attempts during a non-window drag (e.g. in games).
-    private var didFailToResolveDraggedWindow: Bool = false
+    private var dragSession = DragSnapSession()
 
     private let previewController = PreviewController()
 
@@ -37,6 +34,7 @@ final class WindowDragManager {
     private var leftMouseUpMonitor: PassiveEventMonitor?
 
     private var determineDraggedWindowTask: Task<(), Never>?
+    private var determineDraggedWindowGeneration: UInt = 0
     private var accessibilityCheckerTask: Task<(), Never>?
 
     private var currentMousePosition: CGPoint {
@@ -63,6 +61,8 @@ final class WindowDragManager {
                     setupListeners()
                 } else {
                     removeListeners()
+                    resetDragState()
+                    previewController.close()
                 }
             }
         }
@@ -108,65 +108,35 @@ final class WindowDragManager {
 
     private func leftMouseDragged(event _: CGEvent) {
         guard shouldMonitorDragActions else {
+            previewController.close()
+            resetDragState()
             return
         }
 
         Task {
-            // Process window (only ONCE during a window drag)
-            if resizeContext == nil, !didFailToResolveDraggedWindow {
-                setCurrentDraggingWindow()
-            }
-
-            if let window = resizeContext?.window,
-               let initialFrame = initialWindowFrame,
-               hasWindowResized(window.frame, initialFrame) {
-                if hasWindowMoved(window.frame, initialFrame) {
-                    if Defaults[.restoreWindowFrameOnDrag] {
-                        await restoreInitialWindowSize(window)
-                    }
-
-                    if Defaults[.windowSnapping] {
-                        // Only warp cursor away from top edge if top snap area is enabled
-                        if Defaults[.suppressMissionControlOnTopDrag],
-                           let frame = NSScreen.main?.displayBounds,
-                           let mouseLocation = CGEvent.mouseLocation,
-                           mouseLocation.y == frame.minY {
-                            let newOrigin = CGPoint(x: mouseLocation.x, y: frame.minY + 1)
-                            CGWarpMouseCursorPosition(newOrigin)
-                        }
-
-                        processSnapAction()
-                    }
-                }
-
-                StashManager.shared.onWindowManipulated(window.cgWindowID)
-                await WindowRecords.shared.eraseRecords(for: window)
-            }
+            let effects = dragSession.handle(
+                .dragged(
+                    currentFrame: resizeContext?.window?.frame,
+                    configuration: .init(
+                        windowSnapping: Defaults[.windowSnapping],
+                        restoreInitialWindowSize: Defaults[.restoreWindowFrameOnDrag]
+                    )
+                )
+            )
+            await execute(effects)
         }
     }
 
     private func leftMouseUp(_: CGEvent) {
-        guard shouldMonitorDragActions else { return }
-
         Task {
-            previewController.close()
-            defer {
-                resetDragState()
-            }
-
-            guard Defaults[.windowSnapping] else { return }
-
-            if let context = resizeContext,
-               !context.action.direction.isNoOp,
-               let window = context.window,
-               let initialFrame = initialWindowFrame,
-               hasWindowMoved(window.frame, initialFrame) {
-                do {
-                    _ = try await WindowActionEngine.shared.apply(context: context)
-                } catch {
-                    log.error("Failed to snap window: \(ApplicationLogPrivacy.errorDescription(error))")
-                }
-            }
+            let effects = dragSession.handle(
+                .released(
+                    currentFrame: resizeContext?.window?.frame,
+                    hasSnapAction: !(resizeContext?.action.direction.isNoOp ?? true),
+                    windowSnapping: Defaults[.windowSnapping]
+                )
+            )
+            await execute(effects)
         }
     }
 
@@ -175,26 +145,37 @@ final class WindowDragManager {
             return
         }
 
+        determineDraggedWindowGeneration &+= 1
+        let generation = determineDraggedWindowGeneration
         determineDraggedWindowTask = Task {
             defer {
-                determineDraggedWindowTask = nil
+                if determineDraggedWindowGeneration == generation {
+                    determineDraggedWindowTask = nil
+                }
             }
 
             guard let window = WindowUtility.windowAtPosition(currentMousePosition),
                   !WindowStateValidator.shouldIgnore(window)
             else {
-                didFailToResolveDraggedWindow = true
+                _ = dragSession.handle(.windowResolutionFailed)
                 return
             }
 
-            initialWindowFrame = window.frame
+            let initialFrame = window.frame
 
             let context = ResizeContext(
                 window: window,
                 initialMousePosition: currentMousePosition
             )
             await context.refreshResolvedState()
+            guard !Task.isCancelled,
+                  determineDraggedWindowGeneration == generation
+            else {
+                return
+            }
+
             self.resizeContext = context
+            _ = dragSession.handle(.windowResolved(initialFrame: initialFrame))
 
             log.info("Determined window being dragged: \(window.description)")
         }
@@ -202,18 +183,65 @@ final class WindowDragManager {
 
     private func resetDragState() {
         resizeContext = nil
-        didFailToResolveDraggedWindow = false
-        initialWindowFrame = nil
+        dragSession = DragSnapSession()
+        determineDraggedWindowGeneration &+= 1
         determineDraggedWindowTask?.cancel()
         determineDraggedWindowTask = nil
     }
 
-    private func hasWindowMoved(_ windowFrame: CGRect, _ initialFrame: CGRect) -> Bool {
-        DragSnapPolicy.hasWindowMoved(windowFrame, initialFrame)
+    private func execute(_ effects: [DragSnapSession.Effect]) async {
+        for effect in effects {
+            switch effect {
+            case .resolveWindow:
+                setCurrentDraggingWindow()
+
+            case .restoreInitialWindowSize:
+                if let window = resizeContext?.window {
+                    await restoreInitialWindowSize(window)
+                }
+
+            case .updateSnap:
+                prepareForTopEdgeSnapIfNeeded()
+                processSnapAction()
+
+            case .notifyWindowManipulated:
+                if let window = resizeContext?.window {
+                    StashManager.shared.onWindowManipulated(window.cgWindowID)
+                }
+
+            case .eraseWindowRecords:
+                if let window = resizeContext?.window {
+                    await WindowRecords.shared.eraseRecords(for: window)
+                }
+
+            case .closePreview:
+                previewController.close()
+
+            case .applySnap:
+                if let context = resizeContext {
+                    do {
+                        _ = try await WindowActionEngine.shared.apply(context: context)
+                    } catch {
+                        log.error("Failed to snap window: \(ApplicationLogPrivacy.errorDescription(error))")
+                    }
+                }
+
+            case .clearRuntimeState:
+                resetDragState()
+            }
+        }
     }
 
-    private func hasWindowResized(_ windowFrame: CGRect, _ initialFrame: CGRect) -> Bool {
-        DragSnapPolicy.hasWindowResized(windowFrame, initialFrame)
+    private func prepareForTopEdgeSnapIfNeeded() {
+        guard Defaults[.suppressMissionControlOnTopDrag],
+              let frame = NSScreen.main?.displayBounds,
+              let mouseLocation = CGEvent.mouseLocation,
+              mouseLocation.y == frame.minY
+        else {
+            return
+        }
+
+        CGWarpMouseCursorPosition(CGPoint(x: mouseLocation.x, y: frame.minY + 1))
     }
 
     private func restoreInitialWindowSize(_ window: Window) async {

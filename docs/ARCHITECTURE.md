@@ -12,7 +12,7 @@ Line is a menu bar macOS application built with SwiftUI and AppKit. It uses the 
 - `GridModeCoordinator` for grid selection and overlays
 - `SessionManager` for the active window action session (including change-action side effects: indicators, apply, timeout restart, haptic, cycle continuation)
 
-The coordinator owns orchestration state. `WindowDragManager` monitors drag events and applies results from `DragSnapPolicy`. `StashManager` executes Accessibility and store updates based on `StashAftermathDecision`. Geometry and action rules belong in testable calculation or policy types (see Decision and policy modules section).
+The coordinator owns orchestration state. `WindowDragManager` monitors drag events and executes ordered effects from `DragSnapSession`; the session owns the lifecycle of one drag while `DragSnapPolicy` owns geometry decisions. `StashManager` executes Accessibility and store updates based on `StashAftermathDecision`. Geometry and action rules belong in testable calculation or policy types (see Decision and policy modules section).
 
 ## Decision and policy modules
 
@@ -23,6 +23,7 @@ Examples:
 - `KeybindTriggerDecision` — decides whether a keybind event should open the trigger, close it, or be consumed by the active session
 - `KeybindBindingPolicy` — computes effective keybinds (trigger ∪ action or bypass mode) and detects conflicts across all bound actions
 - `DragSnapPolicy` — determines snap edge zones and whether a drag-direction change should apply immediately
+- `DragSnapSession` — owns per-drag resolution/tracking state and emits ordered effects for the manager to execute
 - `URLTargetWindowPolicy` — selects the target window for `line://` automation (user-defined > sticky window within TTL > first candidate)
 - `StashAftermathDecision` — decides stash aftermath after a window resize (stash, unstash, reprocess, ignore, unmanage, etc.)
 
