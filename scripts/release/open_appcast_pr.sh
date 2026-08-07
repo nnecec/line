@@ -33,6 +33,7 @@ printf '%s' "$SPARKLE_PRIVATE_KEY" | \
 # Resolve Sparkle packages if needed so sign_update exists
 if [[ ! -d "$DERIVED_DATA/SourcePackages" ]]; then
   xcodebuild \
+    -skipMacroValidation \
     -resolvePackageDependencies \
     -project Line.xcodeproj \
     -scheme Line \

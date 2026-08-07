@@ -115,6 +115,7 @@ mkdir -p "$OUTPUT_DIR"
 # Build unsigned, then apply Development signature. Avoids Automatic signing /
 # Apple portal access on CI (free Apple ID + imported .p12 is enough).
 xcodebuild \
+  -skipMacroValidation \
   -project Line.xcodeproj \
   -scheme "Line (GH ACTIONS)" \
   -configuration "$CONFIGURATION" \

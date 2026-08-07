@@ -81,6 +81,10 @@ Tag and Release name: `v0.1.0`. Do not use `Line-unsigned.*`.
 5. Append distribution notes on the Release (Development-signed, not notarized; appcast PR required for Sparkle).
 6. Sign `Line-X.Y.Z.zip` with `SPARKLE_PRIVATE_KEY`, update `appcast.xml`, open **`automation/appcast-vX.Y.Z`** PR.
 
+CI and Publish pass `-skipMacroValidation` because GitHub-hosted runners cannot approve Swift macros
+interactively. This is bounded by pinning Scribe and its macro implementation to the exact revision in
+`Package.resolved`; review that revision whenever the dependency is upgraded.
+
 If step 6 fails after step 3 succeeded, the Release **remains**. Re-run **Publish** on the same main tip to take the **appcast-only** path.
 
 ### Secrets
