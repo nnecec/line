@@ -27,7 +27,6 @@
 		2A28B6292EE5050C00A1E26B /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 2A28B6282EE5050C00A1E26B /* Defaults */; };
 		2A70A4012FE1000000A70A40 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 2A70A4032FE1000000A70A40 /* Sparkle */; };
 		2AC4F4A82FDCAF1F00CB2FBE /* Scribe in Frameworks */ = {isa = PBXBuildFile; productRef = 2AF9238D2F540B1300F467FD /* Scribe */; };
-		2AC4F62C2FDCAF7100CB2FBE /* Luminare in Frameworks */ = {isa = PBXBuildFile; productRef = 2AC4F62B2FDCAF7100CB2FBE /* Luminare */; };
 		5A1000012FD1000000A10001 /* ApplicationInfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */; };
 		5A1000022FD1000000A10001 /* StashOverlapPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */; };
 		5A1000052FD1000000A10001 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = 5A1000062FD1000000A10001 /* THIRD_PARTY_NOTICES.md */; };
@@ -128,7 +127,6 @@
 				2AC4F4A82FDCAF1F00CB2FBE /* Scribe in Frameworks */,
 				2A28B6292EE5050C00A1E26B /* Defaults in Frameworks */,
 				F06D768A2DFF7A77007EEDA9 /* SkyLight.framework in Frameworks */,
-				2AC4F62C2FDCAF7100CB2FBE /* Luminare in Frameworks */,
 				2A70A4012FE1000000A70A40 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -248,7 +246,6 @@
 			packageProductDependencies = (
 				2A28B6282EE5050C00A1E26B /* Defaults */,
 				2AF9238D2F540B1300F467FD /* Scribe */,
-				2AC4F62B2FDCAF7100CB2FBE /* Luminare */,
 				2A70A4032FE1000000A70A40 /* Sparkle */,
 			);
 			productName = WindowManager;
@@ -287,7 +284,6 @@
 			packageReferences = (
 				2A28B6272EE5050C00A1E26B /* XCRemoteSwiftPackageReference "Defaults" */,
 				2AF9238C2F540B1300F467FD /* XCRemoteSwiftPackageReference "Scribe" */,
-				2AC4F62A2FDCAF7100CB2FBE /* XCRemoteSwiftPackageReference "Luminare" */,
 				2A70A4022FE1000000A70A40 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			productRefGroup = A8E59C36297F5E9A0064D4BA /* Products */;
@@ -816,15 +812,7 @@
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
-			};
-		};
-		2AC4F62A2FDCAF7100CB2FBE /* XCRemoteSwiftPackageReference "Luminare" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/MrKai77/Luminare";
-			requirement = {
-				kind = revision;
-				revision = d77be7db1f3db80e579ec6d85b2058b0dd1b968e;
+				minimumVersion = 2.9.6;
 			};
 		};
 		2AF9238C2F540B1300F467FD /* XCRemoteSwiftPackageReference "Scribe" */ = {
@@ -847,11 +835,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2A70A4022FE1000000A70A40 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
-		};
-		2AC4F62B2FDCAF7100CB2FBE /* Luminare */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 2AC4F62A2FDCAF7100CB2FBE /* XCRemoteSwiftPackageReference "Luminare" */;
-			productName = Luminare;
 		};
 		2AF9238D2F540B1300F467FD /* Scribe */ = {
 			isa = XCSwiftPackageProductDependency;

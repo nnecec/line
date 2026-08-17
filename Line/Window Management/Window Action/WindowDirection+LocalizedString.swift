@@ -5,7 +5,6 @@
 //  Created by phlpsong on 2024/3/31.
 //
 
-import Luminare
 import SwiftUI
 
 extension WindowDirection {

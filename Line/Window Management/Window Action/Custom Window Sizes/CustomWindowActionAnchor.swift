@@ -5,10 +5,9 @@
 //  Created by nnecec on 2024-01-01.
 //
 
-import Luminare
 import SwiftUI
 
-enum CustomWindowActionAnchor: Int, Codable, Identifiable, LuminareSelectionData {
+enum CustomWindowActionAnchor: Int, Codable, Identifiable {
     var id: Self { self }
 
     case none = -1

@@ -22,7 +22,7 @@ mint run swiftformat --lint . --reporter github-actions-log
 
 本地调试使用 `Line` scheme。CI 的必过 job 是 unit tests + 计算器覆盖率下限；`EndToEndIntegrationTests` 单独 job，无权限时用 `XCTSkip`。发布配置检查使用 `Line (GH ACTIONS)`。
 
-公开发版使用 **Publish** 工作流（仅 `workflow_dispatch` on `main`）：semantic-release 按 Conventional Commits 计算 `vX.Y.Z`，产物为 `Line-X.Y.Z.zip` / `Line-X.Y.Z.dmg` / `SHA256SUMS.txt`（**Apple Development 签名**，无 Developer ID、不公证，以保证辅助功能权限可稳定授予），正式 GitHub Release，再用 `SPARKLE_PRIVATE_KEY` 签 zip 并开 `automation/appcast-vX.Y.Z` PR。Publish 需要 `APPLE_DEVELOPMENT_CERT_BASE64` / `P12_PASSWORD` / `KEYCHAIN_PASSWORD`。Sparkle 公钥在 `Line/Config.xcconfig`；`Config` 里的 VERSION 可为 `0.0.0`，打包时注入版本。Node 发版依赖见根目录 `package.json` / `package-lock.json`（仅 tooling）。
+公开发版使用 **Publish** 工作流（仅 `workflow_dispatch` on `main`）：semantic-release 按 Conventional Commits 计算 `vX.Y.Z`，产物为 `Line-X.Y.Z.zip` / `Line-X.Y.Z.dmg` / `SHA256SUMS.txt`（**Apple Development 签名**，无 Developer ID、不公证，以保证辅助功能权限可稳定授予），正式 GitHub Release，再用 `SPARKLE_PRIVATE_KEY` 签 zip 并开 `automation/appcast-vX.Y.Z` PR。Publish 需要 `APPLE_DEVELOPMENT_CERT_BASE64` / `P12_PASSWORD` / `KEYCHAIN_PASSWORD`。Sparkle 公钥在 `Line/Config.xcconfig`；`Config` 里的 VERSION 可为 `0.0.0`，打包时注入版本。Node 发版依赖见根目录 `package.json` / `pnpm-lock.yaml`，pnpm 项目级解析约束见 `pnpm-workspace.yaml`（仅 tooling）。
 
 ## 现行架构
 
@@ -44,7 +44,7 @@ SkyLight 调用必须通过 `Line/Private APIs/` 中的动态符号加载层。�
 
 ## 依赖
 
-主要 SwiftPM 依赖包括 Defaults、Luminare、Scribe 和 Sparkle。Luminare 与 Scribe 使用精确 revision。升级依赖时必须检查许可证、安全公告、macOS 26 兼容性，并提交更新后的 `Package.resolved`。
+主要 SwiftPM 依赖包括 Defaults、Scribe 和 Sparkle。Scribe 使用精确 revision。升级依赖时必须检查许可证、安全公告、macOS 26 兼容性，并提交更新后的 `Package.resolved`。
 
 ## 修改约束
 

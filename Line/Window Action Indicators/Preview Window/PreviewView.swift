@@ -9,7 +9,6 @@ import Defaults
 import SwiftUI
 
 struct PreviewView: View {
-    @Environment(\.luminareAnimation) private var luminareAnimation
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var accentColorController: AccentColorController = .shared
@@ -76,6 +75,10 @@ struct PreviewView: View {
         return viewModel.isShown ? 1 : 0.985
     }
 
+    private var previewAnimation: Animation? {
+        reduceMotion ? nil : .snappy(duration: 0.2)
+    }
+
     var body: some View {
         windowView()
             .compositingGroup()
@@ -106,11 +109,11 @@ struct PreviewView: View {
             isShown: viewModel.isShown
         )
         .padding(borderInsetPadding)
-        .animation(luminareAnimation, value: [accentColorController.color1, accentColorController.color2])
-        .animation(luminareAnimation, value: previewBackgroundAccentOpacity)
-        .animation(luminareAnimation, value: viewModel.isShown)
-        .animation(luminareAnimation, value: glassStyle)
-        .animation(luminareAnimation, value: borderStyle)
-        .animation(luminareAnimation, value: accentColorMode)
+        .animation(previewAnimation, value: [accentColorController.color1, accentColorController.color2])
+        .animation(previewAnimation, value: previewBackgroundAccentOpacity)
+        .animation(previewAnimation, value: viewModel.isShown)
+        .animation(previewAnimation, value: glassStyle)
+        .animation(previewAnimation, value: borderStyle)
+        .animation(previewAnimation, value: accentColorMode)
     }
 }

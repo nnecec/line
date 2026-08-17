@@ -25,21 +25,25 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # Mint installs tools under ~/.mint; key on Mintfile so version bumps invalidate.
-      - name: Cache Mint
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ~/.mint
-          key: ${{ runner.os }}-mint-v1-${{ hashFiles('Mintfile') }}
-          restore-keys: |
-            ${{ runner.os }}-mint-v1-
-
-      - name: Install Mint
-        run: brew install mint
+      - name: Install SwiftFormat 0.62.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/swiftformat-0.62.1.zip"
+          tool_dir="$RUNNER_TEMP/swiftformat-0.62.1"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 \
+            --output "$archive" \
+            https://github.com/nicklockwood/SwiftFormat/releases/download/0.62.1/swiftformat.zip
+          echo "7cb1cb1fae04932047c7015441c543848e8e60e1572d808d080e0a1f1661114a  $archive" \
+            | shasum -a 256 --check -
+          unzip -q "$archive" -d "$tool_dir"
+          "$tool_dir/swiftformat" --version
 
       - name: Check Swift formatting
-        run: mint run swiftformat --lint . --reporter github-actions-log
+        run: >-
+          "$RUNNER_TEMP/swiftformat-0.62.1/swiftformat"
+          --lint . --reporter github-actions-log

@@ -68,4 +68,4 @@ Changes in this area need testing on every supported macOS release and should re
 
 ## Dependencies
 
-Swift Package Manager resolves exact versions or revisions in `Package.resolved`. Defaults provides settings persistence, Luminare provides settings components, Scribe provides logging, and Sparkle handles updates. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for license information.
+Swift Package Manager resolves exact versions or revisions in `Package.resolved`. Defaults provides settings persistence, Scribe provides logging, and Sparkle handles updates. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for license information.
