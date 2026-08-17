@@ -34,6 +34,10 @@ The active interaction after Line opens in which the user selects, cycles, previ
 The session holds the current prepared resize as its layout truth for the interaction.
 _Avoid_: Action coordinator, resize session, trigger session, ResizeContext
 
+**Window Scene**:
+A named arrangement of application windows and their relative placement on available displays, representing a repeatable working context independently of macOS Spaces.
+_Avoid_: Workspace, saved layout, layout profile
+
 **Window Resize Execution**:
 The operation that turns a selected window action, target window, display, and window state into the frame and state needed to apply the resize.
 It owns session bootstrap (including a session-scoped layout frame snapshot when the window is stashed), mid-session transitions that reuse that snapshot without re-reading live window state, and commit (apply the current preparation, or re-prepare for immediate apply while inheriting the session layout snapshot).
@@ -63,4 +67,3 @@ _Avoid_: keybind conflict policy private to one settings view
 **Drag Snap**:
 The decision of which window action to preview and apply while the user drags a window into a screen edge zone.
 _Avoid_: processSnapAction geometry, drag manager internals
-

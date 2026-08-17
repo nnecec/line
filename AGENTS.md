@@ -69,3 +69,17 @@ SkyLight 调用必须通过 `Line/Private APIs/` 中的动态符号加载层。�
 公开工程文档位于根目录和 `docs/`。架构变化同步更新 `docs/ARCHITECTURE.md`，发布链路变化同步更新 `docs/RELEASES.md`，网络和数据处理变化同步更新 `docs/PRIVACY.md` 与 `Line/InternetAccessPolicy.plist`。
 
 不要把临时审计报告、实施计划、调试日志或本机绝对路径提交到仓库。需要保留的长期决策应整理成稳定的架构或发布文档。
+
+## Agent skills
+
+### Issue tracker
+
+Issue 和规格使用 GitHub Issues 跟踪。详见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+项目使用五个默认 triage 标签。详见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+项目采用 single-context 布局，使用根目录的 `CONTEXT.md` 和 `docs/adr/`。详见 `docs/agents/domain.md`。
