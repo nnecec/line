@@ -56,6 +56,69 @@ final class TriggerCoordinatorTests: XCTestCase {
 
     // MARK: - Binding Tests
 
+    func testKeybindEventBufferCoalescesConsecutiveOpenRequestsToLatestAction() throws {
+        let buffer = KeybindTriggerEventBuffer()
+        let first = BoundWindowAction(action: .standard(.proportional(.leftHalf)), keybind: [])
+        let latest = BoundWindowAction(action: .standard(.proportional(.rightHalf)), keybind: [])
+
+        let token = try XCTUnwrap(buffer.enqueue(.open(first)))
+        XCTAssertNil(buffer.enqueue(.open(latest)))
+
+        XCTAssertEqual(buffer.popNext(for: token), .open(latest))
+        XCTAssertNil(buffer.popNext(for: token))
+    }
+
+    func testKeybindEventBufferPreservesCloseBoundaryBetweenOpenRequests() throws {
+        let buffer = KeybindTriggerEventBuffer()
+        let first = BoundWindowAction(action: .standard(.proportional(.leftHalf)), keybind: [])
+        let latest = BoundWindowAction(action: .standard(.proportional(.rightHalf)), keybind: [])
+
+        let token = try XCTUnwrap(buffer.enqueue(.open(first)))
+        XCTAssertNil(buffer.enqueue(.close(forceClose: false)))
+        XCTAssertNil(buffer.enqueue(.open(latest)))
+
+        XCTAssertEqual(buffer.popNext(for: token), .open(first))
+        XCTAssertEqual(buffer.popNext(for: token), .close(forceClose: false))
+        XCTAssertEqual(buffer.popNext(for: token), .open(latest))
+        XCTAssertNil(buffer.popNext(for: token))
+    }
+
+    func testKeybindEventBufferPreservesRepeatedIncrementalActions() throws {
+        let buffer = KeybindTriggerEventBuffer()
+        let action = BoundWindowAction(action: .incremental(.larger), keybind: [])
+
+        let token = try XCTUnwrap(buffer.enqueue(.open(action)))
+        XCTAssertNil(buffer.enqueue(.open(action)))
+
+        XCTAssertEqual(buffer.popNext(for: token), .open(action))
+        XCTAssertEqual(buffer.popNext(for: token), .open(action))
+        XCTAssertNil(buffer.popNext(for: token))
+    }
+
+    func testKeybindEventBufferSchedulesAnotherDrainAfterBecomingEmpty() throws {
+        let buffer = KeybindTriggerEventBuffer()
+        let action = BoundWindowAction(action: .standard(.proportional(.leftHalf)), keybind: [])
+
+        let token = try XCTUnwrap(buffer.enqueue(.open(action)))
+        XCTAssertEqual(buffer.popNext(for: token), .open(action))
+        XCTAssertNil(buffer.popNext(for: token))
+        XCTAssertNotNil(buffer.enqueue(.open(action)))
+    }
+
+    func testKeybindEventBufferInvalidationDropsQueuedEventsAndStartsNewGeneration() throws {
+        let buffer = KeybindTriggerEventBuffer()
+        let action = BoundWindowAction(action: .standard(.proportional(.leftHalf)), keybind: [])
+
+        let oldToken = try XCTUnwrap(buffer.enqueue(.open(action)))
+        XCTAssertNil(buffer.enqueue(.open(action)))
+
+        buffer.invalidate()
+
+        XCTAssertNil(buffer.popNext(for: oldToken))
+        let newToken = try XCTUnwrap(buffer.enqueue(.open(action)))
+        XCTAssertEqual(buffer.popNext(for: newToken), .open(action))
+    }
+
     func testBindingCallbacksWorks() {
         // Given: coordinator is bound in setUp
 

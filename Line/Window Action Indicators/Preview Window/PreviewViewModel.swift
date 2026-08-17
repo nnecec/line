@@ -9,6 +9,39 @@ import Defaults
 import Scribe
 import SwiftUI
 
+struct PreviewCornerRadiusCache {
+    private var cachedWindowID: CGWindowID?
+    private var cachedValue: RectangleCornerRadii?
+    private var hasCachedValue = false
+
+    mutating func value(
+        for windowID: CGWindowID?,
+        isEnabled: Bool,
+        provider: (CGWindowID) -> RectangleCornerRadii?
+    ) -> RectangleCornerRadii? {
+        guard isEnabled, let windowID else {
+            reset()
+            return nil
+        }
+
+        if hasCachedValue, cachedWindowID == windowID {
+            return cachedValue
+        }
+
+        let value = provider(windowID)
+        cachedWindowID = windowID
+        cachedValue = value
+        hasCachedValue = true
+        return value
+    }
+
+    private mutating func reset() {
+        cachedWindowID = nil
+        cachedValue = nil
+        hasCachedValue = false
+    }
+}
+
 @Loggable
 @MainActor
 final class PreviewViewModel: ObservableObject {
@@ -18,9 +51,22 @@ final class PreviewViewModel: ObservableObject {
     @Published private(set) var isGridLayoutPreview: Bool = false
 
     private let isSettingsPreview: Bool
+    private let cornerRadiusProvider: (CGWindowID) -> RectangleCornerRadii?
+    private var cornerRadiusCache = PreviewCornerRadiusCache()
 
-    init(isSettingsPreview: Bool) {
+    init(
+        isSettingsPreview: Bool,
+        cornerRadiusProvider: @escaping (CGWindowID) -> RectangleCornerRadii? = { windowID in
+            if #available(macOS 26.0, *),
+               let radii = SkyLightToolBelt.getCornerRadii(windowID: windowID),
+               radii != .init(topLeading: 0, bottomLeading: 0, bottomTrailing: 0, topTrailing: 0) {
+                return radii
+            }
+            return nil
+        }
+    ) {
         self.isSettingsPreview = isSettingsPreview
+        self.cornerRadiusProvider = cornerRadiusProvider
     }
 
     func setIsShown(_ newState: Bool) {
@@ -30,10 +76,13 @@ final class PreviewViewModel: ObservableObject {
     }
 
     func update(with prepared: WindowResizeExecution.PreparedResize, isScreenSwitch: Bool) {
-        if #available(macOS 26.0, *), let window = prepared.window {
-            overrideCornerRadii = Self.getCornerRadius(for: window)
-        } else {
-            overrideCornerRadii = nil
+        let cornerRadii = cornerRadiusCache.value(
+            for: prepared.window?.cgWindowID,
+            isEnabled: Defaults[.previewUseWindowCornerRadius],
+            provider: cornerRadiusProvider
+        )
+        if overrideCornerRadii != cornerRadii {
+            overrideCornerRadii = cornerRadii
         }
 
         let isCurrentlyHidden = !isShown
@@ -127,18 +176,5 @@ final class PreviewViewModel: ObservableObject {
                 height: previewHeight
             )
         }
-    }
-
-    @available(macOS 26.0, *)
-    private static func getCornerRadius(for window: Window) -> RectangleCornerRadii? {
-        var cornerRadii: RectangleCornerRadii? = nil
-
-        if Defaults[.previewUseWindowCornerRadius],
-           let radii = SkyLightToolBelt.getCornerRadii(windowID: window.cgWindowID),
-           radii != .init(topLeading: 0, bottomLeading: 0, bottomTrailing: 0, topTrailing: 0) {
-            cornerRadii = radii
-        }
-
-        return cornerRadii
     }
 }

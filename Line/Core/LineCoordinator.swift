@@ -9,6 +9,13 @@ import Scribe
 import SwiftUI
 
 enum LineCoordinatorOpeningPolicy {
+    enum Admission: Equatable {
+        case beginOpening
+        case updatePendingAction
+        case queueReopen
+        case ignore
+    }
+
     struct GridOpenInstructions: Equatable {
         var shouldCancelPartiallyOpenedLine: Bool
         var shouldActivateLine: Bool
@@ -20,6 +27,23 @@ enum LineCoordinatorOpeningPolicy {
         isAccessibilityGranted: Bool
     ) -> Bool {
         !shouldCancelOpening && isAccessibilityGranted
+    }
+
+    static func admission(
+        isLineOpening: Bool,
+        shouldCancelOpening: Bool,
+        direction: WindowDirection
+    ) -> Admission {
+        guard isLineOpening else { return .beginOpening }
+        if shouldCancelOpening {
+            return .queueReopen
+        }
+        guard direction != .noSelection else { return .ignore }
+        return .updatePendingAction
+    }
+
+    static func shouldReplayOpening(requestGeneration: UInt, latestGeneration: UInt) -> Bool {
+        requestGeneration == latestGeneration
     }
 
     static func instructionsAfterGridOpen(
@@ -69,6 +93,11 @@ enum LineCoordinatorClosePolicy {
 @Loggable
 @MainActor
 final class LineCoordinator {
+    private struct OpeningRequest {
+        let action: BoundWindowAction
+        let generation: UInt
+    }
+
     static let shared = LineCoordinator()
 
     private init() {
@@ -113,7 +142,9 @@ final class LineCoordinator {
     /// so rapid trigger events cannot act on the previous/default context.
     private var isLineOpening: Bool = false
     private var pendingOpeningAction: BoundWindowAction?
+    private var pendingReopenRequest: OpeningRequest?
     private var shouldCancelOpening: Bool = false
+    private var latestOpeningRequestGeneration: UInt = 0
 
     private(set) var isLineActive: Bool = false {
         didSet {
@@ -200,7 +231,9 @@ final class LineCoordinator {
 
         isLineOpening = false
         pendingOpeningAction = nil
+        pendingReopenRequest = nil
         shouldCancelOpening = false
+        latestOpeningRequestGeneration &+= 1
         isLineActive = false
     }
 
@@ -244,15 +277,45 @@ final class LineCoordinator {
 // MARK: - Opening/Closing Line
 
 extension LineCoordinator {
-    private func openLine(startingAction: BoundWindowAction) async {
+    private func openLine(
+        startingAction: BoundWindowAction,
+        requestGeneration replayGeneration: UInt? = nil
+    ) async {
+        let request: OpeningRequest
+        if let replayGeneration {
+            guard LineCoordinatorOpeningPolicy.shouldReplayOpening(
+                requestGeneration: replayGeneration,
+                latestGeneration: latestOpeningRequestGeneration
+            ) else {
+                return
+            }
+            request = OpeningRequest(action: startingAction, generation: replayGeneration)
+        } else {
+            latestOpeningRequestGeneration &+= 1
+            request = OpeningRequest(
+                action: startingAction,
+                generation: latestOpeningRequestGeneration
+            )
+        }
+
         guard AccessibilityManager.shared.isGranted else {
             return
         }
 
-        guard !isLineOpening else {
-            if startingAction.direction != .noSelection {
-                pendingOpeningAction = startingAction
-            }
+        switch LineCoordinatorOpeningPolicy.admission(
+            isLineOpening: isLineOpening,
+            shouldCancelOpening: shouldCancelOpening,
+            direction: startingAction.direction
+        ) {
+        case .beginOpening:
+            break
+        case .updatePendingAction:
+            pendingOpeningAction = startingAction
+            return
+        case .queueReopen:
+            pendingReopenRequest = request
+            return
+        case .ignore:
             return
         }
 
@@ -288,13 +351,25 @@ extension LineCoordinator {
 
         isLineOpening = true
         pendingOpeningAction = nil
+        pendingReopenRequest = nil
         shouldCancelOpening = false
         hasParentCycleActionMirror.withLock { $0 = false }
 
         defer {
+            let reopenRequest = pendingReopenRequest
             isLineOpening = false
             pendingOpeningAction = nil
+            pendingReopenRequest = nil
             shouldCancelOpening = false
+
+            if let reopenRequest {
+                Task { @MainActor [weak self] in
+                    await self?.openLine(
+                        startingAction: reopenRequest.action,
+                        requestGeneration: reopenRequest.generation
+                    )
+                }
+            }
         }
 
         log.info("Opening Line with starting action and target window: \(window.description)")
@@ -357,6 +432,9 @@ extension LineCoordinator {
     }
 
     private func closeLine(forceClose: Bool) async {
+        latestOpeningRequestGeneration &+= 1
+        pendingReopenRequest = nil
+
         if isLineOpening {
             shouldCancelOpening = true
             await cancelPartiallyOpenedLine()

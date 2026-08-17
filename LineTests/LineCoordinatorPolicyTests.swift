@@ -10,6 +10,54 @@ import XCTest
 
 @MainActor
 final class LineCoordinatorPolicyTests: XCTestCase {
+    func testOpeningAdmissionQueuesGridReopenAfterPreviousOpeningWasCancelled() {
+        XCTAssertEqual(
+            LineCoordinatorOpeningPolicy.admission(
+                isLineOpening: true,
+                shouldCancelOpening: true,
+                direction: .noSelection
+            ),
+            .queueReopen
+        )
+    }
+
+    func testOpeningAdmissionIgnoresDuplicateGridOpenWhileCurrentOpeningRemainsValid() {
+        XCTAssertEqual(
+            LineCoordinatorOpeningPolicy.admission(
+                isLineOpening: true,
+                shouldCancelOpening: false,
+                direction: .noSelection
+            ),
+            .ignore
+        )
+    }
+
+    func testOpeningAdmissionUpdatesDirectionalActionWhileCurrentOpeningRemainsValid() {
+        XCTAssertEqual(
+            LineCoordinatorOpeningPolicy.admission(
+                isLineOpening: true,
+                shouldCancelOpening: false,
+                direction: .leftHalf
+            ),
+            .updatePendingAction
+        )
+    }
+
+    func testOpeningReplayRequiresLatestRequestGeneration() {
+        XCTAssertTrue(
+            LineCoordinatorOpeningPolicy.shouldReplayOpening(
+                requestGeneration: 3,
+                latestGeneration: 3
+            )
+        )
+        XCTAssertFalse(
+            LineCoordinatorOpeningPolicy.shouldReplayOpening(
+                requestGeneration: 3,
+                latestGeneration: 4
+            )
+        )
+    }
+
     func testOpeningPolicyReturnsFalseWhenOpeningWasCancelled() {
         XCTAssertFalse(
             LineCoordinatorOpeningPolicy.canActivateAfterOpening(

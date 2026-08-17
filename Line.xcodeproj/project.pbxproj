@@ -22,6 +22,7 @@
 		2A0260032FB2600000ABC026 /* DataPatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0260022FB2600000ABC026 /* DataPatcherTests.swift */; };
 		2A0260052FB2600000ABC026 /* WallpaperImageFetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0260042FB2600000ABC026 /* WallpaperImageFetcherTests.swift */; };
 		2A0360012FC3600000ABC036 /* LineCoordinatorPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0360002FC3600000ABC036 /* LineCoordinatorPolicyTests.swift */; };
+		2A0360032FC3600000ABC036 /* PreviewViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0360022FC3600000ABC036 /* PreviewViewModelTests.swift */; };
 		2A0510012FC5100000ABC051 /* CycleActionConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0510002FC5100000ABC051 /* CycleActionConfigurationTests.swift */; };
 		2A28B6292EE5050C00A1E26B /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 2A28B6282EE5050C00A1E26B /* Defaults */; };
 		2A70A4012FE1000000A70A40 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 2A70A4032FE1000000A70A40 /* Sparkle */; };
@@ -72,6 +73,7 @@
 		2A0260022FB2600000ABC026 /* DataPatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataPatcherTests.swift; sourceTree = "<group>"; };
 		2A0260042FB2600000ABC026 /* WallpaperImageFetcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperImageFetcherTests.swift; sourceTree = "<group>"; };
 		2A0360002FC3600000ABC036 /* LineCoordinatorPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineCoordinatorPolicyTests.swift; sourceTree = "<group>"; };
+		2A0360022FC3600000ABC036 /* PreviewViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewViewModelTests.swift; sourceTree = "<group>"; };
 		2A0510002FC5100000ABC051 /* CycleActionConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CycleActionConfigurationTests.swift; sourceTree = "<group>"; };
 		5A1000032FD1000000A10001 /* ApplicationInfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationInfrastructureTests.swift; sourceTree = "<group>"; };
 		5A1000042FD1000000A10001 /* StashOverlapPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashOverlapPolicyTests.swift; sourceTree = "<group>"; };
@@ -149,6 +151,7 @@
 				BAF9FF8DAA295A6E8FE1A00E /* GridGeometryTests.swift */,
 				2A0250032FB2500000ABC025 /* SessionManagerTests.swift */,
 				2A0360002FC3600000ABC036 /* LineCoordinatorPolicyTests.swift */,
+				2A0360022FC3600000ABC036 /* PreviewViewModelTests.swift */,
 				2A0260002FB2600000ABC026 /* MigratorTests.swift */,
 				2A0260022FB2600000ABC026 /* DataPatcherTests.swift */,
 				2A0260042FB2600000ABC026 /* WallpaperImageFetcherTests.swift */,
@@ -333,6 +336,7 @@
 				8935A25F0DE35FBB85164AB2 /* GridGeometryTests.swift in Sources */,
 				2A0250062FB2500000ABC025 /* SessionManagerTests.swift in Sources */,
 				2A0360012FC3600000ABC036 /* LineCoordinatorPolicyTests.swift in Sources */,
+				2A0360032FC3600000ABC036 /* PreviewViewModelTests.swift in Sources */,
 				2A0260012FB2600000ABC026 /* MigratorTests.swift in Sources */,
 				2A0260032FB2600000ABC026 /* DataPatcherTests.swift in Sources */,
 				2A0260052FB2600000ABC026 /* WallpaperImageFetcherTests.swift in Sources */,
