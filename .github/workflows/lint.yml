@@ -3,6 +3,10 @@ name: Lint
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "appcast.xml"
   push:
     branches:
       - main

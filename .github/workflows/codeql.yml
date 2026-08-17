@@ -5,9 +5,17 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "appcast.xml"
   push:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "appcast.xml"
   schedule:
     - cron: "17 3 * * 1"
 
@@ -34,18 +42,27 @@ jobs:
           persist-credentials: false
 
       - name: Select Xcode
+        id: xcode
+        run: bash scripts/ci/select_xcode.sh
+
+      - name: Cache Swift package sources
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            .build/codeql-source-packages
+          key: ${{ runner.os }}-${{ runner.arch }}-codeql-spm-${{ steps.xcode.outputs.cache_key }}-v1-${{ hashFiles('Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'Line.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-codeql-spm-${{ steps.xcode.outputs.cache_key }}-v1-
+
+      - name: Resolve package dependencies
         run: |
-          set -euo pipefail
-          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.app"
-          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
-          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.5.app"
-          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.6.app"
-          fi
-          xcodebuild -version
+          xcodebuild \
+            -skipMacroValidation \
+            -resolvePackageDependencies \
+            -project Line.xcodeproj \
+            -scheme Line \
+            -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/.build/codeql-source-packages"
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
@@ -60,7 +77,10 @@ jobs:
             -project Line.xcodeproj \
             -scheme Line \
             -configuration Debug \
-            -destination 'generic/platform=macOS' \
+            -destination 'platform=macOS,arch=arm64' \
+            -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/.build/codeql-source-packages" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO \
             build
 

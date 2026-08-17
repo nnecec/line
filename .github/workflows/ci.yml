@@ -3,6 +3,10 @@ name: CI
 on:
   workflow_dispatch:
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "appcast.xml"
   push:
     branches:
       - main
@@ -27,31 +31,20 @@ jobs:
           persist-credentials: false
 
       - name: Select Xcode
-        run: |
-          set -euo pipefail
-          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.app"
-          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
-          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.5.app"
-          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.6.app"
-          fi
-          xcodebuild -version
+        id: xcode
+        run: bash scripts/ci/select_xcode.sh
 
       # Cache key includes Package.resolved (dependency pin graph) and project.pbxproj
-      # (package refs / build settings). Bump the v1 suffix if caches go green-but-stale.
+      # (package refs / build settings), plus the exact Xcode build.
       - name: Cache SPM and DerivedData
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/Library/Developer/Xcode/DerivedData
             ~/Library/Caches/org.swift.swiftpm
-            Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
-          key: ${{ runner.os }}-xcode-v1-${{ hashFiles('Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'Line.xcodeproj/project.pbxproj') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.xcode.outputs.cache_key }}-v2-${{ hashFiles('Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'Line.xcodeproj/project.pbxproj') }}
           restore-keys: |
-            ${{ runner.os }}-xcode-v1-
+            ${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.xcode.outputs.cache_key }}-v2-
 
       - name: Resolve package dependencies
         # Headless runners cannot approve Swift macros interactively. Scribe is
@@ -60,9 +53,6 @@ jobs:
 
       - name: Test release tooling
         run: ruby scripts/release/update_appcast_test.rb
-
-      - name: Build Line
-        run: xcodebuild -skipMacroValidation -project Line.xcodeproj -scheme Line -configuration Debug CODE_SIGNING_ALLOWED=NO build
 
       - name: Run unit tests with coverage
         run: |
@@ -83,6 +73,7 @@ jobs:
         run: scripts/ci/check_calculator_coverage.sh "$RUNNER_TEMP/UnitTests.xcresult"
 
       - name: Smoke-archive release scheme
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           xcodebuild \
             -skipMacroValidation \
@@ -98,10 +89,11 @@ jobs:
 
   integration-tests:
     name: Integration Tests (Accessibility)
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: macos-26
     timeout-minutes: 30
     # GitHub-hosted runners normally lack Accessibility permission.
-    # This job still runs so skip/pass counts are visible; it must not hide real failures.
+    # Keep this manual so maintainers can inspect skip/pass counts without taxing every change.
     continue-on-error: false
 
     steps:
@@ -111,18 +103,8 @@ jobs:
           persist-credentials: false
 
       - name: Select Xcode
-        run: |
-          set -euo pipefail
-          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.app"
-          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
-          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.5.app"
-          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.6.app"
-          fi
-          xcodebuild -version
+        id: xcode
+        run: bash scripts/ci/select_xcode.sh
 
       # Same SPM/DerivedData key as unit-tests so both jobs can share warm caches.
       - name: Cache SPM and DerivedData
@@ -131,10 +113,9 @@ jobs:
           path: |
             ~/Library/Developer/Xcode/DerivedData
             ~/Library/Caches/org.swift.swiftpm
-            Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
-          key: ${{ runner.os }}-xcode-v1-${{ hashFiles('Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'Line.xcodeproj/project.pbxproj') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.xcode.outputs.cache_key }}-v2-${{ hashFiles('Line.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'Line.xcodeproj/project.pbxproj') }}
           restore-keys: |
-            ${{ runner.os }}-xcode-v1-
+            ${{ runner.os }}-${{ runner.arch }}-xcode-${{ steps.xcode.outputs.cache_key }}-v2-
 
       - name: Resolve package dependencies
         # Headless runners cannot approve Swift macros interactively. Scribe is

@@ -8,27 +8,19 @@ on:
         required: true
         default: "0.0.0"
         type: string
-      publish_prerelease:
-        description: "Sign, notarize, and publish a prerelease from main"
-        required: true
-        default: false
-        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
   group: development-build-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   unsigned-build:
     name: Unsigned verification build
     runs-on: macos-26
     timeout-minutes: 45
-    outputs:
-      app_version: ${{ steps.metadata.outputs.app_version }}
-      app_build: ${{ steps.metadata.outputs.app_build }}
 
     steps:
       - name: Check out selected ref
@@ -38,10 +30,8 @@ jobs:
           persist-credentials: false
 
       - name: Validate build metadata
-        id: metadata
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
-          PUBLISH_PRERELEASE: ${{ inputs.publish_prerelease }}
         run: |
           set -euo pipefail
 
@@ -50,44 +40,11 @@ jobs:
             exit 1
           fi
 
-          if [[ "$PUBLISH_PRERELEASE" == "true" && "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "Signed prereleases must be dispatched from main."
-            exit 1
-          fi
-
-          APP_BUILD=$(git rev-list --count HEAD)
-          if [[ "$PUBLISH_PRERELEASE" == "true" ]]; then
-            CONFIG_VERSION=$(ruby scripts/release/read_xcconfig_value.rb Line/Config.xcconfig VERSION)
-            CONFIG_BUILD=$(ruby scripts/release/read_xcconfig_value.rb Line/Config.xcconfig BUILD_NUMBER)
-            if [[ "$CONFIG_VERSION" != "$REQUESTED_VERSION" ]]; then
-              echo "Signed prereleases must use VERSION from Line/Config.xcconfig."
-              exit 1
-            fi
-            if [[ ! "$CONFIG_BUILD" =~ ^[1-9][0-9]*$ ]]; then
-              echo "Signed prereleases require a positive BUILD_NUMBER in Line/Config.xcconfig."
-              exit 1
-            fi
-            APP_BUILD="$CONFIG_BUILD"
-          fi
-
-          echo "app_version=$REQUESTED_VERSION" >> "$GITHUB_OUTPUT"
-          echo "app_build=$APP_BUILD" >> "$GITHUB_OUTPUT"
           echo "APP_VERSION=$REQUESTED_VERSION" >> "$GITHUB_ENV"
-          echo "APP_BUILD=$APP_BUILD" >> "$GITHUB_ENV"
+          echo "APP_BUILD=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
 
       - name: Select Xcode
-        run: |
-          set -euo pipefail
-          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.app"
-          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
-          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.5.app"
-          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.6.app"
-          fi
-          xcodebuild -version
+        run: bash scripts/ci/select_xcode.sh
 
       - name: Build without signing credentials
         run: |
@@ -118,275 +75,3 @@ jobs:
           path: dist/Line-unsigned.zip
           if-no-files-found: error
           retention-days: 14
-
-  comment-on-pr:
-    name: Comment on matching pull request
-    if: ${{ !inputs.publish_prerelease }}
-    needs: unsigned-build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-
-    steps:
-      - name: Add artifact link to pull request
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          APP_VERSION: ${{ needs.unsigned-build.outputs.app_version }}
-          APP_BUILD: ${{ needs.unsigned-build.outputs.app_build }}
-        with:
-          script: |
-            if (!context.ref.startsWith('refs/heads/')) {
-              core.info(`No branch pull request lookup for ${context.ref}`)
-              return
-            }
-
-            const branch = context.ref.slice('refs/heads/'.length)
-            const { data: pulls } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open'
-            })
-
-            if (pulls.length === 0) {
-              core.info(`No open pull request found for ${branch}`)
-              return
-            }
-
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
-            const body = [
-              'Development build finished.',
-              '',
-              `Version: ${process.env.APP_VERSION} (${process.env.APP_BUILD})`,
-              `Artifact and logs: ${runUrl}`
-            ].join('\n')
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pulls[0].number,
-              body
-            })
-
-  publish-prerelease:
-    name: Signed and notarized prerelease
-    if: ${{ inputs.publish_prerelease && github.ref == 'refs/heads/main' }}
-    needs: unsigned-build
-    runs-on: macos-26
-    timeout-minutes: 60
-    environment: development-release
-    permissions:
-      contents: write
-    env:
-      APP_VERSION: ${{ needs.unsigned-build.outputs.app_version }}
-      APP_BUILD: ${{ needs.unsigned-build.outputs.app_build }}
-
-    steps:
-      - name: Check out trusted main
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Require immutable release policy
-        env:
-          GH_TOKEN: ${{ secrets.REPOSITORY_POLICY_TOKEN }}
-        run: |
-          set -euo pipefail
-          test -n "$GH_TOKEN"
-          test "$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" \
-            -H "X-GitHub-Api-Version: 2026-03-10" \
-            --jq '.enabled')" = "true"
-
-      - name: Inspect prerelease state
-        id: prerelease-state
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          TAG="dev-${GITHUB_RUN_NUMBER}"
-          ALREADY_PUBLISHED=false
-
-          git fetch --tags --force
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            TAG_COMMIT=$(git rev-list -n 1 "$TAG")
-            if [[ "$TAG_COMMIT" != "$GITHUB_SHA" ]]; then
-              echo "$TAG already points to a different commit."
-              exit 1
-            fi
-          fi
-
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            IS_DRAFT=$(gh release view "$TAG" --json isDraft --jq '.isDraft')
-            if [[ "$IS_DRAFT" == "false" ]]; then
-              ALREADY_PUBLISHED=true
-            fi
-          fi
-
-          echo "already_published=$ALREADY_PUBLISHED" >> "$GITHUB_OUTPUT"
-
-      - name: Select Xcode
-        run: |
-          set -euo pipefail
-          if [[ -d "/Applications/Xcode_26.4.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.app"
-          elif [[ -d "/Applications/Xcode_26.4.1.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.4.1.app"
-          elif [[ -d "/Applications/Xcode_26.5.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.5.app"
-          elif [[ -d "/Applications/Xcode_26.6.app" ]]; then
-            sudo xcode-select -s "/Applications/Xcode_26.6.app"
-          fi
-          xcodebuild -version
-
-      - name: Install Developer ID certificate
-        if: ${{ steps.prerelease-state.outputs.already_published != 'true' }}
-        env:
-          DEVELOPER_ID_CERT_BASE64: ${{ secrets.DEVELOPER_ID_CERT_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "$DEVELOPER_ID_CERT_BASE64"
-          test -n "$P12_PASSWORD"
-          test -n "$KEYCHAIN_PASSWORD"
-
-          CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
-          KEYCHAIN_PATH="$RUNNER_TEMP/line-signing.keychain-db"
-          printf '%s' "$DEVELOPER_ID_CERT_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-      - name: Archive and export signed app
-        if: ${{ steps.prerelease-state.outputs.already_published != 'true' }}
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          set -euo pipefail
-          test -n "$APPLE_TEAM_ID"
-
-          xcodebuild \
-            archive \
-            -project Line.xcodeproj \
-            -scheme "Line (GH ACTIONS)" \
-            -configuration Development \
-            -destination 'generic/platform=macOS' \
-            -archivePath dist/Line.xcarchive \
-            VERSION="$APP_VERSION" \
-            BUILD_NUMBER="$APP_BUILD" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Developer ID Application"
-
-          xcodebuild \
-            -exportArchive \
-            -archivePath dist/Line.xcarchive \
-            -exportPath dist/export \
-            -exportOptionsPlist assets/ExportOptions.plist
-
-      - name: Notarize and staple app
-        if: ${{ steps.prerelease-state.outputs.already_published != 'true' }}
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PWD: ${{ secrets.APPLE_ID_PWD }}
-        run: |
-          set -euo pipefail
-          test -n "$APPLE_TEAM_ID"
-          test -n "$APPLE_ID"
-          test -n "$APPLE_ID_PWD"
-
-          ditto -c -k --sequesterRsrc --keepParent dist/export/Line.app dist/Line-notarization.zip
-          xcrun notarytool submit dist/Line-notarization.zip \
-            --apple-id "$APPLE_ID" \
-            --team-id "$APPLE_TEAM_ID" \
-            --password "$APPLE_ID_PWD" \
-            --wait
-          xcrun stapler staple dist/export/Line.app
-          codesign --verify --deep --strict dist/export/Line.app
-          spctl --assess --type execute --verbose=2 dist/export/Line.app
-
-      - name: Package prerelease
-        if: ${{ steps.prerelease-state.outputs.already_published != 'true' }}
-        run: |
-          set -euo pipefail
-          ditto -c -k --sequesterRsrc --keepParent dist/export/Line.app dist/Line.zip
-          cd dist
-          shasum -a 256 Line.zip > SHA256SUMS.txt
-
-      - name: Publish GitHub prerelease
-        env:
-          ALREADY_PUBLISHED: ${{ steps.prerelease-state.outputs.already_published }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          TAG="dev-${GITHUB_RUN_NUMBER}"
-          TITLE="Development build ${APP_VERSION} (${APP_BUILD})"
-
-          if [[ "$ALREADY_PUBLISHED" != "true" ]]; then
-            if gh release view "$TAG" >/dev/null 2>&1; then
-              gh release upload "$TAG" dist/Line.zip dist/SHA256SUMS.txt --clobber
-              gh release edit "$TAG" --title "$TITLE" --prerelease
-            else
-              gh release create "$TAG" \
-                dist/Line.zip \
-                dist/SHA256SUMS.txt \
-                --target "$GITHUB_SHA" \
-                --title "$TITLE" \
-                --generate-notes \
-                --prerelease \
-                --draft
-            fi
-          fi
-
-          VERIFY_DIR="$RUNNER_TEMP/verified-prerelease"
-          mkdir -p "$VERIFY_DIR"
-          gh release download "$TAG" \
-            --pattern "Line.zip" \
-            --pattern "SHA256SUMS.txt" \
-            --dir "$VERIFY_DIR"
-          test -f "$VERIFY_DIR/Line.zip"
-          test -f "$VERIFY_DIR/SHA256SUMS.txt"
-          cd "$VERIFY_DIR"
-          shasum -a 256 -c SHA256SUMS.txt
-          cd "$GITHUB_WORKSPACE"
-
-          if [[ "$ALREADY_PUBLISHED" != "true" ]]; then
-            ASSET_COUNT=$(gh release view "$TAG" --json assets --jq '.assets | length')
-            test "$ASSET_COUNT" = "2"
-            gh release edit "$TAG" --draft=false --prerelease
-          fi
-
-          IS_IMMUTABLE=$(gh release view "$TAG" --json isImmutable --jq '.isImmutable')
-          if [[ "$IS_IMMUTABLE" != "true" ]]; then
-            echo "Release immutability must be enabled before publishing prereleases."
-            exit 1
-          fi
-
-          ASSET_COUNT=$(gh release view "$TAG" --json assets --jq '.assets | length')
-          test "$ASSET_COUNT" = "2"
-
-          RELEASE_VERIFIED=false
-          for ATTEMPT in 1 2 3 4 5 6; do
-            if gh release verify "$TAG"; then
-              RELEASE_VERIFIED=true
-              break
-            fi
-            if [[ "$ATTEMPT" == "6" ]]; then
-              break
-            fi
-            sleep 10
-          done
-          test "$RELEASE_VERIFIED" = "true"
-          gh release verify-asset "$TAG" "$VERIFY_DIR/Line.zip"
-          gh release verify-asset "$TAG" "$VERIFY_DIR/SHA256SUMS.txt"
-          echo "$TAG is published, immutable, and verified."
-
-      - name: Delete temporary signing keychain
-        if: always()
-        run: security delete-keychain "$RUNNER_TEMP/line-signing.keychain-db" || true

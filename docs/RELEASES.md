@@ -146,10 +146,6 @@ tccutil reset Accessibility com.nnecec.Line
 | GitHub Release download | SHA-256 + optional Actions provenance; Development code signature; **manual** Gatekeeper approval |
 | Sparkle in-app update | EdDSA of the zip against the public key embedded in the app; feed only after appcast PR merge |
 
-## Developer ID / notarized workflow (optional, paid)
-
-`.github/workflows/release.yml` remains for maintainers who later enroll in the Apple Developer Program. It is **not** required for the open-source Publish path above. See that workflow for certificate, notarization, and immutable-release requirements.
-
 ## Local development signing helper
 
 ```bash
