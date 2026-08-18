@@ -77,10 +77,8 @@ jobs:
             -project Line.xcodeproj \
             -scheme Line \
             -configuration Debug \
-            -destination 'platform=macOS,arch=arm64' \
+            -destination 'platform=macOS' \
             -clonedSourcePackagesDirPath "$GITHUB_WORKSPACE/.build/codeql-source-packages" \
-            ARCHS=arm64 \
-            ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO \
             build
 
