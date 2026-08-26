@@ -95,17 +95,11 @@ final class TriggerCoordinator {
 
     private(set) lazy var keybindTrigger: KeybindTrigger = .init(
         windowActionCache: windowActionCache,
-        openCallback: { [weak self, keybindEventBuffer] action in
-            guard let token = keybindEventBuffer.enqueue(.open(action)) else { return }
-            Task { @MainActor [weak self] in
-                await self?.drainKeybindEvents(token: token)
-            }
+        openCallback: { [weak self] action in
+            self?.enqueueKeybindEvent(.open(action))
         },
-        closeCallback: { [weak self, keybindEventBuffer] forceClose in
-            guard let token = keybindEventBuffer.enqueue(.close(forceClose: forceClose)) else { return }
-            Task { @MainActor [weak self] in
-                await self?.drainKeybindEvents(token: token)
-            }
+        closeCallback: { [weak self] forceClose in
+            self?.enqueueKeybindEvent(.close(forceClose: forceClose))
         },
         checkIfLineOpen: { [weak self] in
             self?.checkIfLineOpen?() ?? false
@@ -155,6 +149,24 @@ final class TriggerCoordinator {
         self.onOpen = onOpen
         self.onClose = onClose
         self.checkIfLineOpen = checkIfLineOpen
+    }
+
+    /// Internal so the event-delivery contract can be regression-tested without
+    /// depending on a live CGEvent tap.
+    nonisolated func enqueueKeybindEvent(_ event: KeybindTriggerEventBuffer.Event) {
+        let buffer = keybindEventBuffer
+        if case let .close(forceClose) = event {
+            buffer.invalidate()
+            Task { @MainActor [weak self] in
+                await self?.onClose?(forceClose)
+            }
+            return
+        }
+
+        guard let token = buffer.enqueue(event) else { return }
+        Task { @MainActor [weak self] in
+            await self?.drainKeybindEvents(token: token)
+        }
     }
 
     private func drainKeybindEvents(token: KeybindTriggerEventBuffer.DrainToken) async {

@@ -46,6 +46,7 @@ dist/
 .claude/
 skills-lock.json
 docs/plans/
+plans/
 
 # Release tooling (Node)
 node_modules/

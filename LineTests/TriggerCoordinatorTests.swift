@@ -119,6 +119,50 @@ final class TriggerCoordinatorTests: XCTestCase {
         XCTAssertEqual(buffer.popNext(for: newToken), .open(action))
     }
 
+    func testCloseEventIsDeliveredWhileOpenCallbackIsStillSuspended() async throws {
+        let openingStarted = expectation(description: "opening callback starts")
+        let closeDelivered = expectation(description: "close callback is not starved by opening")
+        let nextOpeningStarted = expectation(description: "a later opening can start a fresh drain")
+        var resumeOpening: CheckedContinuation<(), Never>?
+        var openingCount = 0
+
+        coordinator.bind(
+            onOpen: { _ in
+                openingCount += 1
+                self.openCallCount = openingCount
+                if openingCount == 1 {
+                    openingStarted.fulfill()
+                    await withCheckedContinuation { (continuation: CheckedContinuation<(), Never>) in
+                        resumeOpening = continuation
+                    }
+                } else {
+                    nextOpeningStarted.fulfill()
+                }
+            },
+            onClose: { _ in
+                closeDelivered.fulfill()
+            },
+            checkIfLineOpen: { false }
+        )
+
+        let action = BoundWindowAction(action: .special(.noSelection), keybind: [])
+        coordinator.enqueueKeybindEvent(.open(action))
+        await fulfillment(of: [openingStarted], timeout: 1)
+
+        // This request is queued behind the suspended opening callback.
+        coordinator.enqueueKeybindEvent(.open(action))
+        coordinator.enqueueKeybindEvent(.close(forceClose: false))
+        await fulfillment(of: [closeDelivered], timeout: 1)
+
+        resumeOpening?.resume()
+        try await Task.sleep(for: .milliseconds(20))
+        XCTAssertEqual(openCallCount, 1)
+
+        coordinator.enqueueKeybindEvent(.open(action))
+        await fulfillment(of: [nextOpeningStarted], timeout: 1)
+        XCTAssertEqual(openCallCount, 2)
+    }
+
     func testBindingCallbacksWorks() {
         // Given: coordinator is bound in setUp
 
