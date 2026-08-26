@@ -146,11 +146,6 @@ final class PreviewViewModel: ObservableObject {
         log.debug("Current previewed frame: \(computedFrame)")
     }
 
-    /// Bridge for settings previews that still build a ResizeContext.
-    func updateContext(with context: ResizeContext, isScreenSwitch: Bool) {
-        update(with: WindowResizeExecution.PreparedResize(context: context), isScreenSwitch: isScreenSwitch)
-    }
-
     private func computeStartingFrame(
         for position: PreviewStartingPosition,
         targetFrame: CGRect,

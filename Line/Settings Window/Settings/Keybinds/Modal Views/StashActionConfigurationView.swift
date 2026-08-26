@@ -137,9 +137,15 @@ struct StashActionConfigurationView: View {
                         pressing: { pressing in
                             if pressing {
                                 guard let screen = NSScreen.main else { return }
-                                let context = ResizeContext(screen: screen)
-                                context.setAction(to: BoundWindowAction(action: action, keybind: []), parent: nil)
-                                previewController.open(context: context)
+                                let preparedResize = WindowResizeExecution.prepareResolved(
+                                    action: BoundWindowAction(action: action, keybind: []),
+                                    screen: screen,
+                                    bounds: screen.cgSafeScreenFrame,
+                                    padding: PaddingConfiguration.getConfiguredPadding(for: screen),
+                                    windowProperties: nil,
+                                    record: nil
+                                )
+                                previewController.open(preparedResize: preparedResize)
                             } else {
                                 previewController.close()
                             }

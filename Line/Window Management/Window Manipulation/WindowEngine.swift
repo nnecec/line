@@ -122,22 +122,6 @@ enum WindowEngine {
         _ = try await performPreparedResize(preparedResize)
     }
 
-    /// Legacy Drag Snap adapter. Mutable state stays outside the Prepared Resize execution seam.
-    @MainActor
-    static func performResize(context: ResizeContext) async throws {
-        if context.resolvedWindowProperties == nil {
-            await context.refreshResolvedState()
-        }
-
-        guard let outcome = try await performPreparedResize(.init(context: context)) else {
-            return
-        }
-
-        context.resolvedWindowProperties = outcome.resolvedWindowProperties
-        context.lastAppliedFrame = outcome.finalFrame
-        context.resolvedRecord = outcome.resolvedRecord
-    }
-
     @MainActor
     private static func performPreparedResize(
         _ preparedResize: WindowResizeExecution.PreparedResize

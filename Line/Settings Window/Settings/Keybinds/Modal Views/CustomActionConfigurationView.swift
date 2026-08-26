@@ -316,9 +316,15 @@ struct CustomActionConfigurationView: View {
                         pressing: { pressing in
                             if pressing {
                                 guard let configurationScreen else { return }
-                                let context = ResizeContext(screen: configurationScreen)
-                                context.setAction(to: BoundWindowAction(action: action, keybind: []), parent: nil)
-                                previewController.open(context: context)
+                                let preparedResize = WindowResizeExecution.prepareResolved(
+                                    action: BoundWindowAction(action: action, keybind: []),
+                                    screen: configurationScreen,
+                                    bounds: configurationScreen.cgSafeScreenFrame,
+                                    padding: PaddingConfiguration.getConfiguredPadding(for: configurationScreen),
+                                    windowProperties: nil,
+                                    record: nil
+                                )
+                                previewController.open(preparedResize: preparedResize)
                             } else {
                                 previewController.close()
                             }

@@ -63,11 +63,6 @@ final class PreviewController: WindowActionIndicator {
         log.debug("Initialized controller")
     }
 
-    /// Settings / drag bridge.
-    func open(context: ResizeContext) {
-        open(preparedResize: WindowResizeExecution.PreparedResize(context: context))
-    }
-
     func close() {
         guard controller != nil else { return }
         closeTask?.cancel()

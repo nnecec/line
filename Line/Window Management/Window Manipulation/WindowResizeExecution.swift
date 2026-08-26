@@ -290,3 +290,12 @@ enum WindowResizeExecution {
         )
     }
 }
+
+struct ComputedFrame {
+    let raw: CGRect
+    let padded: CGRect
+
+    static var zero: ComputedFrame {
+        ComputedFrame(raw: .zero, padded: .zero)
+    }
+}

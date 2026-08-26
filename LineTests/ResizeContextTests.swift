@@ -6,6 +6,7 @@
 @testable import Line
 import XCTest
 
+@MainActor
 final class ResizeContextTests: XCTestCase {
     func makeTestAction(_ action: WindowAction = .standard(.maximize)) -> BoundWindowAction {
         BoundWindowAction(action: action, keybind: [])
@@ -13,6 +14,67 @@ final class ResizeContextTests: XCTestCase {
 
     func makeTestScreen() -> NSScreen {
         NSScreen.main ?? NSScreen.screens[0]
+    }
+
+    // MARK: - 行为基线
+
+    func testDefaultScreenBoundsPaddingAndPreparedSnapshot() {
+        let screen = makeTestScreen()
+        let action = makeTestAction(.standard(.rightHalf))
+        let context = ResizeContext(window: nil, screen: screen, action: action)
+
+        XCTAssertEqual(context.bounds, screen.cgSafeScreenFrame)
+        XCTAssertEqual(
+            context.padding,
+            PaddingConfiguration.getConfiguredPadding(for: screen)
+        )
+        XCTAssertEqual(
+            context.paddedBounds,
+            context.padding.applyToBounds(context.bounds, screen: screen),
+            accuracy: 0.01
+        )
+
+        let parent = makeTestAction(.standard(.maximize))
+        context.parentAction = parent
+        context.initialMousePosition = CGPoint(x: 123, y: 456)
+        let prepared = WindowResizeExecution.prepareResolved(
+            action: action,
+            parentAction: parent,
+            screen: screen,
+            bounds: context.bounds,
+            padding: context.padding,
+            initialMousePosition: context.initialMousePosition,
+            windowProperties: nil,
+            record: nil
+        )
+
+        XCTAssertEqual(prepared.action.action, action.action)
+        XCTAssertEqual(prepared.parentAction?.action, parent.action)
+        XCTAssertEqual(prepared.initialMousePosition, context.initialMousePosition)
+    }
+
+    func testSetActionAndSetScreenRefreshResolutionInputs() {
+        let screen = makeTestScreen()
+        let context = ResizeContext(
+            window: nil,
+            screen: screen,
+            bounds: CGRect(x: 1, y: 2, width: 300, height: 200),
+            padding: .zero,
+            action: makeTestAction(.standard(.leftHalf))
+        )
+        let originalFrame = context.getTargetFrame().0
+
+        let nextAction = makeTestAction(.standard(.rightHalf))
+        context.setAction(to: nextAction, parent: makeTestAction())
+        XCTAssertNotEqual(context.getTargetFrame().0, originalFrame)
+        XCTAssertEqual(context.action.action, nextAction.action)
+
+        context.setScreen(to: screen)
+        XCTAssertEqual(context.bounds, screen.cgSafeScreenFrame)
+        XCTAssertEqual(
+            context.padding,
+            PaddingConfiguration.getConfiguredPadding(for: screen)
+        )
     }
 
     // MARK: - 缓存失效测试

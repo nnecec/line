@@ -22,11 +22,6 @@ final class WindowActionIndicatorService {
         }
     }
 
-    /// Bridge for callers that still hold a ResizeContext (settings previews, drag).
-    func openAndUpdate(context: ResizeContext) {
-        openAndUpdate(preparedResize: WindowResizeExecution.PreparedResize(context: context))
-    }
-
     func closeAll() {
         previewController.close()
     }

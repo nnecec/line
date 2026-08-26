@@ -38,7 +38,7 @@ final class WindowDragManager {
     static let shared = WindowDragManager()
     private init() {}
 
-    private var resizeContext: ResizeContext?
+    private var preparedResize: WindowResizeExecution.PreparedResize?
     private var dragSession = DragSnapSession()
 
     private let previewController = PreviewController()
@@ -189,7 +189,7 @@ final class WindowDragManager {
                 let effects = dragSession.handle(
                     .released(
                         currentFrame: releaseFrame,
-                        hasSnapAction: !(resizeContext?.action.direction.isNoOp ?? true),
+                        hasSnapAction: !(preparedResize?.action.direction.isNoOp ?? true),
                         windowSnapping: Defaults[.windowSnapping]
                     )
                 )
@@ -224,18 +224,17 @@ final class WindowDragManager {
             lastKnownFrame = initialFrame
             lastFrameSampleTime = ProcessInfo.processInfo.systemUptime
 
-            let context = ResizeContext(
+            let prepared = await WindowResizeExecution.bootstrap(
                 window: window,
                 initialMousePosition: currentMousePosition
             )
-            await context.refreshResolvedState()
             guard !Task.isCancelled,
                   determineDraggedWindowGeneration == generation
             else {
                 return
             }
 
-            self.resizeContext = context
+            self.preparedResize = prepared
             _ = dragSession.handle(.windowResolved(initialFrame: initialFrame))
 
             log.info("Determined window being dragged: \(window.description)")
@@ -243,7 +242,7 @@ final class WindowDragManager {
     }
 
     private func resetDragState() {
-        resizeContext = nil
+        preparedResize = nil
         dragSession = DragSnapSession()
         latestMouseLocation = nil
         lastKnownFrame = nil
@@ -255,7 +254,7 @@ final class WindowDragManager {
     }
 
     private func sampledFrameForDraggedEvent() -> CGRect? {
-        guard resizeContext?.window != nil else { return lastKnownFrame }
+        guard preparedResize?.window != nil else { return lastKnownFrame }
 
         let now = ProcessInfo.processInfo.systemUptime
         guard DragFrameSamplingPolicy.shouldSample(lastSampleTime: lastFrameSampleTime, now: now) else {
@@ -263,13 +262,13 @@ final class WindowDragManager {
         }
 
         lastFrameSampleTime = now
-        guard let frame = resizeContext?.window?.frame else { return lastKnownFrame }
+        guard let frame = preparedResize?.window?.frame else { return lastKnownFrame }
         lastKnownFrame = frame
         return frame
     }
 
     private func liveFrameForRelease() -> CGRect? {
-        guard let frame = resizeContext?.window?.frame else { return nil }
+        guard let frame = preparedResize?.window?.frame else { return nil }
         lastKnownFrame = frame
         lastFrameSampleTime = ProcessInfo.processInfo.systemUptime
         return frame
@@ -282,7 +281,7 @@ final class WindowDragManager {
                 setCurrentDraggingWindow()
 
             case .restoreInitialWindowSize:
-                if let window = resizeContext?.window {
+                if let window = preparedResize?.window {
                     await restoreInitialWindowSize(window)
                 }
 
@@ -291,12 +290,12 @@ final class WindowDragManager {
                 processSnapAction()
 
             case .notifyWindowManipulated:
-                if let window = resizeContext?.window {
+                if let window = preparedResize?.window {
                     StashManager.shared.onWindowManipulated(window.cgWindowID)
                 }
 
             case .eraseWindowRecords:
-                if let window = resizeContext?.window {
+                if let window = preparedResize?.window {
                     await WindowRecords.shared.eraseRecords(for: window)
                 }
 
@@ -304,9 +303,9 @@ final class WindowDragManager {
                 previewController.close()
 
             case .applySnap:
-                if let context = resizeContext {
+                if let preparedResize {
                     do {
-                        _ = try await WindowActionEngine.shared.apply(context: context)
+                        _ = try await WindowActionEngine.shared.apply(preparedResize: preparedResize)
                     } catch {
                         log.error("Failed to snap window: \(ApplicationLogPrivacy.errorDescription(error))")
                     }
@@ -382,7 +381,7 @@ final class WindowDragManager {
             topInset: topInset
         )
 
-        let oldDirection = resizeContext?.action.direction ?? .noAction
+        let oldDirection = preparedResize?.action.direction ?? .noAction
         let outcome = DragSnapPolicy.decide(
             mouseLocation: currentMousePosition,
             screenFrame: screenFrame,
@@ -398,15 +397,19 @@ final class WindowDragManager {
 
             log.info("Window snapping direction changed")
 
-            resizeContext?.setScreen(to: screen)
             let action = BoundWindowAction(
                 action: newDirection.toWindowAction(),
                 keybind: []
             )
-            resizeContext?.setAction(to: action, parent: nil)
-
-            if let context = resizeContext {
-                previewController.open(context: context)
+            if let current = preparedResize {
+                let next = WindowResizeExecution.transition(
+                    from: current,
+                    toAction: action,
+                    parentAction: nil,
+                    screen: screen
+                )
+                preparedResize = next
+                previewController.open(preparedResize: next)
             }
 
             if newDirection != .noAction, Defaults[.hapticFeedback] {
@@ -418,7 +421,13 @@ final class WindowDragManager {
                 action: .special(.noAction),
                 keybind: []
             )
-            resizeContext?.setAction(to: action, parent: nil)
+            if let current = preparedResize {
+                preparedResize = WindowResizeExecution.transition(
+                    from: current,
+                    toAction: action,
+                    parentAction: nil
+                )
+            }
             previewController.close()
 
         case .unchanged:

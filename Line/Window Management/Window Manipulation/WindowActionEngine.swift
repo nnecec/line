@@ -70,23 +70,6 @@ final class WindowActionEngine {
         }
     }
 
-    /// Apply a window action with explicit resize context tracking.
-    /// The context should be updated by the caller before calling this function.
-    ///
-    /// - Parameters:
-    ///   - action: The action to apply
-    ///   - window: The target window (can be nil for some actions like focus navigation from screen center)
-    ///   - resizeContext: Context containing tracking state for grow/shrink actions (passed by value, caller updates)
-    /// - Returns: Result indicating success and any state changes
-    /// - Throws: `CancellationError` if a new action is applied to the same window
-    @MainActor
-    func apply(context: ResizeContext) async throws -> Result {
-        try await applyLatest(for: context.window) { [weak self] in
-            guard let self else { throw CancellationError() }
-            return try await self.performApply(.legacyContext(context))
-        }
-    }
-
     @MainActor
     private func applyLatest(
         for window: Window?,
@@ -132,11 +115,8 @@ final class WindowActionEngine {
             return .failed
         }
 
-        switch input {
-        case let .prepared(preparedResize):
+        if case let .prepared(preparedResize) = input {
             try await WindowEngine.performResize(preparedResize: preparedResize)
-        case let .legacyContext(context):
-            try await WindowEngine.performResize(context: context)
         }
         return .resized
     }
@@ -144,19 +124,18 @@ final class WindowActionEngine {
     @MainActor
     private enum ApplyInput {
         case prepared(WindowResizeExecution.PreparedResize)
-        case legacyContext(ResizeContext)
 
         var action: BoundWindowAction {
             switch self {
-            case let .prepared(preparedResize): preparedResize.action
-            case let .legacyContext(context): context.action
+            case let .prepared(preparedResize):
+                return preparedResize.action
             }
         }
 
         var window: Window? {
             switch self {
-            case let .prepared(preparedResize): preparedResize.window
-            case let .legacyContext(context): context.window
+            case let .prepared(preparedResize):
+                return preparedResize.window
             }
         }
     }
