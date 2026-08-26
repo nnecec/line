@@ -259,3 +259,146 @@ final class GridModeCoordinatorTests: XCTestCase {
         }
     }
 }
+
+@MainActor
+final class WindowEngineBoundaryTests: XCTestCase {
+    func testNoOpFocusAndQuickActionsDoNotEnterResize() async throws {
+        for action in [
+            BoundWindowAction(action: .special(.noAction), keybind: []),
+            BoundWindowAction(action: .focus(.focusDown), keybind: []),
+            BoundWindowAction(action: .special(.minimize), keybind: [])
+        ] {
+            let fake = BoundaryFake()
+            let outcome = try await WindowEngine.execute(
+                makeRequest(action: action),
+                using: fake.boundary
+            )
+
+            XCTAssertNil(outcome)
+            XCTAssertEqual(fake.effects, [])
+        }
+    }
+
+    func testResizeRecordsFirstFrameAndEffectsInOrder() async throws {
+        let fake = BoundaryFake()
+        let action = BoundWindowAction(action: .standard(.maximize), keybind: [])
+        let outcome = try await WindowEngine.execute(
+            makeRequest(action: action),
+            using: fake.boundary
+        )
+
+        XCTAssertEqual(outcome?.finalFrame, fake.finalFrame)
+        XCTAssertEqual(fake.effects, ["record-first", "record", "resize", "stash"])
+    }
+
+    func testUnavailableSystemWindowManagerUsesOrdinaryResize() async throws {
+        let fake = BoundaryFake(systemFrame: nil)
+        let action = BoundWindowAction(action: .standard(.maximize), keybind: [])
+        let request = makeRequest(action: action, useSystemWindowManager: true)
+        let outcome = try await WindowEngine.execute(request, using: fake.boundary)
+
+        XCTAssertEqual(outcome?.finalFrame, fake.finalFrame)
+        XCTAssertTrue(fake.effects.contains("system"))
+        XCTAssertTrue(fake.effects.contains("resize"))
+        XCTAssertEqual(fake.effects.last, "stash")
+    }
+
+    func testCancellationRemainsCancellationError() async {
+        let fake = BoundaryFake(resizeError: CancellationError())
+        let action = BoundWindowAction(action: .standard(.maximize), keybind: [])
+
+        do {
+            _ = try await WindowEngine.execute(makeRequest(action: action), using: fake.boundary)
+            XCTFail("Cancellation must be propagated")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+            XCTAssertFalse(fake.effects.contains("stash"))
+        }
+    }
+
+    func testResizeErrorFallsBackToCurrentFrame() async throws {
+        let fake = BoundaryFake(resizeError: BoundaryFakeError.resizeFailed)
+        let action = BoundWindowAction(action: .standard(.maximize), keybind: [])
+        let outcome = try await WindowEngine.execute(makeRequest(action: action), using: fake.boundary)
+
+        XCTAssertEqual(outcome?.finalFrame, fake.currentFrame)
+        XCTAssertFalse(fake.effects.contains("stash"))
+    }
+
+    func testSuccessfulFinalFrameResizeRecordsAndRunsStashAftermath() async throws {
+        let fake = BoundaryFake()
+        let action = BoundWindowAction(action: .standard(.maximize), keybind: [])
+        let request = makeRequest(action: action, shouldStoreAsFinalFrame: true)
+        _ = try await WindowEngine.execute(request, using: fake.boundary)
+
+        XCTAssertEqual(fake.effects, ["record-first", "resize", "record-final", "stash"])
+    }
+
+    private func makeRequest(
+        action: BoundWindowAction,
+        useSystemWindowManager: Bool = false,
+        shouldStoreAsFinalFrame: Bool = false
+    ) -> WindowExecutionRequest {
+        WindowExecutionRequest(
+            action: action,
+            screen: NSScreen.main ?? NSScreen.screens[0],
+            targetFrame: CGRect(x: 20, y: 20, width: 700, height: 500),
+            paddedBounds: CGRect(x: 0, y: 0, width: 1440, height: 900),
+            resolvedWindowProperties: .init(
+                snapshotFrame: CGRect(x: 100, y: 100, width: 500, height: 400),
+                isResizable: true,
+                isFullscreen: false,
+                isEnhancedUserInterface: false
+            ),
+            willChangeScreens: false,
+            shouldStoreAsFinalFrame: shouldStoreAsFinalFrame,
+            useSystemWindowManager: useSystemWindowManager,
+            focusWindowOnResize: false,
+            moveCursorWithWindow: false,
+            animate: false
+        )
+    }
+}
+
+@MainActor
+private final class BoundaryFake {
+    var effects: [String] = []
+    let currentFrame = CGRect(x: 100, y: 100, width: 500, height: 400)
+    let finalFrame = CGRect(x: 20, y: 20, width: 700, height: 500)
+    private let systemFrame: CGRect?
+    private let resizeError: Error?
+
+    init(systemFrame: CGRect? = nil, resizeError: Error? = nil) {
+        self.systemFrame = systemFrame
+        self.resizeError = resizeError
+    }
+
+    lazy var boundary = WindowExecutionBoundary(
+        currentFrame: { self.currentFrame },
+        recordFirstIfNeeded: { _ in self.effects.append("record-first") },
+        record: { [self] properties, _ in
+            effects.append(properties?.frame == finalFrame ? "record-final" : "record")
+        },
+        removeLastAction: { self.effects.append("remove-last") },
+        resolveRecord: { nil },
+        focus: { self.effects.append("focus") },
+        setFullscreen: { _ in self.effects.append("fullscreen-off") },
+        resize: { [self] _, _, _, _, _ in
+            effects.append("resize")
+            if let resizeError {
+                throw resizeError
+            }
+            return finalFrame
+        },
+        systemResize: { [self] _ in
+            effects.append("system")
+            return systemFrame
+        },
+        moveCursor: { _ in self.effects.append("cursor") },
+        stashAftermath: { _, _ in self.effects.append("stash") }
+    )
+}
+
+enum BoundaryFakeError: Error {
+    case resizeFailed
+}

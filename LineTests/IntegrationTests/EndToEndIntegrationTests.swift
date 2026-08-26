@@ -43,18 +43,9 @@ import XCTest
 /// 警告：这些测试依赖真实的窗口、Accessibility 权限和系统状态
 /// 可能在某些环境中不稳定
 final class EndToEndIntegrationTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-
-        guard AccessibilityManager.shared.isGranted else {
-            return
-        }
-    }
-
-    override func tearDown() {
-        // 清理状态
-        super.tearDown()
-    }
+    // Real-window cases perform an explicit environment check at the point of use.
+    // The no-op case below remains runnable without Accessibility permission; keeping
+    // setup side-effect free avoids silently turning the suite into a false pass.
 
     func testNoOpActionCompletesWithoutAccessibilityPermission() async throws {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else {
@@ -85,6 +76,7 @@ final class EndToEndIntegrationTests: XCTestCase {
         }
 
         let initialFrame = window.frame
+        defer { window.setFrameSynchronously(initialFrame) }
 
         // 2. 创建 action
         let action = WindowAction.standard(.proportional(.leftHalf))
@@ -118,6 +110,7 @@ final class EndToEndIntegrationTests: XCTestCase {
         }
 
         let initialFrame = window.frame
+        defer { window.setFrameSynchronously(initialFrame) }
         let action = WindowAction.standard(.maximize)
 
         let result = try await WindowActionEngine.shared.apply(action, window: window, screen: screen)
@@ -144,6 +137,8 @@ final class EndToEndIntegrationTests: XCTestCase {
             throw XCTSkip("需要窗口")
         }
 
+        let initialFrame = window.frame
+        defer { window.setFrameSynchronously(initialFrame) }
         let action = WindowAction.standard(.center(.geometric))
 
         let result = try await WindowActionEngine.shared.apply(action, window: window, screen: screen)
@@ -174,6 +169,11 @@ final class EndToEndIntegrationTests: XCTestCase {
         }
 
         let wasMinimized = window.minimized
+        defer {
+            if !wasMinimized {
+                window.minimized = false
+            }
+        }
 
         // 应用 minimize action
         let action = WindowAction.special(.minimize)
@@ -181,10 +181,7 @@ final class EndToEndIntegrationTests: XCTestCase {
 
         XCTAssertTrue(result.success, "Minimize 应该成功")
 
-        // 恢复原始状态
-        if !wasMinimized {
-            window.minimized = false
-        }
+        // 原始最小化状态由 defer 恢复。
     }
 
     func testQuickActionHide() async throws {
@@ -198,6 +195,11 @@ final class EndToEndIntegrationTests: XCTestCase {
         }
 
         let wasHidden = window.isWindowHidden
+        defer {
+            if !wasHidden {
+                window.toggleHidden()
+            }
+        }
 
         // 应用 hide action
         let action = WindowAction.special(.hide)
@@ -205,10 +207,7 @@ final class EndToEndIntegrationTests: XCTestCase {
 
         XCTAssertTrue(result.success, "Hide 应该成功")
 
-        // 恢复原始状态
-        if !wasHidden {
-            window.toggleHidden()
-        }
+        // 原始隐藏状态由 defer 恢复。
     }
 
     // MARK: - Focus 动作流程
@@ -273,6 +272,9 @@ final class EndToEndIntegrationTests: XCTestCase {
               let screen = NSScreen.main else {
             throw XCTSkip("需要窗口")
         }
+
+        let initialFrame = window.frame
+        defer { window.setFrameSynchronously(initialFrame) }
 
         // 执行一系列 action
         let actions: [WindowAction] = [

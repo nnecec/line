@@ -2,6 +2,12 @@ name: CI
 
 on:
   workflow_dispatch:
+    inputs:
+      require_real_integration:
+        description: Require at least one executed Accessibility integration test
+        required: false
+        default: false
+        type: boolean
   pull_request:
     paths-ignore:
       - "**.md"
@@ -52,7 +58,9 @@ jobs:
         run: xcodebuild -skipMacroValidation -resolvePackageDependencies -project Line.xcodeproj -scheme Line
 
       - name: Test release tooling
-        run: ruby scripts/release/update_appcast_test.rb
+        run: |
+          ruby scripts/release/update_appcast_test.rb
+          ruby scripts/release/build_package_test.rb
 
       - name: Run unit tests with coverage
         run: |
@@ -67,7 +75,8 @@ jobs:
             -skip-testing:LineTests/EndToEndIntegrationTests \
             -enableCodeCoverage YES \
             -resultBundlePath "$RUNNER_TEMP/UnitTests.xcresult" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
 
       - name: Enforce calculator coverage floor
         run: scripts/ci/check_calculator_coverage.sh "$RUNNER_TEMP/UnitTests.xcresult"
@@ -87,6 +96,20 @@ jobs:
             VERSION=1.2.3 \
             BUILD_NUMBER=123
 
+      - name: Smoke-test unsigned release package
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/line-package"
+          VERSION=0.0.0 BUILD_NUMBER=1 ALLOW_UNSIGNED=1 OUTPUT_DIR="$OUT" scripts/release/build_package.sh
+          test -f "$OUT/Line-0.0.0.zip"
+          test -f "$OUT/Line-0.0.0.dmg"
+          test -f "$OUT/SHA256SUMS.txt"
+          PLIST="$OUT/DerivedData/Build/Products/Release/Line.app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST" | grep -Fx '0.0.0'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST" | grep -Fx '1'
+          (cd "$OUT" && shasum -a 256 Line-0.0.0.zip Line-0.0.0.dmg) | diff -u - SHA256SUMS.txt
+
   integration-tests:
     name: Integration Tests (Accessibility)
     if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -95,6 +118,8 @@ jobs:
     # GitHub-hosted runners normally lack Accessibility permission.
     # Keep this manual so maintainers can inspect skip/pass counts without taxing every change.
     continue-on-error: false
+    env:
+      REQUIRE_REAL_INTEGRATION: ${{ inputs.require_real_integration && '1' || '0' }}
 
     steps:
       - name: Check out repository
@@ -128,38 +153,63 @@ jobs:
           set -euo pipefail
           set -o pipefail
           LOG="$RUNNER_TEMP/integration-tests.log"
-          # XCTSkip is a pass for xcodebuild. Real assertion failures still fail the job.
+          # XCTSkip is represented in the XCTest result bundle. Real assertion failures
+          # remain failures; a missing test bundle is also reported as a failure.
+          set +e
           xcodebuild test \
             -skipMacroValidation \
             -project Line.xcodeproj \
             -scheme Line \
             -destination 'platform=macOS' \
             -only-testing:LineTests/EndToEndIntegrationTests \
+            -resultBundlePath "$RUNNER_TEMP/IntegrationTests.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
             2>&1 | tee "$LOG"
+          XCODEBUILD_STATUS=${PIPESTATUS[0]}
+          set -e
 
-          # Match classic XCTest lines and newer "Test skipped/passed/failed" summaries.
-          SKIP_COUNT=$(grep -Eic 'Test Case .* skipped|Test skipped' "$LOG" || true)
-          FAIL_COUNT=$(grep -Eic 'Test Case .* failed|Test failed|failed \(' "$LOG" || true)
-          PASS_COUNT=$(grep -Eic 'Test Case .* passed|Test passed' "$LOG" || true)
+          # Read XCTest's result bundle instead of inferring counts from localized log text.
+          set +e
+          read -r DISCOVERED_COUNT PASS_COUNT SKIP_COUNT FAIL_COUNT < <(
+            xcrun xcresulttool get test-results summary \
+              --path "$RUNNER_TEMP/IntegrationTests.xcresult" \
+              --format json 2>/dev/null | python3 -c 'import json, sys; d=json.load(sys.stdin); print(d.get("totalTestCount", 0), d.get("passedTests", 0), d.get("skippedTests", 0), d.get("failedTests", 0))'
+          )
+          PARSE_STATUS=$?
+          set -e
+          if [[ "$PARSE_STATUS" -ne 0 ]]; then
+            DISCOVERED_COUNT=0; PASS_COUNT=0; SKIP_COUNT=0; FAIL_COUNT=0
+          fi
+          EXECUTED_COUNT=$((PASS_COUNT + FAIL_COUNT))
+          if [[ "$XCODEBUILD_STATUS" -ne 0 && "$FAIL_COUNT" -eq 0 ]]; then FAIL_COUNT=1; fi
 
           {
             echo "### Integration test summary"
             echo ""
             echo "| Result | Count |"
             echo "| --- | ---: |"
+            echo "| discovered | ${DISCOVERED_COUNT} |"
             echo "| passed | ${PASS_COUNT} |"
             echo "| skipped | ${SKIP_COUNT} |"
             echo "| failed | ${FAIL_COUNT} |"
+            echo "| executed | ${EXECUTED_COUNT} |"
             echo ""
-            if [[ "$SKIP_COUNT" -gt 0 && "$PASS_COUNT" -eq 0 && "$FAIL_COUNT" -eq 0 ]]; then
-              echo "All integration cases were **explicitly skipped** (typical on runners without Accessibility permission or a controllable frontmost window)."
-              echo "Unit Tests and Coverage remains the required correctness gate."
-            elif [[ "$PASS_COUNT" -gt 0 ]]; then
-              echo "At least one integration case **executed** on this runner."
+            if [[ "$EXECUTED_COUNT" -eq 0 && "$FAIL_COUNT" -eq 0 ]]; then
+              echo "Environment unavailable or no real integration case executed; this is **not** complete integration validation."
+            elif [[ "$EXECUTED_COUNT" -gt 0 ]]; then
+              echo "At least one integration case executed on this runner."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
+          echo "discovered=${DISCOVERED_COUNT}" >> "$GITHUB_OUTPUT"
           echo "passed=${PASS_COUNT}" >> "$GITHUB_OUTPUT"
           echo "skipped=${SKIP_COUNT}" >> "$GITHUB_OUTPUT"
           echo "failed=${FAIL_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "executed=${EXECUTED_COUNT}" >> "$GITHUB_OUTPUT"
+
+          if [[ "${REQUIRE_REAL_INTEGRATION:-0}" == "1" && "$EXECUTED_COUNT" -eq 0 ]]; then
+            echo "REQUIRE_REAL_INTEGRATION=1 but zero integration cases executed." >&2
+            exit 1
+          fi
+          if [[ "$FAIL_COUNT" -ne 0 ]]; then exit 1; fi
