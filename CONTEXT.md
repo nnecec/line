@@ -35,7 +35,7 @@ The session holds the current prepared resize as its layout truth for the intera
 _Avoid_: Action coordinator, resize session, trigger session, ResizeContext
 
 **Window Scene**:
-A named arrangement of application windows and their relative placement on available displays, representing a repeatable working context independently of macOS Spaces.
+A named arrangement of application windows and their relative placement on available displays, representing a repeatable working context independently of macOS Spaces. The design is local-only and one-shot: it never launches applications, controls Spaces, or continuously tiles windows. Ambiguous window or display matches require user choice or are skipped; a Scene apply may partially succeed.
 _Avoid_: Workspace, saved layout, layout profile
 
 **Window Resize Execution**:

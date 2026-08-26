@@ -29,6 +29,7 @@ Examples:
 - `URLCommandTargetOrchestrator` — owns URL target selection, activation/screen effects, execution results, and successful sticky-target updates
 - `URLTargetWindowPolicy` — selects the target window for `line://` automation (user-defined > sticky window within TTL > first candidate)
 - `StashAftermathDecision` — decides stash aftermath after a window resize (stash, unstash, reprocess, ignore, unmanage, etc.)
+- Window Scene policies (design in [`WINDOW_SCENES.md`](WINDOW_SCENES.md)) — will own versioned Scene validation, safe window/topology matching, and one-shot apply receipt decisions; they must remain pure and must not call Accessibility or persist runtime IDs.
 
 When to extract a policy or decision module:
 
@@ -52,7 +53,9 @@ Settings keys live in `Line/Extensions/Defaults+Extensions.swift` and related ex
 
 Grid size memory has two layers. `GridConfigurationManager` persists the latest grid size for an application bundle identifier and display, which acts as the fallback for future windows. It also keeps a bounded, process-local override keyed by process identifier, `CGWindowID`, and display so separate windows from the same application can retain different grid sizes during the current Line session. Window identifiers are never persisted; session overrides are removed when the owning application terminates and cleared when Accessibility access is revoked or Line shuts down. Lookup order is window-and-display override, application-and-display fallback, then the default 1 × 1 grid.
 
-Migrations in `Line/Migration` run during application startup. A migration should be idempotent and covered by characterization tests before old storage is removed.
+Window Scene is a separate, planned domain: a versioned local document of named placements using bundle identity, non-content window hints, relative visible-frame layout, and display topology references rather than persisted window/display IDs. The first version is one-shot and best-effort, never launches applications, controls macOS Spaces, continuously tiles, or promises atomic rollback. Ambiguous application windows and display topology require user choice or are skipped, and every placement contributes a privacy-safe receipt. A future executor must generate `Prepared Resize` and delegate writes through the existing Window Resize Execution/WindowEngine boundary; it must not write AX directly or create a second frame engine. See [`WINDOW_SCENES.md`](WINDOW_SCENES.md) and ADR 016.
+
+Migrations in `Line/Migration` run during application startup. A migration should be idempotent and covered by characterization tests before old storage is removed. If Scene persistence is implemented, it must use its own versioned repository and migration boundary rather than adding scattered Defaults patches.
 
 ## Updates
 
