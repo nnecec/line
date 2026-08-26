@@ -5,7 +5,7 @@
 //  Created via architecture refactor on 2026-07-02.
 //
 //  Immutable value object representing a window resize request.
-//  Replaces the stateful ResizeContext with a pure data carrier.
+//  Provides the immutable request data consumed by the resize calculator.
 //  This eliminates manual state synchronization and makes the computation layer testable.
 //
 
