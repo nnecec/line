@@ -189,12 +189,17 @@ enum SkyLightToolBelt {
         let options: SLSWindowCaptureOptions = [.ignoreGlobalClipShape, .bestResolution, .fullSize]
 
         let cid = SLSMainConnectionID()
-        let images = SLSHWCaptureWindowList(
+        let capturedValue = SLSHWCaptureWindowList(
             cid,
             &captureWindowIDs,
             captureWindowIDs.count,
             options.rawValue
-        ).takeRetainedValue() as! [CGImage]
+        ).takeRetainedValue()
+
+        guard let images = capturedValue as? [CGImage] else {
+            log.error("SkyLight returned an unexpected window capture result")
+            return []
+        }
 
         return images
     }

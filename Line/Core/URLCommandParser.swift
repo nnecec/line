@@ -36,7 +36,7 @@ enum URLCommandParser {
             return .reject(.unsupportedScheme)
         }
 
-        guard url.absoluteString.count < maxURLLength else {
+        guard url.absoluteString.count <= maxURLLength else {
             return .reject(.urlTooLong)
         }
 

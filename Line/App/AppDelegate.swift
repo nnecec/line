@@ -49,6 +49,55 @@ enum AppLaunchCoordinationPolicy {
     }
 }
 
+struct RunningApplicationIdentity: Equatable {
+    let processIdentifier: pid_t
+    let bundleIdentifier: String?
+    let launchDate: Date?
+
+    init(application: NSRunningApplication) {
+        self.processIdentifier = application.processIdentifier
+        self.bundleIdentifier = application.bundleIdentifier
+        self.launchDate = application.launchDate
+    }
+
+    init(processIdentifier: pid_t, bundleIdentifier: String?, launchDate: Date?) {
+        self.processIdentifier = processIdentifier
+        self.bundleIdentifier = bundleIdentifier
+        self.launchDate = launchDate
+    }
+
+    var hasStableIdentity: Bool {
+        bundleIdentifier != nil && launchDate != nil
+    }
+}
+
+enum StaleInstanceTerminationDecision: Equatable {
+    case terminate
+    case wait
+    case doNotKill
+
+    static func resolve(
+        recordedIdentity: RunningApplicationIdentity?,
+        observedIdentity: RunningApplicationIdentity?,
+        currentPID: pid_t,
+        currentBundleIdentifier: String?
+    ) -> Self {
+        guard let recordedIdentity,
+              let observedIdentity,
+              recordedIdentity.hasStableIdentity,
+              observedIdentity.hasStableIdentity,
+              observedIdentity == recordedIdentity,
+              observedIdentity.processIdentifier != currentPID,
+              let currentBundleIdentifier,
+              observedIdentity.bundleIdentifier == currentBundleIdentifier
+        else {
+            return observedIdentity == nil ? .wait : .doNotKill
+        }
+
+        return .terminate
+    }
+}
+
 @Loggable
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -108,11 +157,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             andEventID: AEEventID(kAEGetURL)
         )
 
-        let stalePIDs = shouldCoordinateDuplicateInstances ? broadcastTerminateToOtherInstances() : []
+        let staleInstances = shouldCoordinateDuplicateInstances ? broadcastTerminateToOtherInstances() : []
 
         // Wait for other instances to fully exit before installing event taps to prevent conflicts
         Task { @MainActor in
-            await waitForInstancesToExit(pids: stalePIDs, timeout: .seconds(3))
+            await waitForInstancesToExit(instances: staleInstances, timeout: .seconds(3))
             LineCoordinator.shared.start()
             WindowDragManager.shared.addObservers()
             StashManager.shared.start()
@@ -147,9 +196,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Sends the terminate notification to any other running Line instances, and returns their PIDs.
+    /// Sends the terminate notification to any other running Line instances, and returns stable identities.
     @discardableResult
-    private func broadcastTerminateToOtherInstances() -> [pid_t] {
+    private func broadcastTerminateToOtherInstances() -> [RunningApplicationIdentity] {
         let currentPID = ProcessInfo.processInfo.processIdentifier
         let bundleId = Bundle.main.bundleIdentifier ?? "com.nnecec.Line"
 
@@ -170,17 +219,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             userInfo: ["pid": Int(currentPID)]
         )
 
-        return otherInstances.map(\.processIdentifier)
+        return otherInstances.map(RunningApplicationIdentity.init)
     }
 
-    /// Waits until all provided PIDs have exited, or until the timeout is reached.
-    private func waitForInstancesToExit(pids: [pid_t], timeout: Duration) async {
-        guard !pids.isEmpty else { return }
+    /// Waits until all provided instances have exited, or until the timeout is reached.
+    private func waitForInstancesToExit(instances: [RunningApplicationIdentity], timeout: Duration) async {
+        guard !instances.isEmpty else { return }
 
         let deadline = ContinuousClock.now + timeout
 
         while ContinuousClock.now < deadline {
-            let allGone = pids.allSatisfy { NSRunningApplication(processIdentifier: $0) == nil }
+            let allGone = instances.allSatisfy {
+                NSRunningApplication(processIdentifier: $0.processIdentifier) == nil
+            }
             if allGone {
                 log.info("All prior Line instances have exited")
                 return
@@ -188,11 +239,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? await Task.sleep(for: .milliseconds(100))
         }
 
-        let surviving = pids.filter { NSRunningApplication(processIdentifier: $0) != nil }
-        if !surviving.isEmpty {
-            log.warn("Timed out waiting for prior Line instances to exit, force killing \(surviving.count) instance(s)")
-            for pid in surviving {
-                kill(pid, SIGKILL)
+        let surviving = instances.compactMap { identity -> (RunningApplicationIdentity, NSRunningApplication)? in
+            guard let application = NSRunningApplication(processIdentifier: identity.processIdentifier) else {
+                return nil
+            }
+            return (identity, application)
+        }
+
+        for (recordedIdentity, application) in surviving {
+            let observedIdentity = RunningApplicationIdentity(application: application)
+            switch StaleInstanceTerminationDecision.resolve(
+                recordedIdentity: recordedIdentity,
+                observedIdentity: observedIdentity,
+                currentPID: ProcessInfo.processInfo.processIdentifier,
+                currentBundleIdentifier: Bundle.main.bundleIdentifier
+            ) {
+            case .terminate:
+                log.warn("Timed out waiting for a prior Line instance, force terminating it")
+                kill(application.processIdentifier, SIGKILL)
+            case .wait:
+                log.warn("Prior Line instance identity is unavailable; will not force terminate it")
+            case .doNotKill:
+                log.warn("Prior process identity changed; will not force terminate it")
             }
         }
     }

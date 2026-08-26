@@ -1,6 +1,6 @@
 # Makefile for Line
 
-.PHONY: help test test-unit test-integration test-coverage build build-release package-local lint format clean
+.PHONY: help test test-unit test-integration test-coverage build build-release package package-local lint format clean
 
 help:
 	@echo "Line development commands:"

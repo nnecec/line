@@ -142,12 +142,23 @@ final class URLCommandHandlerTests: XCTestCase {
         }
     }
 
-    func testRejectsURLAtMaximumLength() throws {
+    func testAcceptsURLAtMaximumLength() throws {
         let prefix = "line://action/"
         let path = makePathWithValidParameters(length: URLCommandParser.maxURLLength - prefix.count)
         let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
 
         XCTAssertEqual(url.absoluteString.count, URLCommandParser.maxURLLength)
+        guard case .accept = URLCommandParser.parse(url) else {
+            return XCTFail("URL at the limit should be accepted")
+        }
+    }
+
+    func testRejectsURLAboveMaximumLength() throws {
+        let prefix = "line://action/"
+        let path = makePathWithValidParameters(length: URLCommandParser.maxURLLength + 1 - prefix.count)
+        let url = try XCTUnwrap(URL(string: "line://action/\(path)"))
+
+        XCTAssertEqual(url.absoluteString.count, URLCommandParser.maxURLLength + 1)
         XCTAssertEqual(URLCommandParser.parse(url), .reject(.urlTooLong))
     }
 

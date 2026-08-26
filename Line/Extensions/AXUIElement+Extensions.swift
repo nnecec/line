@@ -7,6 +7,87 @@
 
 import SwiftUI
 
+enum AXValueBoundaryPolicy {
+    static func isAXUIElement(_ value: AnyObject) -> Bool {
+        CFGetTypeID(value) == AXUIElementGetTypeID()
+    }
+
+    static func isAXValue(_ value: AnyObject) -> Bool {
+        CFGetTypeID(value) == AXValueGetTypeID()
+    }
+}
+
+enum AXValueBoundaryAdapter {
+    typealias GetValue = (AXValue, AXValueType, UnsafeMutableRawPointer) -> Bool
+
+    static func unpack(_ value: AnyObject, getValue: GetValue = AXValueGetValue) throws -> Any {
+        switch CFGetTypeID(value) {
+        case AXUIElementGetTypeID():
+            return try checkedAXUIElement(value)
+        case AXValueGetTypeID():
+            let axValue = try checkedAXValue(value)
+            let type = AXValueGetType(axValue)
+            switch type {
+            case .axError:
+                var result: AXError = .success
+                guard getValue(axValue, type, &result) else {
+                    throw AXError.illegalArgument
+                }
+                return result
+            case .cfRange:
+                var result = CFRange()
+                guard getValue(axValue, type, &result) else {
+                    throw AXError.illegalArgument
+                }
+                return result
+            case .cgPoint:
+                var result = CGPoint.zero
+                guard getValue(axValue, type, &result) else {
+                    throw AXError.illegalArgument
+                }
+                return result
+            case .cgRect:
+                var result = CGRect.zero
+                guard getValue(axValue, type, &result) else {
+                    throw AXError.illegalArgument
+                }
+                return result
+            case .cgSize:
+                var result = CGSize.zero
+                guard getValue(axValue, type, &result) else {
+                    throw AXError.illegalArgument
+                }
+                return result
+            default:
+                return value
+            }
+        default:
+            return value
+        }
+    }
+
+    private static func checkedAXUIElement(_ value: AnyObject) throws -> AXUIElement {
+        guard AXValueBoundaryPolicy.isAXUIElement(value) else {
+            throw AXError.illegalArgument
+        }
+
+        // AXUIElement is an opaque Core Foundation type. Swift imports it as a
+        // CF-backed class, so a conditional cast from AnyObject is rejected as
+        // always-successful by the compiler. The CFTypeID guard above proves
+        // the representation before this narrow conversion.
+        return unsafeBitCast(value, to: AXUIElement.self)
+    }
+
+    private static func checkedAXValue(_ value: AnyObject) throws -> AXValue {
+        guard AXValueBoundaryPolicy.isAXValue(value) else {
+            throw AXError.illegalArgument
+        }
+
+        // See checkedAXUIElement(_:): AXValue is also an opaque CF type.
+        return unsafeBitCast(value, to: AXValue.self)
+    }
+}
+
 extension AXUIElement {
     static let systemWide = AXUIElementCreateSystemWide()
 
@@ -22,7 +103,12 @@ extension AXUIElement {
             throw error
         }
 
-        guard let unpackedValue = (unpackAXValue(value!) as? T) else {
+        guard let value else {
+            throw AXError.noValue
+        }
+
+        let unpacked = try AXValueBoundaryAdapter.unpack(value)
+        guard let unpackedValue = unpacked as? T else {
             throw AXError.illegalArgument
         }
 
@@ -83,46 +169,6 @@ extension AXUIElement {
             AXValueCreate(AXValueType(rawValue: kAXValueCGSizeType)!, &val)!
         default:
             value as AnyObject
-        }
-    }
-
-    private func unpackAXValue(_ value: AnyObject) -> Any {
-        switch CFGetTypeID(value) {
-        case AXUIElementGetTypeID():
-            return value as! AXUIElement
-        case AXValueGetTypeID():
-            let type = AXValueGetType(value as! AXValue)
-            switch type {
-            case .axError:
-                var result: AXError = .success
-                let success = AXValueGetValue(value as! AXValue, type, &result)
-                assert(success)
-                return result
-            case .cfRange:
-                var result = CFRange()
-                let success = AXValueGetValue(value as! AXValue, type, &result)
-                assert(success)
-                return result
-            case .cgPoint:
-                var result = CGPoint.zero
-                let success = AXValueGetValue(value as! AXValue, type, &result)
-                assert(success)
-                return result
-            case .cgRect:
-                var result = CGRect.zero
-                let success = AXValueGetValue(value as! AXValue, type, &result)
-                assert(success)
-                return result
-            case .cgSize:
-                var result = CGSize.zero
-                let success = AXValueGetValue(value as! AXValue, type, &result)
-                assert(success)
-                return result
-            default:
-                return value
-            }
-        default:
-            return value
         }
     }
 
