@@ -108,7 +108,7 @@ jobs:
           PLIST="$OUT/DerivedData/Build/Products/Release/Line.app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST" | grep -Fx '0.0.0'
           /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST" | grep -Fx '1'
-          (cd "$OUT" && shasum -a 256 Line-0.0.0.zip Line-0.0.0.dmg) | diff -u - SHA256SUMS.txt
+          (cd "$OUT" && shasum -a 256 Line-0.0.0.zip Line-0.0.0.dmg) | diff -u "$OUT/SHA256SUMS.txt" -
 
   integration-tests:
     name: Integration Tests (Accessibility)
