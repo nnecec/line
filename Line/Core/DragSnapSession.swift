@@ -44,6 +44,7 @@ struct DragSnapSession {
     }
 
     private var state: State = .idle
+    private(set) var lastKnownFrame: CGRect?
 
     mutating func handle(_ event: Event) -> [Effect] {
         switch event {
@@ -54,6 +55,7 @@ struct DragSnapSession {
             guard case .resolvingWindow = state else {
                 return []
             }
+            lastKnownFrame = initialFrame
             state = .tracking(initialFrame: initialFrame)
             return []
 
@@ -65,17 +67,19 @@ struct DragSnapSession {
             return []
 
         case let .released(currentFrame, hasSnapAction, windowSnapping):
+            let releaseFrame = currentFrame ?? lastKnownFrame
             let shouldApplySnap: Bool
             if case let .tracking(initialFrame) = state,
-               let currentFrame {
+               let releaseFrame {
                 shouldApplySnap = windowSnapping &&
                     hasSnapAction &&
-                    DragSnapPolicy.hasWindowMoved(currentFrame, initialFrame)
+                    DragSnapPolicy.hasWindowMoved(releaseFrame, initialFrame)
             } else {
                 shouldApplySnap = false
             }
 
             state = .idle
+            lastKnownFrame = nil
             return shouldApplySnap
                 ? [.closePreview, .applySnap, .clearRuntimeState]
                 : [.closePreview, .clearRuntimeState]
@@ -95,9 +99,11 @@ struct DragSnapSession {
             return []
 
         case let .tracking(initialFrame):
-            guard let currentFrame,
-                  DragSnapPolicy.hasWindowResized(currentFrame, initialFrame)
-            else {
+            guard let currentFrame else {
+                return []
+            }
+            lastKnownFrame = currentFrame
+            guard DragSnapPolicy.hasWindowResized(currentFrame, initialFrame) else {
                 return []
             }
 

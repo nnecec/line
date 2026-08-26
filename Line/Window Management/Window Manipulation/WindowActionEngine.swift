@@ -232,15 +232,28 @@ final class WindowActionEngine {
     // MARK: - Helpers
 
     private func minimizeOtherWindows(exceptWindow: Window) {
-        let allWindows = WindowUtility.windowList()
-        let windowsToMinimize = allWindows.filter {
-            $0.cgWindowID != exceptWindow.cgWindowID && !$0.minimized && !$0.isWindowHidden
-        }
+        let lightweightWindows = WindowUtility.lightweightWindowList()
+        let candidateIDs = WindowMinimizationPolicy.candidateIDs(
+            from: lightweightWindows,
+            exceptWindowID: exceptWindow.cgWindowID
+        )
+        var minimizedCount = 0
 
-        log.info("Minimizing \(windowsToMinimize.count) other windows")
+        for windowID in candidateIDs {
+            guard let window = try? Window.fromWindowID(windowID),
+                  WindowMinimizationPolicy.shouldMinimize(
+                      windowID: window.cgWindowID,
+                      exceptWindowID: exceptWindow.cgWindowID,
+                      isMinimized: window.minimized
+                  )
+            else {
+                continue
+            }
 
-        for window in windowsToMinimize {
             window.minimized = true
+            minimizedCount += 1
         }
+
+        log.info("Minimizing \(minimizedCount) other windows")
     }
 }

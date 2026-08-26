@@ -9,6 +9,19 @@ import Defaults
 import Scribe
 import SwiftUI
 
+private struct DragEventSnapshot: Sendable {
+    let location: CGPoint
+}
+
+enum DragFrameSamplingPolicy {
+    static let minimumInterval: TimeInterval = 0.05
+
+    static func shouldSample(lastSampleTime: TimeInterval?, now: TimeInterval) -> Bool {
+        guard let lastSampleTime else { return true }
+        return now - lastSampleTime >= minimumInterval
+    }
+}
+
 enum WindowDragMonitoringPolicy {
     static func shouldMonitor(
         windowSnapping: Bool,
@@ -36,9 +49,14 @@ final class WindowDragManager {
     private var determineDraggedWindowTask: Task<(), Never>?
     private var determineDraggedWindowGeneration: UInt = 0
     private var accessibilityCheckerTask: Task<(), Never>?
+    private var dragDrainTask: Task<(), Never>?
+    private let dragEventCoalescer = DragEventCoalescer<DragEventSnapshot>()
+    private var latestMouseLocation: CGPoint?
+    private var lastKnownFrame: CGRect?
+    private var lastFrameSampleTime: TimeInterval?
 
     private var currentMousePosition: CGPoint {
-        NSEvent.mouseLocation.flipY(screen: NSScreen.screens[0])
+        (latestMouseLocation ?? NSEvent.mouseLocation).flipY(screen: NSScreen.screens[0])
     }
 
     /// This is to avoid running global drag logic unless a feature actually depends on it.
@@ -104,39 +122,80 @@ final class WindowDragManager {
 
         leftMouseUpMonitor = nil
         leftMouseDraggedMonitor = nil
+        dragEventCoalescer.invalidate()
+        dragDrainTask?.cancel()
+        dragDrainTask = nil
     }
 
-    private func leftMouseDragged(event _: CGEvent) {
+    private func leftMouseDragged(event: CGEvent) {
         guard shouldMonitorDragActions else {
             previewController.close()
             resetDragState()
             return
         }
 
-        Task {
-            let effects = dragSession.handle(
-                .dragged(
-                    currentFrame: resizeContext?.window?.frame,
-                    configuration: .init(
-                        windowSnapping: Defaults[.windowSnapping],
-                        restoreInitialWindowSize: Defaults[.restoreWindowFrameOnDrag]
-                    )
-                )
-            )
-            await execute(effects)
+        enqueueDragEvent(.dragged(DragEventSnapshot(location: event.location)))
+    }
+
+    private func leftMouseUp(event: CGEvent) {
+        enqueueDragEvent(.released(DragEventSnapshot(location: event.location)))
+    }
+
+    private func enqueueDragEvent(_ event: DragEventCoalescer<DragEventSnapshot>.Event) {
+        let shouldSchedule: Bool
+        switch event {
+        case let .dragged(snapshot):
+            shouldSchedule = dragEventCoalescer.submitDragged(snapshot)
+        case let .released(snapshot):
+            shouldSchedule = dragEventCoalescer.submitReleased(snapshot)
+        }
+
+        guard shouldSchedule else { return }
+        let drainToken = dragEventCoalescer.drainToken()
+        dragDrainTask = Task { @MainActor [weak self] in
+            await self?.drainDragEvents(drainToken: drainToken)
         }
     }
 
-    private func leftMouseUp(_: CGEvent) {
-        Task {
-            let effects = dragSession.handle(
-                .released(
-                    currentFrame: resizeContext?.window?.frame,
-                    hasSnapAction: !(resizeContext?.action.direction.isNoOp ?? true),
-                    windowSnapping: Defaults[.windowSnapping]
+    private func drainDragEvents(drainToken: UInt) async {
+        guard dragEventCoalescer.isCurrentDrain(drainToken) else { return }
+        defer {
+            if dragEventCoalescer.isCurrentDrain(drainToken) {
+                dragDrainTask = nil
+            }
+        }
+
+        while let scheduled = dragEventCoalescer.next() {
+            guard dragEventCoalescer.isCurrent(scheduled.generation) else { continue }
+
+            switch scheduled.event {
+            case let .dragged(snapshot):
+                latestMouseLocation = snapshot.location
+                let effects = dragSession.handle(
+                    .dragged(
+                        currentFrame: sampledFrameForDraggedEvent(),
+                        configuration: .init(
+                            windowSnapping: Defaults[.windowSnapping],
+                            restoreInitialWindowSize: Defaults[.restoreWindowFrameOnDrag]
+                        )
+                    )
                 )
-            )
-            await execute(effects)
+                guard dragEventCoalescer.isCurrent(scheduled.generation) else { continue }
+                await execute(effects)
+
+            case let .released(snapshot):
+                latestMouseLocation = snapshot.location
+                let releaseFrame = liveFrameForRelease() ?? lastKnownFrame
+                let effects = dragSession.handle(
+                    .released(
+                        currentFrame: releaseFrame,
+                        hasSnapAction: !(resizeContext?.action.direction.isNoOp ?? true),
+                        windowSnapping: Defaults[.windowSnapping]
+                    )
+                )
+                // Release cleanup is never discarded because a newer event arrived.
+                await execute(effects)
+            }
         }
     }
 
@@ -162,6 +221,8 @@ final class WindowDragManager {
             }
 
             let initialFrame = window.frame
+            lastKnownFrame = initialFrame
+            lastFrameSampleTime = ProcessInfo.processInfo.systemUptime
 
             let context = ResizeContext(
                 window: window,
@@ -184,9 +245,34 @@ final class WindowDragManager {
     private func resetDragState() {
         resizeContext = nil
         dragSession = DragSnapSession()
+        latestMouseLocation = nil
+        lastKnownFrame = nil
+        lastFrameSampleTime = nil
+        dragEventCoalescer.invalidate()
         determineDraggedWindowGeneration &+= 1
         determineDraggedWindowTask?.cancel()
         determineDraggedWindowTask = nil
+    }
+
+    private func sampledFrameForDraggedEvent() -> CGRect? {
+        guard resizeContext?.window != nil else { return lastKnownFrame }
+
+        let now = ProcessInfo.processInfo.systemUptime
+        guard DragFrameSamplingPolicy.shouldSample(lastSampleTime: lastFrameSampleTime, now: now) else {
+            return lastKnownFrame
+        }
+
+        lastFrameSampleTime = now
+        guard let frame = resizeContext?.window?.frame else { return lastKnownFrame }
+        lastKnownFrame = frame
+        return frame
+    }
+
+    private func liveFrameForRelease() -> CGRect? {
+        guard let frame = resizeContext?.window?.frame else { return nil }
+        lastKnownFrame = frame
+        lastFrameSampleTime = ProcessInfo.processInfo.systemUptime
+        return frame
     }
 
     private func execute(_ effects: [DragSnapSession.Effect]) async {

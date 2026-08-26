@@ -17,6 +17,26 @@ struct LightweightWindowInfo: Equatable {
     let ownerPID: pid_t
 }
 
+enum WindowMinimizationPolicy {
+    static func candidateIDs(
+        from windows: [LightweightWindowInfo],
+        exceptWindowID: CGWindowID
+    ) -> [CGWindowID] {
+        windows.compactMap { window in
+            guard window.cgWindowID != exceptWindowID else { return nil }
+            return window.cgWindowID
+        }
+    }
+
+    static func shouldMinimize(
+        windowID: CGWindowID,
+        exceptWindowID: CGWindowID,
+        isMinimized: Bool
+    ) -> Bool {
+        windowID != exceptWindowID && !isMinimized
+    }
+}
+
 /// This enum is in charge of fetching windows in the user's workspace, which will be used by Line.
 @Loggable(style: .static)
 enum WindowUtility {

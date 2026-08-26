@@ -137,6 +137,43 @@ final class LightweightWindowInfoTests: XCTestCase {
         XCTAssertNotEqual(a, c)
     }
 
+    func testMinimizationPolicySkipsExceptAndAlreadyMinimizedWindows() {
+        XCTAssertFalse(
+            WindowMinimizationPolicy.shouldMinimize(
+                windowID: 1,
+                exceptWindowID: 1,
+                isMinimized: false
+            )
+        )
+        XCTAssertFalse(
+            WindowMinimizationPolicy.shouldMinimize(
+                windowID: 2,
+                exceptWindowID: 1,
+                isMinimized: true
+            )
+        )
+        XCTAssertTrue(
+            WindowMinimizationPolicy.shouldMinimize(
+                windowID: 2,
+                exceptWindowID: 1,
+                isMinimized: false
+            )
+        )
+    }
+
+    func testMinimizationPolicyPreservesLightweightZOrderCandidates() {
+        let windows = [
+            LightweightWindowInfo(cgWindowID: 1, frame: .zero, ownerPID: 10),
+            LightweightWindowInfo(cgWindowID: 2, frame: .zero, ownerPID: 11),
+            LightweightWindowInfo(cgWindowID: 3, frame: .zero, ownerPID: 12)
+        ]
+
+        XCTAssertEqual(
+            WindowMinimizationPolicy.candidateIDs(from: windows, exceptWindowID: 2),
+            [1, 3]
+        )
+    }
+
     // MARK: - List API smoke (no AX)
 
     func testLightweightWindowListDoesNotCrash() {
