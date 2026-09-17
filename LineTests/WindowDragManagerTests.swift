@@ -25,6 +25,11 @@ final class WindowDragManagerTests: XCTestCase {
         XCTAssertTrue(DragFrameSamplingPolicy.shouldSample(lastSampleTime: 1, now: 1.05))
     }
 
+    func testRestrictedScreenSessionIgnoresDragEvents() {
+        XCTAssertFalse(WindowDragMonitoringPolicy.shouldProcessDragEvent(isRestricted: true))
+        XCTAssertTrue(WindowDragMonitoringPolicy.shouldProcessDragEvent(isRestricted: false))
+    }
+
     func testEachDragFeatureIndependentlyEnablesMonitoring() {
         let featureStates = [
             (windowSnapping: true, restoreWindowFrameOnDrag: false, hasStashedWindows: false),

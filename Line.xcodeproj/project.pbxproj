@@ -43,6 +43,7 @@
 		5A10004B2FD6000000A1004B /* DragSnapPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10004A2FD6000000A1004A /* DragSnapPolicyTests.swift */; };
 		5A10005B2FD7000000A1005B /* WindowDragManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10005A2FD7000000A1005A /* WindowDragManagerTests.swift */; };
 		5A10006B2FD8000000A1006B /* StashRevealTransitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10006A2FD8000000A1006A /* StashRevealTransitionTests.swift */; };
+		5A10008B2FD9000000A1008B /* ScreenSessionRestrictionPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10008A2FD9000000A1008A /* ScreenSessionRestrictionPolicyTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -95,6 +96,7 @@
 		5A10004A2FD6000000A1004A /* DragSnapPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragSnapPolicyTests.swift; sourceTree = "<group>"; };
 		5A10005A2FD7000000A1005A /* WindowDragManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowDragManagerTests.swift; sourceTree = "<group>"; };
 		5A10006A2FD8000000A1006A /* StashRevealTransitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashRevealTransitionTests.swift; sourceTree = "<group>"; };
+		5A10008A2FD9000000A1008A /* ScreenSessionRestrictionPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenSessionRestrictionPolicyTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -165,6 +167,7 @@
 				5A10004A2FD6000000A1004A /* DragSnapPolicyTests.swift */,
 				5A10005A2FD7000000A1005A /* WindowDragManagerTests.swift */,
 				5A10006A2FD8000000A1006A /* StashRevealTransitionTests.swift */,
+				5A10008A2FD9000000A1008A /* ScreenSessionRestrictionPolicyTests.swift */,
 				5A10000E2FD3000000A1000D /* StashPersistencePolicyTests.swift */,
 				5A10000C2FE7000000A1000C /* LightweightWindowInfoTests.swift */,
 			);
@@ -348,6 +351,7 @@
 				5A10004B2FD6000000A1004B /* DragSnapPolicyTests.swift in Sources */,
 				5A10005B2FD7000000A1005B /* WindowDragManagerTests.swift in Sources */,
 				5A10006B2FD8000000A1006B /* StashRevealTransitionTests.swift in Sources */,
+				5A10008B2FD9000000A1008B /* ScreenSessionRestrictionPolicyTests.swift in Sources */,
 				5A10000D2FD3000000A1000D /* StashPersistencePolicyTests.swift in Sources */,
 				5A10000B2FE7000000A1000B /* LightweightWindowInfoTests.swift in Sources */,
 			);

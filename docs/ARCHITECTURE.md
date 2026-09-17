@@ -11,6 +11,7 @@ Line is a menu bar macOS application built with SwiftUI and AppKit. It uses the 
 - `TriggerCoordinator` for keyboard and middle-click triggers (see `KeybindTriggerDecision` and `KeybindBindingPolicy` in the Decision and policy modules section)
 - `GridModeCoordinator` for grid selection and overlays
 - `SessionManager` for the active window action session (including change-action side effects: indicators, apply, timeout restart, haptic, cycle continuation)
+- `ScreenSessionGate` for lock, sleep, and display-wake restriction (see `ScreenSessionRestrictionPolicy`)
 
 The coordinator owns orchestration state. `WindowDragManager` monitors drag events and executes ordered effects from `DragSnapSession`; the session owns the lifecycle of one drag while `DragSnapPolicy` owns geometry decisions. `StashManager` executes Accessibility and store updates based on `StashAftermathDecision`. Geometry and action rules belong in testable calculation or policy types (see Decision and policy modules section).
 
@@ -22,6 +23,7 @@ Examples:
 
 - `KeybindTriggerDecision` — decides whether a keybind event should open the trigger, close it, or be consumed by the active session
 - `KeybindBindingPolicy` — computes effective keybinds (trigger ∪ action or bypass mode) and detects conflicts across all bound actions
+- `ScreenSessionRestrictionPolicy` — decides when lock, sleep, and display-wake must cancel HID-driven window actions and ignore synthetic events for a short resume delay
 - `DragSnapPolicy` — determines snap edge zones and whether a drag-direction change should apply immediately
 - `DragSnapSession` — owns per-drag resolution/tracking state and emits ordered effects for the manager to execute
 - `StashRevealTransition` — owns the single revealed-window invariant, throttling, and token-checked async transition lifecycle

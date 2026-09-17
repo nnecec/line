@@ -64,6 +64,12 @@ final class MiddleClickTrigger {
     func stop() {
         monitor?.stop()
         monitor = nil
+        resetTransientState()
+    }
+
+    func resetTransientState() {
+        triggerDelayTimer.cancel()
+        doubleClickTimer.reset()
     }
 
     // MARK: Private

@@ -45,6 +45,11 @@ final class DoubleClickTimer {
     /// Handles a key up event.
     /// Only records the release time if the press was quick (within doubleClickInterval).
     /// A long press cancels the double-click sequence.
+    func reset() {
+        lastTriggerKeyPressTime = nil
+        lastTriggerKeyReleaseTime = nil
+    }
+
     func handleKeyUp() {
         let now = Date()
 

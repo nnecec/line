@@ -62,7 +62,8 @@ final class LineCoordinatorPolicyTests: XCTestCase {
         XCTAssertFalse(
             LineCoordinatorOpeningPolicy.canActivateAfterOpening(
                 shouldCancelOpening: true,
-                isAccessibilityGranted: true
+                isAccessibilityGranted: true,
+                isRestricted: false
             )
         )
     }
@@ -71,7 +72,39 @@ final class LineCoordinatorPolicyTests: XCTestCase {
         XCTAssertFalse(
             LineCoordinatorOpeningPolicy.canActivateAfterOpening(
                 shouldCancelOpening: false,
-                isAccessibilityGranted: false
+                isAccessibilityGranted: false,
+                isRestricted: false
+            )
+        )
+    }
+
+    func testOpeningPolicyReturnsFalseWhenScreenSessionIsRestricted() {
+        XCTAssertTrue(
+            LineCoordinatorOpeningPolicy.canActivateAfterOpening(
+                shouldCancelOpening: false,
+                isAccessibilityGranted: true,
+                isRestricted: false
+            )
+        )
+        XCTAssertFalse(
+            LineCoordinatorOpeningPolicy.canActivateAfterOpening(
+                shouldCancelOpening: false,
+                isAccessibilityGranted: true,
+                isRestricted: true
+            )
+        )
+        XCTAssertFalse(LineCoordinatorOpeningPolicy.shouldBeginOpening(isRestricted: true))
+        XCTAssertTrue(LineCoordinatorOpeningPolicy.shouldBeginOpening(isRestricted: false))
+        XCTAssertTrue(
+            LineCoordinatorOpeningPolicy.shouldForceClose(
+                requestedForceClose: false,
+                isRestricted: true
+            )
+        )
+        XCTAssertFalse(
+            LineCoordinatorOpeningPolicy.shouldForceClose(
+                requestedForceClose: false,
+                isRestricted: false
             )
         )
     }

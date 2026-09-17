@@ -229,11 +229,24 @@ final class TriggerCoordinatorTests: XCTestCase {
 
     // MARK: - Opening Cancellation Tests
 
+    func testResetTransientTriggerStateDropsPendingOpenEvents() async {
+        coordinator.enqueueKeybindEvent(
+            .open(BoundWindowAction(action: .standard(.maximize), keybind: []))
+        )
+        coordinator.resetTransientTriggerState()
+
+        try? await Task.sleep(for: .milliseconds(20))
+
+        XCTAssertEqual(openCallCount, 0)
+        XCTAssertEqual(closeCallCount, 0)
+    }
+
     func testCancelledOpeningCannotActivateLine() {
         XCTAssertFalse(
             LineCoordinator.canActivateAfterOpening(
                 shouldCancelOpening: true,
-                isAccessibilityGranted: true
+                isAccessibilityGranted: true,
+                isRestricted: false
             )
         )
     }
