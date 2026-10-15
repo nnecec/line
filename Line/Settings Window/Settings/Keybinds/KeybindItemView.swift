@@ -161,10 +161,10 @@ struct KeybindItemView: View {
                         .foregroundStyle(.red)
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(Text("Keybind conflict", comment: "VoiceOver label for a conflicting keybind"))
-                            .transition(
-                                reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.25))
-                            )
-                            .help("There are other keybinds that conflict with this key combination.")
+                        .transition(
+                            reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.25))
+                        )
+                        .help("There are other keybinds that conflict with this key combination.")
                     }
                 }
                 .fixedSize()
