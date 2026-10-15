@@ -30,10 +30,6 @@ enum WindowDragMonitoringPolicy {
     ) -> Bool {
         windowSnapping || restoreWindowFrameOnDrag || hasStashedWindows
     }
-
-    static func shouldProcessDragEvent(isRestricted: Bool) -> Bool {
-        !isRestricted
-    }
 }
 
 @Loggable
@@ -98,11 +94,6 @@ final class WindowDragManager {
         previewController.close()
     }
 
-    func cancelActiveDrag() {
-        previewController.close()
-        resetDragState()
-    }
-
     private func setupListeners() {
         removeListeners()
 
@@ -137,13 +128,6 @@ final class WindowDragManager {
     }
 
     private func leftMouseDragged(event: CGEvent) {
-        guard WindowDragMonitoringPolicy.shouldProcessDragEvent(
-            isRestricted: ScreenSessionRestrictionFlag.isRestricted
-        ) else {
-            cancelActiveDrag()
-            return
-        }
-
         guard shouldMonitorDragActions else {
             previewController.close()
             resetDragState()
@@ -154,13 +138,6 @@ final class WindowDragManager {
     }
 
     private func leftMouseUp(event: CGEvent) {
-        guard WindowDragMonitoringPolicy.shouldProcessDragEvent(
-            isRestricted: ScreenSessionRestrictionFlag.isRestricted
-        ) else {
-            cancelActiveDrag()
-            return
-        }
-
         enqueueDragEvent(.released(DragEventSnapshot(location: event.location)))
     }
 

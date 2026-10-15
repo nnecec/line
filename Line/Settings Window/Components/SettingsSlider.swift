@@ -48,7 +48,7 @@ struct SettingsSlider: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             LabeledContent {
                 valueControl
             } label: {
@@ -90,6 +90,7 @@ struct SettingsSlider: View {
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
                 .frame(width: 64)
+                .textFieldStyle(.roundedBorder)
                 .accessibilityLabel(Text(title))
 
                 if let unitLabel {
@@ -101,6 +102,7 @@ struct SettingsSlider: View {
             Text(valueFormatter(value))
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
+                .accessibilityLabel(Text(valueFormatter(value)))
         }
     }
 

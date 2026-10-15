@@ -138,10 +138,6 @@ final class KeybindTrigger {
     func stop() {
         eventMonitor?.stop()
         eventMonitor = nil
-        resetTransientState()
-    }
-
-    func resetTransientState() {
         pressedKeys = []
         effectiveEventFlags = []
         canPassthroughNextSpecialEvent = true
@@ -199,10 +195,6 @@ final class KeybindTrigger {
     }
 
     private func openLine(startingAction: BoundWindowAction, overrideExistingTriggerDelayTimerAction: Bool) {
-        if ScreenSessionRestrictionFlag.isRestricted {
-            return
-        }
-
         if checkIfLineOpen() {
             openCallback(startingAction) // Only update Line to the latest BoundWindowAction
         } else {

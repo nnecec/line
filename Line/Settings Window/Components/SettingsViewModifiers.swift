@@ -23,14 +23,14 @@ extension View {
         if #available(macOS 14.0, *) {
             formStyle(.grouped)
                 .scrollContentBackground(.hidden)
-                .contentMargins(.top, 8, for: .scrollContent)
-                .contentMargins(.bottom, 24, for: .scrollContent)
+                .contentMargins(.top, 12, for: .scrollContent)
+                .contentMargins(.bottom, 28, for: .scrollContent)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         } else {
             formStyle(.grouped)
                 .scrollContentBackground(.hidden)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
+                .padding(.top, 12)
+                .padding(.bottom, 28)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }

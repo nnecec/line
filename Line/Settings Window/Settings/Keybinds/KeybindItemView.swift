@@ -152,8 +152,15 @@ struct KeybindItemView: View {
                         .padding(.leading, 4)
 
                     if hasDuplicateKeybinds {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
+                        Label {
+                            Text("Conflict", comment: "Visible keybind conflict status")
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.red)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(Text("Keybind conflict", comment: "VoiceOver label for a conflicting keybind"))
                             .transition(
                                 reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.25))
                             )

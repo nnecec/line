@@ -14,6 +14,14 @@ struct SettingsContentView: View {
     @State private var historyIndex = 0
     @State private var isHistoryNavigation = false
 
+    private var canGoBack: Bool {
+        historyIndex > 0
+    }
+
+    private var canGoForward: Bool {
+        historyIndex < navigationHistory.count - 1
+    }
+
     private var tabSelection: Binding<SettingsTab?> {
         Binding {
             state.currentTab
@@ -22,14 +30,6 @@ struct SettingsContentView: View {
                 state.currentTab = newTab
             }
         }
-    }
-
-    private var canGoBack: Bool {
-        historyIndex > 0
-    }
-
-    private var canGoForward: Bool {
-        historyIndex < navigationHistory.count - 1
     }
 
     var body: some View {
@@ -77,9 +77,7 @@ struct SettingsContentView: View {
                 }
                 .disabled(!canGoBack)
                 .help(Text("Go to previous settings pane", comment: "Help text for settings back button"))
-                .accessibilityLabel(
-                    Text("Back", comment: "Accessibility label for settings back navigation")
-                )
+                .accessibilityLabel(Text("Back", comment: "Accessibility label for settings back navigation"))
 
                 Button {
                     goForward()
@@ -91,9 +89,7 @@ struct SettingsContentView: View {
                 }
                 .disabled(!canGoForward)
                 .help(Text("Go to next settings pane", comment: "Help text for settings forward button"))
-                .accessibilityLabel(
-                    Text("Forward", comment: "Accessibility label for settings forward navigation")
-                )
+                .accessibilityLabel(Text("Forward", comment: "Accessibility label for settings forward navigation"))
             }
         }
         .onAppear {
@@ -117,8 +113,10 @@ struct SettingsContentView: View {
                     Text(tab.title)
                 } icon: {
                     tab.image
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .tag(tab)
+                .accessibilityLabel(Text(tab.title))
             }
         }
     }
@@ -141,8 +139,7 @@ struct SettingsContentView: View {
 
     private func recordNavigation(to tab: SettingsTab) {
         guard !isHistoryNavigation else { return }
-        if navigationHistory.indices.contains(historyIndex),
-           navigationHistory[historyIndex] == tab {
+        if navigationHistory.indices.contains(historyIndex), navigationHistory[historyIndex] == tab {
             return
         }
 

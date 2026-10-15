@@ -197,13 +197,6 @@ final class TriggerCoordinator {
         keybindEventBuffer.invalidate()
     }
 
-    /// Drop in-flight trigger state without tearing down event taps.
-    func resetTransientTriggerState() {
-        keybindTrigger.resetTransientState()
-        middleClickTrigger.resetTransientState()
-        keybindEventBuffer.invalidate()
-    }
-
     /// Suppress the next special event passthrough (e.g., emoji key).
     /// Called when mouse movement is detected during a session.
     func suppressNextSpecialEvent() {

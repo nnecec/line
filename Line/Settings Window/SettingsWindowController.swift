@@ -41,11 +41,14 @@ final class SettingsWindowController: NSWindowController {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
+        window.isMovableByWindowBackground = true
         window.minSize = NSSize(width: 720, height: 520)
         // Keep zoom usable without forcing a fullscreen-primary document window.
         window.collectionBehavior.insert(.fullScreenAuxiliary)
         window.setFrameAutosaveName("LineSettingsWindowV2")
-        window.center()
+        if !window.setFrameUsingName("LineSettingsWindowV2") {
+            window.center()
+        }
 
         let rootView = SettingsSceneRoot(state: state)
         window.contentView = NSHostingView(rootView: rootView)

@@ -24,18 +24,9 @@ enum LineCoordinatorOpeningPolicy {
 
     static func canActivateAfterOpening(
         shouldCancelOpening: Bool,
-        isAccessibilityGranted: Bool,
-        isRestricted: Bool
+        isAccessibilityGranted: Bool
     ) -> Bool {
-        !shouldCancelOpening && isAccessibilityGranted && !isRestricted
-    }
-
-    static func shouldBeginOpening(isRestricted: Bool) -> Bool {
-        !isRestricted
-    }
-
-    static func shouldForceClose(requestedForceClose: Bool, isRestricted: Bool) -> Bool {
-        requestedForceClose || isRestricted
+        !shouldCancelOpening && isAccessibilityGranted
     }
 
     static func admission(
@@ -180,13 +171,11 @@ final class LineCoordinator {
 
     static func canActivateAfterOpening(
         shouldCancelOpening: Bool,
-        isAccessibilityGranted: Bool,
-        isRestricted: Bool
+        isAccessibilityGranted: Bool
     ) -> Bool {
         LineCoordinatorOpeningPolicy.canActivateAfterOpening(
             shouldCancelOpening: shouldCancelOpening,
-            isAccessibilityGranted: isAccessibilityGranted,
-            isRestricted: isRestricted
+            isAccessibilityGranted: isAccessibilityGranted
         )
     }
 
@@ -201,7 +190,6 @@ final class LineCoordinator {
     }
 
     func start() {
-        startScreenSessionGate()
         startApplicationTerminationMonitoring()
 
         accessibilityCheckerTask = Task(priority: .background) { [weak self] in
@@ -226,7 +214,6 @@ final class LineCoordinator {
     }
 
     func shutdown() {
-        ScreenSessionGate.shared.shutdown()
         accessibilityCheckerTask?.cancel()
         accessibilityCheckerTask = nil
         applicationTerminationTask?.cancel()
@@ -248,15 +235,6 @@ final class LineCoordinator {
         shouldCancelOpening = false
         latestOpeningRequestGeneration &+= 1
         isLineActive = false
-    }
-
-    private func startScreenSessionGate() {
-        ScreenSessionGate.shared.start { [weak self] in
-            guard let self else { return }
-            triggerCoordinator.resetTransientTriggerState()
-            WindowDragManager.shared.cancelActiveDrag()
-            Task { await self.closeLine(forceClose: true) }
-        }
     }
 
     private func startApplicationTerminationMonitoring() {
@@ -318,12 +296,6 @@ extension LineCoordinator {
                 action: startingAction,
                 generation: latestOpeningRequestGeneration
             )
-        }
-
-        guard LineCoordinatorOpeningPolicy.shouldBeginOpening(
-            isRestricted: ScreenSessionRestrictionFlag.isRestricted
-        ) else {
-            return
         }
 
         guard AccessibilityManager.shared.isGranted else {
@@ -460,11 +432,6 @@ extension LineCoordinator {
     }
 
     private func closeLine(forceClose: Bool) async {
-        let forceClose = LineCoordinatorOpeningPolicy.shouldForceClose(
-            requestedForceClose: forceClose,
-            isRestricted: ScreenSessionRestrictionFlag.isRestricted
-        )
-
         latestOpeningRequestGeneration &+= 1
         pendingReopenRequest = nil
 
@@ -503,8 +470,7 @@ extension LineCoordinator {
     private func shouldAbortOpening() -> Bool {
         !Self.canActivateAfterOpening(
             shouldCancelOpening: shouldCancelOpening,
-            isAccessibilityGranted: AccessibilityManager.shared.isGranted,
-            isRestricted: ScreenSessionRestrictionFlag.isRestricted
+            isAccessibilityGranted: AccessibilityManager.shared.isGranted
         )
     }
 
