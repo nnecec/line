@@ -645,7 +645,7 @@ private extension StashManager {
 
     /// Handles mouse movement events to reveal or hide stashed windows.
     private func processMouseMovement() async {
-        let mouseLocation = NSEvent.mouseLocation.flipY(screen: NSScreen.screens[0])
+        let mouseLocation = NSEvent.mouseLocation.flipY(maxY: NSScreen.coordinateReferenceMaxY)
 
         // Skip CG listing when cursor is far from every stash/reveal region (store frames only).
         let nearAnyStash = StashZOrderPolicy.isMouseNearAnyStash(
@@ -682,7 +682,7 @@ private extension StashManager {
                 return
             }
 
-            let mouseLocation = NSEvent.mouseLocation.flipY(screen: NSScreen.screens[0])
+            let mouseLocation = NSEvent.mouseLocation.flipY(maxY: NSScreen.coordinateReferenceMaxY)
             let windows = getZSortedStashedWindows()
 
             for window in windows {

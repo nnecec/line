@@ -386,7 +386,7 @@ final class Window {
         if isOwnWindow {
             Task { @MainActor in
                 guard let win = ownNSWindow() else { return }
-                win.setFrameOrigin(CGRect(origin: point, size: win.frame.size).flipY(screen: .screens[0]).origin)
+                win.setFrameOrigin(CGRect(origin: point, size: win.frame.size).flipY(maxY: NSScreen.coordinateReferenceMaxY).origin)
             }
         } else {
             do {
@@ -452,7 +452,7 @@ final class Window {
         }
         NSAnimationContext.runAnimationGroup { context in
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.33, 1, 0.68, 1)
-            window.animator().setFrame(rect.flipY(screen: .screens[0]), display: false)
+            window.animator().setFrame(rect.flipY(maxY: NSScreen.coordinateReferenceMaxY), display: false)
         }
         return true
     }
@@ -474,7 +474,7 @@ final class Window {
                     log.info("Failed to get own main window to resize")
                     return
                 }
-                window.setFrame(rect.flipY(screen: .screens[0]), display: false)
+                window.setFrame(rect.flipY(maxY: NSScreen.coordinateReferenceMaxY), display: false)
             }
         } else {
             DispatchQueue.main.sync {
@@ -483,7 +483,7 @@ final class Window {
                         log.info("Failed to get own main window to resize")
                         return
                     }
-                    window.setFrame(rect.flipY(screen: .screens[0]), display: false)
+                    window.setFrame(rect.flipY(maxY: NSScreen.coordinateReferenceMaxY), display: false)
                 }
             }
         }

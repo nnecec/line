@@ -19,6 +19,17 @@ enum ScreenSelectionPolicy {
 }
 
 extension NSScreen {
+    /// The primary AppKit screen used by the AX/CG global coordinate bridge.
+    /// The bridge's Y origin is global, so this is intentionally not the
+    /// screen currently containing the key window.
+    static var coordinateReference: NSScreen? {
+        screens.first
+    }
+
+    static var coordinateReferenceMaxY: CGFloat {
+        coordinateReference?.frame.maxY ?? 0
+    }
+
     var displayID: CGDirectDisplayID? {
         let key = NSDeviceDescriptionKey("NSScreenNumber")
         return deviceDescription[key] as? CGDirectDisplayID
@@ -41,7 +52,7 @@ extension NSScreen {
 
         // Ask SkyLight first so we match WindowServer's tie-breaking at display boundaries.
         if let primary = screens.first,
-           let displayID = SkyLightToolBelt.bestManagedDisplayID(forCGPoint: mouseLocation.flipY(screen: primary)),
+           let displayID = SkyLightToolBelt.bestManagedDisplayID(forCGPoint: mouseLocation.flipY(maxY: NSScreen.coordinateReferenceMaxY)),
            let match = screens.first(where: { $0.displayID == displayID }) {
             return match
         }
@@ -55,7 +66,7 @@ extension NSScreen {
 
     var cgSafeScreenFrame: CGRect {
         let cgbounds = displayBounds
-        let visibleFrame = safeScreenFrame.flipY(screen: NSScreen.screens[0])
+        let visibleFrame = safeScreenFrame.flipY(maxY: NSScreen.coordinateReferenceMaxY)
 
         // By setting safeScreenFrame to visibleFrame, we won't need to adjust its size.
         var safeScreenFrame = visibleFrame
@@ -92,7 +103,7 @@ extension NSScreen {
                 "Failed to get NSScreen.displayID in NSScreen.displayBounds",
                 category: LogCategory("NSScreen")
             )
-            return frame.flipY(screen: self)
+            return frame.flipY(maxY: NSScreen.coordinateReferenceMaxY)
         }
 
         return CGDisplayBounds(displayID)

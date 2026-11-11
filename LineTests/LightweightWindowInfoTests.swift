@@ -23,6 +23,15 @@ final class ScreenSelectionPolicyTests: XCTestCase {
             ScreenSelectionPolicy.screenIndex(containing: CGPoint(x: 200, y: 50), in: frames)
         )
     }
+
+    func testCoordinateReferenceFlipPreservesGlobalHorizontalOrigin() {
+        let source = CGRect(x: -1200, y: 100, width: 800, height: 600)
+        let flipped = source.flipY(maxY: 1000)
+
+        XCTAssertEqual(flipped.origin.x, -1200)
+        XCTAssertEqual(flipped.origin.y, 300)
+        XCTAssertEqual(flipped.size, source.size)
+    }
 }
 
 final class LightweightWindowInfoTests: XCTestCase {

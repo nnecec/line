@@ -56,7 +56,7 @@ final class WindowDragManager {
     private var lastFrameSampleTime: TimeInterval?
 
     private var currentMousePosition: CGPoint {
-        (latestMouseLocation ?? NSEvent.mouseLocation).flipY(screen: NSScreen.screens[0])
+        (latestMouseLocation ?? NSEvent.mouseLocation).flipY(maxY: NSScreen.coordinateReferenceMaxY)
     }
 
     /// This is to avoid running global drag logic unless a feature actually depends on it.
@@ -367,8 +367,7 @@ final class WindowDragManager {
             return
         }
 
-        let mainScreen = NSScreen.screens[0]
-        let screenFrame = screen.frame.flipY(screen: mainScreen)
+        let screenFrame = screen.frame.flipY(maxY: NSScreen.coordinateReferenceMaxY)
 
         let inset = Defaults[.snapThreshold]
         let topInset = DragSnapPolicy.topInset(

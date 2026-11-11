@@ -31,7 +31,7 @@ extension CGPoint {
     }
 
     func flipY(screen: NSScreen) -> CGPoint {
-        flipY(maxY: screen.frame.maxY)
+        flipY(maxY: NSScreen.coordinateReferenceMaxY)
     }
 
     func approximatelyEqual(to point: CGPoint, tolerance: CGFloat = 10) -> Bool {
@@ -78,7 +78,7 @@ extension CGSize {
 
 extension CGRect {
     func flipY(screen: NSScreen) -> CGRect {
-        flipY(maxY: screen.frame.maxY)
+        flipY(maxY: NSScreen.coordinateReferenceMaxY)
     }
 
     func flipY(maxY: CGFloat) -> CGRect {
