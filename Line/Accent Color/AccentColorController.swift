@@ -26,6 +26,7 @@ final class AccentColorController: ObservableObject {
 
     private let wallpaperProcessor = WallpaperProcessor()
     private var observationTask: Task<(), Never>?
+    private var refreshGeneration: UInt = 0
 
     private init() {
         self.observationTask = Task { [weak self] in
@@ -51,7 +52,11 @@ final class AccentColorController: ObservableObject {
     }
 
     func refresh(ignoreThrottle: Bool = false) async {
-        switch Defaults[.accentColorMode] {
+        refreshGeneration &+= 1
+        let generation = refreshGeneration
+        let mode = Defaults[.accentColorMode]
+
+        switch mode {
         case .default:
             log.info("Refreshing accent color for default (neutral glass) mode")
             // Neutral highlight used only for soft edges when no accent tint is active.
@@ -66,6 +71,12 @@ final class AccentColorController: ObservableObject {
         case .wallpaper:
             log.info("Refreshing accent color based on wallpaper analysis")
             let colors = await wallpaperProcessor.fetchLatest(ignoreThrottle: ignoreThrottle)
+            guard generation == refreshGeneration,
+                  Defaults[.accentColorMode] == mode
+            else {
+                return
+            }
+
             color1 = colors.primary
             // Secondary wallpaper sample for subtle rim variation only.
             color2 = colors.secondary
