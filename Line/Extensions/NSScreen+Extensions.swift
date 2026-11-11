@@ -9,6 +9,15 @@ import Defaults
 import Scribe
 import SwiftUI
 
+enum ScreenSelectionPolicy {
+    /// Returns the first screen whose frame contains the point using AppKit's
+    /// half-open rectangle semantics. This makes shared display boundaries
+    /// deterministic instead of allowing both screens to match.
+    static func screenIndex(containing point: CGPoint, in frames: [CGRect]) -> Int? {
+        frames.firstIndex { $0.contains(point) }
+    }
+}
+
 extension NSScreen {
     var displayID: CGDirectDisplayID? {
         let key = NSDeviceDescriptionKey("NSScreenNumber")
@@ -37,14 +46,11 @@ extension NSScreen {
             return match
         }
 
-        // CGRect.contains uses half-open intervals [minX, maxX) × [minY, maxY),
-        // excluding points on the maxX/maxY edges. So we cannot use frame.contains(_:)
-        return screens.first {
-            mouseLocation.x >= $0.frame.minX &&
-                mouseLocation.x <= $0.frame.maxX &&
-                mouseLocation.y >= $0.frame.minY &&
-                mouseLocation.y <= $0.frame.maxY
+        let frames = screens.map(\.frame)
+        guard let index = ScreenSelectionPolicy.screenIndex(containing: mouseLocation, in: frames) else {
+            return nil
         }
+        return screens[index]
     }
 
     var cgSafeScreenFrame: CGRect {

@@ -10,9 +10,13 @@ enum WindowInfoMatchPolicy {
     static func matches(
         targetFrame: CGRect,
         candidatePosition: CGPoint?,
-        candidateSize: CGSize?
+        candidateSize: CGSize?,
+        tolerance: CGFloat = 0
     ) -> Bool {
         guard let candidatePosition, let candidateSize else { return false }
-        return candidatePosition == targetFrame.origin && candidateSize == targetFrame.size
+        return abs(candidatePosition.x - targetFrame.origin.x) <= tolerance &&
+            abs(candidatePosition.y - targetFrame.origin.y) <= tolerance &&
+            abs(candidateSize.width - targetFrame.size.width) <= tolerance &&
+            abs(candidateSize.height - targetFrame.size.height) <= tolerance
     }
 }

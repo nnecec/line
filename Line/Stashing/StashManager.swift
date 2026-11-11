@@ -181,12 +181,17 @@ final class StashManager {
     private var mouseMonitor: PassiveEventMonitor?
     private var frontmostAppMonitor: Task<(), Never>?
     private var mouseMovedTask: Task<(), Never>?
+    private var restoreTask: Task<(), Never>?
 
     // MARK: - Public methods
 
     func start() {
-        Task {
+        restoreTask?.cancel()
+        restoreTask = Task { @MainActor [weak self] in
+            guard let self else { return }
             await store.restore()
+            guard !Task.isCancelled else { return }
+            restoreTask = nil
         }
     }
 
@@ -196,9 +201,12 @@ final class StashManager {
 
     /// Cancels all monitoring and restores every stashed window to its initial frame.
     func shutdown() {
+        restoreTask?.cancel()
+        restoreTask = nil
         mouseMovedTask?.cancel()
         mouseMovedTask = nil
         stopListeningToRevealTriggers()
+        store.shutdown()
         restoreAllStashedWindows()
     }
 

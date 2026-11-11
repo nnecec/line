@@ -28,11 +28,20 @@ final class StashedWindowsStore {
     /// Hold data from `Defaults[.stashManagerStashedWindows]` for windows that failed to be restored.
     private var failedToRestore: [CGWindowID: WindowAction] = [:]
     private var spaceObserverTask: Task<(), Never>?
+    private var isShuttingDown = false
 
     // MARK: - Public methods
 
     func restore() async {
+        isShuttingDown = false
         await restoreStashedWindows()
+    }
+
+    func shutdown() {
+        isShuttingDown = true
+        spaceObserverTask?.cancel()
+        spaceObserverTask = nil
+        failedToRestore.removeAll()
     }
 
     /// Return the stashed window that match the given `action` and `screen`
@@ -86,6 +95,7 @@ final class StashedWindowsStore {
     // MARK: Private methods
 
     private func restoreStashedWindows() async {
+        guard !isShuttingDown, !Task.isCancelled else { return }
         let windows = WindowUtility.windowList()
         let defaultStashedWindows = Defaults[.stashManagerStashedWindows]
         var restoredStashedWindows: [CGWindowID: StashedWindowInfo] = [:]
@@ -104,6 +114,7 @@ final class StashedWindowsStore {
             restoredStashedWindows[windowId] = stashedWindow
         }
 
+        guard !isShuttingDown, !Task.isCancelled else { return }
         stashed = restoredStashedWindows
         // Prune Defaults to successfully restored entries only; keep failures
         // in memory for same-session space-change retries.
@@ -133,6 +144,7 @@ final class StashedWindowsStore {
     }
 
     private func onSpaceChanged() async {
+        guard !isShuttingDown, !Task.isCancelled else { return }
         let windows = WindowUtility.windowList()
         var restored = 0
 

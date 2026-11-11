@@ -8,6 +8,23 @@
 @testable import Line
 import XCTest
 
+final class ScreenSelectionPolicyTests: XCTestCase {
+    func testSelectionUsesHalfOpenDisplayFramesAtSharedBoundary() {
+        let frames = [
+            CGRect(x: 0, y: 0, width: 100, height: 100),
+            CGRect(x: 100, y: 0, width: 100, height: 100)
+        ]
+
+        XCTAssertEqual(
+            ScreenSelectionPolicy.screenIndex(containing: CGPoint(x: 100, y: 50), in: frames),
+            1
+        )
+        XCTAssertNil(
+            ScreenSelectionPolicy.screenIndex(containing: CGPoint(x: 200, y: 50), in: frames)
+        )
+    }
+}
+
 final class LightweightWindowInfoTests: XCTestCase {
     // MARK: - Helpers
 
@@ -185,6 +202,27 @@ final class LightweightWindowInfoTests: XCTestCase {
             XCTAssertGreaterThan(item.frame.height, 0)
             XCTAssertNotEqual(item.cgWindowID, 0)
         }
+    }
+
+    func testWindowInfoMatchPolicySupportsSmallAXGeometryDriftWhenToleranceIsProvided() {
+        let target = CGRect(x: 10, y: 20, width: 300, height: 200)
+
+        XCTAssertTrue(
+            WindowInfoMatchPolicy.matches(
+                targetFrame: target,
+                candidatePosition: CGPoint(x: 10.5, y: 20),
+                candidateSize: CGSize(width: 300, height: 200.5),
+                tolerance: 1
+            )
+        )
+        XCTAssertFalse(
+            WindowInfoMatchPolicy.matches(
+                targetFrame: target,
+                candidatePosition: CGPoint(x: 12, y: 20),
+                candidateSize: target.size,
+                tolerance: 1
+            )
+        )
     }
 
     func testWindowInfoMatchPolicyRequiresExactPositionAndSize() {

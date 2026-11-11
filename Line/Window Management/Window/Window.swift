@@ -13,6 +13,7 @@ enum WindowError: LocalizedError {
     case sheetWindow
     case blockedBundleID
     case cannotGetWindow
+    case ambiguousWindowInfo
     case filteredOutFromWindowInfo
     case invalidWindowLevel(CGWindowLevel)
 
@@ -24,6 +25,8 @@ enum WindowError: LocalizedError {
             "Invalid window: blocked bundle ID"
         case .cannotGetWindow:
             "Could not get the element's window"
+        case .ambiguousWindowInfo:
+            "Could not uniquely identify the window"
         case .filteredOutFromWindowInfo:
             "Filtered out from window info"
         case let .invalidWindowLevel(level):
@@ -144,7 +147,15 @@ final class Window {
             return try Window(element: windowElements[0], pid: pid)
         }
 
-        // If we can retrieve bounds, then filter candidates out by their respective frames.
+        // Prefer the CGWindowID before using geometry. A frame can be stale by the
+        // time AX is queried, while the ID remains the identity of the window.
+        let allWindows = windowElements.compactMap { try? Window(element: $0, pid: pid) }
+        if let windowID = windowInfo[kCGWindowNumber as String] as? CGWindowID,
+           let match = allWindows.first(where: { $0.cgWindowID == windowID }) {
+            return match
+        }
+
+        // If we can retrieve bounds, use them to narrow the AX candidates.
         let candidates: [AXUIElement] = if let boundsDict = windowInfo[kCGWindowBounds as String] as? [String: CGFloat],
                                            let frame = CGRect(dictionaryRepresentation: boundsDict as CFDictionary) {
             windowElements.filter {
@@ -153,7 +164,8 @@ final class Window {
                 return WindowInfoMatchPolicy.matches(
                     targetFrame: frame,
                     candidatePosition: position,
-                    candidateSize: size
+                    candidateSize: size,
+                    tolerance: 1
                 )
             }
         } else {
@@ -161,15 +173,10 @@ final class Window {
         }
 
         let windows = candidates.compactMap { try? Window(element: $0, pid: pid) }
-
-        if let windowID = windowInfo[kCGWindowNumber as String] as? CGWindowID,
-           let match = windows.first(where: { $0.cgWindowID == windowID }) {
-            return match
-        } else if let first = windows.first {
-            return first
+        guard windows.count == 1 else {
+            throw WindowError.ambiguousWindowInfo
         }
-
-        return try Window(element: windowElements[0], pid: pid)
+        return windows[0]
     }
 
     var role: NSAccessibility.Role? {
