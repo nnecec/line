@@ -366,6 +366,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LineCoordinator.shared.shutdown()
         WindowDragManager.shared.shutdown()
         StashManager.shared.shutdown()
+        urlCommandHandler.cleanupPendingOutputFiles()
         return .terminateNow
     }
 
