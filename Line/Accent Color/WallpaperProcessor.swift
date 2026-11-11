@@ -166,6 +166,10 @@ extension NSImage {
     /// dull colors appear more frequently in the image. This approach works well for extracting
     /// accent colors from wallpapers, which often have subtle variation in dominant colors.
     func calculateDominantColors() async -> [NSColor]? {
+        guard size.width > 0, size.height > 0 else {
+            return nil
+        }
+
         // Resize the image to a smaller size to improve performance
         let aspectRatio = size.width / size.height
         let resizedImage = resized(to: NSSize(width: 100 * aspectRatio, height: 100))
@@ -235,9 +239,11 @@ extension NSImage {
         var colorScores = [Int: Double]()
         for (colorKey, color) in colorMap {
             let count = colorCounts[colorKey] ?? 0
-            guard count > 0 else { continue }
-
-            let hsbColor = color.usingColorSpace(.deviceRGB)!
+            guard count > 0,
+                  let hsbColor = color.usingColorSpace(.deviceRGB)
+            else {
+                continue
+            }
             let saturation = hsbColor.saturationComponent
             let brightness = hsbColor.brightness
 
@@ -263,7 +269,7 @@ extension NSImage {
         let sortedColors = colorScores
             .sorted { $0.value > $1.value }
             .prefix(10)
-            .map { colorMap[$0.key]! }
+            .compactMap { colorMap[$0.key] }
 
         // Ensure colors are distinct enough from each other
         // This prevents selecting variations of the same color
@@ -294,10 +300,13 @@ extension NSImage {
     /// - Parameter newSize: The target size for the resized image.
     /// - Returns: The resized NSImage or nil if the operation fails.
     func resized(to newSize: NSSize) -> NSImage? {
+        let pixelWidth = max(1, Int(newSize.width.rounded()))
+        let pixelHeight = max(1, Int(newSize.height.rounded()))
+
         guard let bitmapRep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
-            pixelsWide: Int(newSize.width),
-            pixelsHigh: Int(newSize.height),
+            pixelsWide: pixelWidth,
+            pixelsHigh: pixelHeight,
             bitsPerSample: 8,
             samplesPerPixel: 4,
             hasAlpha: true,
