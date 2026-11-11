@@ -367,6 +367,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WindowDragManager.shared.shutdown()
         StashManager.shared.shutdown()
         urlCommandHandler.cleanupPendingOutputFiles()
+        terminateObserver.map(DistributedNotificationCenter.default().removeObserver)
+        terminateObserver = nil
         return .terminateNow
     }
 
