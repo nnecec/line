@@ -68,6 +68,10 @@ struct PreviewConfigurationView: View {
             .settingsFormPanel(maxWidth: 560)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .onDisappear {
+            syncWallpaperTask?.cancel()
+            syncWallpaperTask = nil
+        }
     }
 
     // MARK: - Fixed Live Preview (side-by-side)
@@ -491,6 +495,10 @@ struct PreviewConfigurationView: View {
             }
 
             try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else {
+                syncWallpaperTask = nil
+                return
+            }
 
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.5)) {
                 didSyncWallpaper = false
