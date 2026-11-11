@@ -190,6 +190,7 @@ final class LineCoordinator {
     }
 
     func start() {
+        accessibilityCheckerTask?.cancel()
         startApplicationTerminationMonitoring()
 
         accessibilityCheckerTask = Task(priority: .background) { [weak self] in
