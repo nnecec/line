@@ -246,7 +246,7 @@ final class LineCoordinator {
             )
 
             for await notification in notifications {
-                guard self != nil, !Task.isCancelled else { return }
+                guard let self, !Task.isCancelled else { return }
                 guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
                     as? NSRunningApplication
                 else {
@@ -258,18 +258,18 @@ final class LineCoordinator {
                 )
 
                 guard GridMemoryLifecyclePolicy.shouldCancelGrid(
-                    targetProcessIdentifier: gridModeCoordinator.targetProcessIdentifier,
+                    targetProcessIdentifier: self.gridModeCoordinator.targetProcessIdentifier,
                     terminatedProcessIdentifier: application.processIdentifier
                 ) else {
                     continue
                 }
 
-                if isLineOpening {
-                    shouldCancelOpening = true
+                if self.isLineOpening {
+                    self.shouldCancelOpening = true
                 }
-                gridModeCoordinator.close(reason: .cancelled)
-                triggerKeyTimeoutTimer.cancel()
-                isLineActive = false
+                self.gridModeCoordinator.close(reason: .cancelled)
+                self.triggerKeyTimeoutTimer.cancel()
+                self.isLineActive = false
             }
         }
     }

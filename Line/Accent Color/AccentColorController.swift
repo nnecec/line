@@ -72,7 +72,8 @@ final class AccentColorController: ObservableObject {
             log.info("Refreshing accent color based on wallpaper analysis")
             let colors = await wallpaperProcessor.fetchLatest(ignoreThrottle: ignoreThrottle)
             guard generation == refreshGeneration,
-                  Defaults[.accentColorMode] == mode
+                  Defaults[.accentColorMode] == mode,
+                  !Task.isCancelled
             else {
                 return
             }
