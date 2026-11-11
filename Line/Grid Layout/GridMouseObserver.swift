@@ -29,6 +29,9 @@ final class GridMouseObserver {
     /// Debounced task for hover preview updates (AX-free but still non-trivial work).
     private var previewTask: Task<(), Never>?
 
+    /// Invalidates event callbacks that were queued just before the observer stopped.
+    private var eventGeneration: UInt = 0
+
     init(
         submitCallback: @escaping (GridOverlayViewModel.GridOverlayAction) -> (),
         previewCallback: @escaping (GridRegion?) -> ()
@@ -40,6 +43,7 @@ final class GridMouseObserver {
     /// Start monitoring mouse events.
     func start(viewModel: GridOverlayViewModel) {
         stop()
+        let generation = eventGeneration
         self.viewModel = viewModel
 
         // Mouse moved (hover) — viewModel update is cheap; preview is throttled.
@@ -49,7 +53,8 @@ final class GridMouseObserver {
         ) { [weak self, weak viewModel] _ in
             guard let self, let viewModel else { return .forward }
             let location = NSEvent.mouseLocation
-            Task { @MainActor in
+            Task { @MainActor [weak self, weak viewModel] in
+                guard let self, let viewModel, self.eventGeneration == generation else { return }
                 viewModel.handleMouseMoved(at: location)
                 self.schedulePreview(for: viewModel.selectedRegion)
             }
@@ -64,7 +69,8 @@ final class GridMouseObserver {
         ) { [weak self, weak viewModel] _ in
             guard let self, let viewModel else { return .forward }
             let location = NSEvent.mouseLocation
-            Task { @MainActor in
+            Task { @MainActor [weak self, weak viewModel] in
+                guard let self, let viewModel, self.eventGeneration == generation else { return }
                 viewModel.handleMouseDown(at: location)
                 self.flushPreview(for: viewModel.selectedRegion)
             }
@@ -79,7 +85,8 @@ final class GridMouseObserver {
         ) { [weak self, weak viewModel] _ in
             guard let self, let viewModel else { return .forward }
             let location = NSEvent.mouseLocation
-            Task { @MainActor in
+            Task { @MainActor [weak self, weak viewModel] in
+                guard let self, let viewModel, self.eventGeneration == generation else { return }
                 viewModel.handleMouseDragged(at: location)
                 self.schedulePreview(for: viewModel.selectedRegion)
             }
@@ -94,7 +101,8 @@ final class GridMouseObserver {
         ) { [weak self, weak viewModel] _ in
             guard let self, let viewModel else { return .forward }
             let location = NSEvent.mouseLocation
-            Task { @MainActor in
+            Task { @MainActor [weak self, weak viewModel] in
+                guard let self, let viewModel, self.eventGeneration == generation else { return }
                 let action = viewModel.handleMouseUp(at: location)
                 self.flushPreview(for: viewModel.selectedRegion)
                 if let action = action {
@@ -110,6 +118,7 @@ final class GridMouseObserver {
 
     /// Stop monitoring mouse events.
     func stop() {
+        eventGeneration &+= 1
         previewTask?.cancel()
         previewTask = nil
 
@@ -143,10 +152,11 @@ final class GridMouseObserver {
     /// Debounce expensive preview updates (Task cancel pattern, ~16 ms).
     private func schedulePreview(for region: GridRegion?) {
         previewTask?.cancel()
-        previewTask = Task { @MainActor in
+        let generation = eventGeneration
+        previewTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: Self.previewThrottleInterval)
-            guard !Task.isCancelled else { return }
-            previewCallback(region)
+            guard let self, !Task.isCancelled, self.eventGeneration == generation else { return }
+            self.previewCallback(region)
         }
     }
 
