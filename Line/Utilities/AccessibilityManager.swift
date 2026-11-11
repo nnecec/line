@@ -33,6 +33,7 @@ final class AccessibilityManager {
                 // reading from `AXIsProcessTrustedWithOptions` is updated.
                 // So sleep for 250 milliseconds (this is generous, but just to ensure that the reading will be correct).
                 try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
 
                 let status = Self.getStatus()
                 self.yield(status)

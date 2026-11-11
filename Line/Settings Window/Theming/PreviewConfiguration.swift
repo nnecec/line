@@ -489,6 +489,10 @@ struct PreviewConfigurationView: View {
 
         syncWallpaperTask = Task {
             await accentColorController.refresh(ignoreThrottle: true)
+            guard !Task.isCancelled else {
+                syncWallpaperTask = nil
+                return
+            }
 
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.5)) {
                 didSyncWallpaper = true
