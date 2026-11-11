@@ -14,6 +14,8 @@ private let productDisplayName = "Line"
 final class AboutConfigurationModel: ObservableObject {
     @Published var didCompleteCopyToClipboard: Bool = false
 
+    private var copyConfirmationTask: Task<(), Never>?
+
     let credits: [CreditItem] = [
         .init(
             "Loop",
@@ -21,6 +23,10 @@ final class AboutConfigurationModel: ObservableObject {
             url: .init(string: "https://github.com/MrKai77/Loop")!
         )
     ]
+
+    deinit {
+        copyConfirmationTask?.cancel()
+    }
 
     func copyVersionToClipboard() {
         let pasteboard = NSPasteboard.general
@@ -32,9 +38,11 @@ final class AboutConfigurationModel: ObservableObject {
 
         didCompleteCopyToClipboard = true
 
-        Task { @MainActor in
-            try await Task.sleep(for: .seconds(2))
-            didCompleteCopyToClipboard = false
+        copyConfirmationTask?.cancel()
+        copyConfirmationTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            self?.didCompleteCopyToClipboard = false
         }
     }
 }
