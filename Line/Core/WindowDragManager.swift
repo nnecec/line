@@ -69,6 +69,7 @@ final class WindowDragManager {
     }
 
     func addObservers() {
+        accessibilityCheckerTask?.cancel()
         accessibilityCheckerTask = Task(priority: .background) { [weak self] in
             for await status in AccessibilityManager.shared.stream(initial: true) {
                 guard let self, !Task.isCancelled else {

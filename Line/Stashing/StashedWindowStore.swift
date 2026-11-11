@@ -95,6 +95,9 @@ final class StashedWindowsStore {
     // MARK: Private methods
 
     private func restoreStashedWindows() async {
+        spaceObserverTask?.cancel()
+        spaceObserverTask = nil
+
         guard !isShuttingDown, !Task.isCancelled else { return }
         let windows = WindowUtility.windowList()
         let defaultStashedWindows = Defaults[.stashManagerStashedWindows]
