@@ -588,6 +588,11 @@ private extension StashManager {
     func startListeningToRevealTriggers() {
         guard mouseMonitor == nil else { return }
 
+        // Recover cleanly if a previous monitor was removed before its
+        // notification stream finished cancelling.
+        frontmostAppMonitor?.cancel()
+        frontmostAppMonitor = nil
+
         log.info("Listening for reveal triggers…")
 
         let monitor = PassiveEventMonitor(
@@ -625,8 +630,6 @@ private extension StashManager {
         mouseMovedTask = nil
         frontmostAppChangeTask?.cancel()
         frontmostAppChangeTask = nil
-
-        guard mouseMonitor != nil else { return }
 
         log.info("Stopping listening for reveal triggers…")
 
