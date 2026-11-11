@@ -63,10 +63,12 @@ extension WindowUtility {
     ) -> Window? {
         let allWindows = windowList()
 
+        // `windowList()` already comes from `.optionOnScreenOnly`; checking
+        // application-wide visibility for every candidate would issue another
+        // CG window-list query per window.
         let availableWindows = allWindows
             .filter { window in
                 !window.minimized &&
-                    !window.isWindowHidden &&
                     !WindowStateValidator.shouldIgnore(window)
             }
 
@@ -134,7 +136,6 @@ extension WindowUtility {
         let availableWindows = allWindows
             .filter { window in
                 !window.minimized &&
-                    !window.isWindowHidden &&
                     !WindowStateValidator.shouldIgnore(window)
             }
 
