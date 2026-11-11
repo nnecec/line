@@ -562,10 +562,11 @@ private extension StashManager {
             guard let currentWindowScreen = ScreenUtility.screenContaining(window) ?? NSScreen.main else { return false }
             guard screen.isSameScreen(currentWindowScreen) else { return false }
 
+            // `windowList()` is built from `.optionOnScreenOnly`, so avoid
+            // another CG window-list query through `isWindowHidden` here.
             return store.stashed[window.cgWindowID] == nil
                 && window.cgWindowID != windowID
                 && !window.isApplicationHidden
-                && !window.isWindowHidden
                 && !window.minimized
         }
 
