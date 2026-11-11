@@ -48,7 +48,9 @@ final class WallpaperImageFetcher {
     /// The fallback ensures we still get colors even if permissions aren't granted.
     @concurrent
     func takeScreenshot() async throws -> NSImage? {
-        let screen = NSScreen.screenWithMouse ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let screen = NSScreen.screenWithMouse ?? NSScreen.main ?? NSScreen.screens.first else {
+            throw WallpaperProcessorError.screenshotFailed
+        }
         let screenFrame = screen.displayBounds
 
         // First try to get the wallpaper window from the Dock app that matches our screen dimensions
@@ -132,7 +134,9 @@ final class WallpaperImageFetcher {
     /// fallback when we can't access the wallpaper window directly, and still provides
     /// useful color information in most cases.
     private func captureFullScreen() async throws -> NSImage? {
-        let screen = NSScreen.screenWithMouse ?? NSScreen.main ?? NSScreen.screens[0]
+        guard let screen = NSScreen.screenWithMouse ?? NSScreen.main ?? NSScreen.screens.first else {
+            throw WallpaperProcessorError.screenshotFailed
+        }
 
         // Get available content for screen capture
         let availableContent = try await SCShareableContent.excludingDesktopWindows(
