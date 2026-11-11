@@ -180,6 +180,7 @@ final class StashManager {
     private var revealTransition = StashRevealTransition(throttleInterval: 0.1)
     private var mouseMonitor: PassiveEventMonitor?
     private var frontmostAppMonitor: Task<(), Never>?
+    private var frontmostAppChangeTask: Task<(), Never>?
     private var mouseMovedTask: Task<(), Never>?
     private var restoreTask: Task<(), Never>?
 
@@ -206,6 +207,8 @@ final class StashManager {
         mouseMovedTask?.cancel()
         mouseMovedTask = nil
         stopListeningToRevealTriggers()
+        frontmostAppChangeTask?.cancel()
+        frontmostAppChangeTask = nil
         store.shutdown()
         restoreAllStashedWindows()
     }
@@ -676,9 +679,12 @@ private extension StashManager {
     }
 
     private func processFrontmostAppChange(with notification: Notification) {
-        Task {
-            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  let appWindow = try? Window(pid: app.processIdentifier)
+        frontmostAppChangeTask?.cancel()
+        frontmostAppChangeTask = Task { @MainActor [weak self] in
+            guard let self,
+                  let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  let appWindow = try? Window(pid: app.processIdentifier),
+                  !Task.isCancelled
             else {
                 return
             }
@@ -687,6 +693,8 @@ private extension StashManager {
             let windows = getZSortedStashedWindows()
 
             for window in windows {
+                guard !Task.isCancelled else { return }
+
                 if revealTransition.isWindowRevealed(window.window.cgWindowID) {
                     if appWindow.cgWindowID != window.window.cgWindowID,
                        await !isMouseOverStashed(window: window, location: mouseLocation) {
@@ -694,14 +702,12 @@ private extension StashManager {
                     } else {
                         break
                     }
-                } else {
-                    if appWindow.cgWindowID == window.window.cgWindowID {
-                        // The stashed window has been activated through non-mouse means (e.g. Spotlight, cmd+tab etc.)
-                        // revealWindow will move it on screen and hide any other revealed window.
-                        await revealWindow(window)
-                        // Only one window can be revealed at a time, so stop processing.
-                        break
-                    }
+                } else if appWindow.cgWindowID == window.window.cgWindowID {
+                    // The stashed window has been activated through non-mouse means (e.g. Spotlight, cmd+tab etc.)
+                    // revealWindow will move it on screen and hide any other revealed window.
+                    await revealWindow(window)
+                    // Only one window can be revealed at a time, so stop processing.
+                    break
                 }
             }
         }
