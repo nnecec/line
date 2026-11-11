@@ -618,11 +618,18 @@ private extension StashManager {
     }
 
     func stopListeningToRevealTriggers() {
+        // Cancel pending work even if the event monitor was already removed.
+        // This matters when the last stashed window is unmanaged while a
+        // debounced mouse/frontmost-app task is still running.
+        mouseMovedTask?.cancel()
+        mouseMovedTask = nil
+        frontmostAppChangeTask?.cancel()
+        frontmostAppChangeTask = nil
+
         guard mouseMonitor != nil else { return }
 
         log.info("Stopping listening for reveal triggers…")
 
-        // Cancel tasks first
         frontmostAppMonitor?.cancel()
         frontmostAppMonitor = nil
 
