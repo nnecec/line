@@ -30,7 +30,7 @@ extension CGPoint {
         CGPoint(x: x, y: maxY - y)
     }
 
-    func flipY(screen: NSScreen) -> CGPoint {
+    func flipY(screen _: NSScreen) -> CGPoint {
         flipY(maxY: NSScreen.coordinateReferenceMaxY)
     }
 
@@ -77,7 +77,7 @@ extension CGSize {
 }
 
 extension CGRect {
-    func flipY(screen: NSScreen) -> CGRect {
+    func flipY(screen _: NSScreen) -> CGRect {
         flipY(maxY: NSScreen.coordinateReferenceMaxY)
     }
 
