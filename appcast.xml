@@ -5,6 +5,15 @@
     <description>Latest Line releases.</description>
     <language>en</language>
     <item>
+      <title>Version 0.0.9</title>
+      <pubDate>Thu, 12 Nov 2026 05:17:18 -0000</pubDate>
+      <sparkle:version>139</sparkle:version>
+      <sparkle:shortVersionString>0.0.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>See the GitHub release notes for details.</p>]]></description>
+      <enclosure url='https://github.com/nnecec/line/releases/download/v0.0.9/Line-0.0.9.zip' type='application/octet-stream' sparkle:edSignature='L/Ehd/N9j8WHN2YnNVkvkI1h9PFAiiXdZYAdOf9R8B1a4H+RzU5QJAMheDdBCNcOokMjVg6T0wfUmQ+duc2bAg==' length='6146406'/>
+    </item>
+    <item>
       <title>Version 0.0.8</title>
       <pubDate>Thu, 15 Oct 2026 15:05:18 -0000</pubDate>
       <sparkle:version>118</sparkle:version>
